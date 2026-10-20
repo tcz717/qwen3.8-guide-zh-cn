@@ -185,7 +185,7 @@
       <line x1="60" y1="76" x2="210" y2="76" stroke="rgba(29,110,107,0.25)"/>
       <text x="135" y="96" text-anchor="middle" class="dg-label">SigLIP 风格 ViT</text>
       <text x="135" y="114" text-anchor="middle" class="dg-label">图像 · 视频帧</text>
-      <text x="135" y="132" text-anchor="middle" class="dg-label">→ 图块嵌入</text>
+      <text x="135" y="132" text-anchor="middle" class="dg-label">→ 图像块嵌入</text>
       <text x="135" y="150" text-anchor="middle" class="dg-sub">约 333 个权重张量 · 0.9B 参数</text>
 
       <!-- Text tokens -->
@@ -266,14 +266,14 @@
       <rect x="520" y="340" width="140" height="80" rx="10" fill="url(#gIris)" stroke="rgba(43,58,138,0.6)" stroke-width="1.2"/>
       <text x="590" y="364" text-anchor="middle" class="dg-title" fill="#2b3a8a">LM 头</text>
       <line x1="545" y1="374" x2="635" y2="374" stroke="rgba(43,58,138,0.3)"/>
-      <text x="590" y="392" text-anchor="middle" class="dg-label">→ 逻辑值（248,320）</text>
+      <text x="590" y="392" text-anchor="middle" class="dg-label">→ 未归一化分数（logits，248,320）</text>
       <text x="590" y="408" text-anchor="middle" class="dg-sub">+ MTP 头</text>
     </svg>
     <div class="fig-cap"><b>图 1</b> — 完整数据流：两种输入模态合并为一个残差流，经过 64 层混合堆栈，再从具有 248,320 路输出及辅助 MTP 头的 LM 头输出。</div>
   </div>
 
   <h3>逐阶段解读数据流</h3>
-  <p>该图从左向右阅读：数据先汇聚到一条总线，再进入纵向堆栈。左侧有两条输入路径：<strong>SigLIP 风格视觉编码器</strong>把图像和视频帧转为图块嵌入（约 0.9B 参数，§07）；<strong>文本分词器</strong>则把原始字节映射为 248,320 符号词表中的整数 ID（§02）。图中视觉路径较窄，但每个输入的词元成本更高，因为一张图像可能占用数千词元。因此在合并之前，它会经过<strong>投影器与 2×2 空间合并</strong>，把每个 2×2 图块折叠为一个词元，以牺牲空间分辨率换取序列长度缩短至四分之一。文本本身已离散化，无需这种缩减。</p>
+  <p>该图从左向右阅读：数据先汇聚到一条总线，再进入纵向堆栈。左侧有两条输入路径：<strong>SigLIP 风格视觉编码器</strong>把图像和视频帧转为图像块嵌入（约 0.9B 参数，§07）；<strong>文本分词器</strong>则把原始字节映射为 248,320 符号词表中的整数 ID（§02）。图中视觉路径较窄，但每个输入的词元成本更高，因为一张图像可能占用数千词元。因此在合并之前，它会经过<strong>投影器与 2×2 空间合并</strong>，把每个 2×2 图像块折叠为一个词元，以牺牲空间分辨率换取序列长度缩短至四分之一。文本本身已离散化，无需这种缩减。</p>
   <p>两条路径汇入<strong>统一流</strong>，即单个张量 $x \in \mathbb{R}^{T \times 5120}$，平等承载文本与视觉词元。从这里开始，任何层都不区分文本词元和图像词元：模态边界只存在于位置编码（MRoPE，§07）和嵌入路径中，从不进入骨干网络。该流进入琥珀色的<strong>64 层混合堆栈</strong>，其结构为重复 16 次的 $[3 \times \text{DeltaNet} + 1 \times \text{Attention}]$。堆栈输出回到 <strong>LM 头</strong>，将最终隐藏状态投影回词表上的 248,320 路分布；辅助 <strong>MTP 头</strong>则向前预测多个词元，用于自推测解码（§08）。</p>
 
   <h3>作为中央总线的残差流</h3>
@@ -288,7 +288,7 @@
     <li><strong>1. 混合注意力骨干网络</strong>：64 层排列为 16 个相同的超级块：<code>[3 ×（门控 DeltaNet + FFN）] + [1 ×（门控注意力 + FFN）]</code>。75% 的层采用具有固定大小循环状态的<em>线性注意力</em>，因此单词元成本不随上下文增长；25% 采用完整 softmax 注意力，其 KV 缓存随序列长度增长，但保证精确检索。两者不可互换：线性层低成本压缩残差流，全注意力层则定期依据原始上下文重新锚定，避免纯线性堆栈累积联想漂移。这是模型最重要的一项设计决策（§03–05）。</li>
     <li><strong>2. 交错多模态 RoPE（MRoPE）</strong>：旋转位置编码通常为每个词元分配单一 1D 位置，但无法适应具有 2D 布局的图像和具有 2D+时间布局的视频。MRoPE 将旋转相位拆为三个区段（<code>mrope_section: [11, 11, 10]</code>），分别承载时间、高度和宽度轴，使 2D 图像网格或视频时间线无需重新训练技巧或独立位置表，就能嵌入与文本相同的 1D 词元序列（§07）。</li>
     <li><strong>3. 训练内置的多词元预测</strong>：模型附带额外预测头，在一次前向传播中向前预测多个词元。推理时，这些头充当<em>与主模型同源的草稿模型</em>：骨干网络提出多个后续候选，一次性验证它们，并接受通过校验的最长前缀，从而摊薄长篇自回归生成的单词元成本。由于这些头与骨干网络联合训练，而非事后蒸馏，其预测与骨干网络共享分布，因而很少被拒绝（§08）。</li>
-    <li><strong>4. 原生视觉前端</strong>：SigLIP 风格视觉塔将图像和视频帧转为图块嵌入，再由投影器映射至 LM 宽度为 5120 的残差流。因此骨干网络从不把“视觉”视为特例：图像词元就是词元，由与文本相同的 64 层处理，模型因而能交错推理图形与文字，无需独立视觉解码器。这是一条一等输入路径，而非外挂适配器（§07）。</li>
+    <li><strong>4. 原生视觉前端</strong>：SigLIP 风格视觉塔将图像和视频帧转为图像块嵌入，再由投影器映射至 LM 宽度为 5120 的残差流。因此骨干网络从不把“视觉”视为特例：图像词元就是词元，由与文本相同的 64 层处理，模型因而能交错推理图形与文字，无需独立视觉解码器。这是一条一等输入路径，而非外挂适配器（§07）。</li>
   </ul>
 
   <div class="callout why">
@@ -327,13 +327,13 @@
   <!-- BPE Mathematical Foundations & GEMM Alignment Formalism -->
   <div class="math" aria-label="方程 1：BPE 合并规则通过 248,064 次合并得到 248,320 词元的词表，并填充为 3,880 乘 64 以对齐 Tensor Core，由此产生 2.54 GB 的 BF16 嵌入矩阵和每词元 12.7 亿次 MAC。">
     \tau^* = \arg\max_{(u, v) \in V \times V} \text{Freq}(u, v) \quad \implies \quad V_{k+1} = V_k \cup \{ u \circ v \} \quad k = 1 \dots 248,064&nbsp;&nbsp;<span class="eq-no">(1)</span><br>
-    |V_{\text{padded}}| = 248,320 = 3,880 \times 64 \quad (\text{精确对齐 NVIDIA Tensor Core MMA 图块})<br>
+    |V_{\text{padded}}| = 248,320 = 3,880 \times 64 \quad (\text{精确对齐 NVIDIA Tensor Core MMA 分块})<br>
     \text{嵌入矩阵} = W_{\text{emb}} \in \mathbb{R}^{248320 \times 5120} \implies 248,320 \times 5,120 \times 2\text{ 字节} = \mathbf{2.54\text{ GB（BF16）}}<br>
-    \text{LM 头逻辑值} = \mathbf{z} = \mathbf{h}_L W_{\text{head}}^T \in \mathbb{R}^{B \times T \times 248320} \implies \mathbf{1.27\text{ 十亿次 MAC / 词元}}
+    \text{LM 头未归一化分数（logits）} = \mathbf{z} = \mathbf{h}_L W_{\text{head}}^T \in \mathbb{R}^{B \times T \times 248320} \implies \mathbf{1.27\text{ 十亿次 MAC / 词元}}
   </div>
 
   <h3>为何是 248,320 而非 248,064：为 Tensor Core 填充</h3>
-  <p>合并调度会产生 248,064 个已学习词元，但词表声明为 248,320，其填充大小选为 $3{,}880 \times 64$。额外 256 行从不作为词元使用；它们的作用是让词表维度恰好成为 Tensor Core 矩阵乘加（MMA）图块的整数倍。嵌入查找和 LM 头投影都是以词表为收缩维度的 GEMM；在现代 NVIDIA Tensor Core 上，只有该维度是图块大小（BF16 下为 64）的整数倍时，矩阵乘法才能达到峰值吞吐量。尾部不完整会迫使硬件使用掩码通道或单独的收尾阶段，对如此大的张量都会浪费带宽。填充只付出 256 个未使用行（约 2.6 MB BF16）的成本，却能让每次前向传播中的嵌入和输出头都达到峰值吞吐量，因此这项权衡显然有利于填充。</p>
+  <p>合并调度会产生 248,064 个已学习词元，但词表声明为 248,320，其填充大小选为 $3{,}880 \times 64$。额外 256 行从不作为词元使用；它们的作用是让词表维度恰好成为 Tensor Core 矩阵乘加（MMA）分块的整数倍。嵌入查找和 LM 头投影都是以词表为收缩维度的 GEMM；在现代 NVIDIA Tensor Core 上，只有该维度是分块大小（BF16 下为 64）的整数倍时，矩阵乘法才能达到峰值吞吐量。尾部不完整会迫使硬件使用掩码通道或单独的收尾阶段，对如此大的张量都会浪费带宽。填充只付出 256 个未使用行（约 2.6 MB BF16）的成本，却能让每次前向传播中的嵌入和输出头都达到峰值吞吐量，因此这项权衡显然有利于填充。</p>
   <p>嵌入矩阵 $W_{\text{emb}} \in \mathbb{R}^{248320 \times 5120}$ 是模型从离散整数通往连续几何空间的唯一桥梁：每个词元 ID 选择一行，该 5120 维向量就是任何层运行前的初始残差流值。LM 头是它的镜像，将宽度为 5120 的残差流投影回 248,320 路分布；在 Qwen 3.8 中二者<em>不共享权重</em>，即使用独立学习矩阵，而非嵌入矩阵的转置。因此输入和输出边界对称，合计占用约 5 GB BF16，超过任一骨干层。下方组件展示送入该查找过程的分词结果。</p>
 
   <!-- Widget 1: Live Interactive Tokenizer & BPE Segmenter (#w-tokenizer-lab) -->
@@ -383,7 +383,7 @@
   <!-- Special Token Inventory Catalog -->
   <h3>特殊词元协议目录：边界与智能体约定</h3>
   <p>词表的高位地址空间（接近 248,000 的 ID）保留给控制词元，且不参与 BPE 合并。这一豁免正是关键所在：像 <code>&lt;|im_start|&gt;</code> 这样的分隔符或 <code>&lt;|vision_start|&gt;</code> 这样的边界必须是单个原子符号，分词器绝不能将其拆分或与相邻内容合并，否则切分会破坏它所承载的协议。将其保留为固定的单词元 ID，便可直接保证原子性。</p>
-  <p>整体来看，控制词元构成模型使用的协议层：它们标记用于后训练的聊天角色，包围由服务后端解析并剥离的测试时推理轨迹，在 MRoPE 坐标系中锚定视觉图块词元，并封装用于智能体执行的结构化工具调用 JSON。下方每一项都将一个词元映射到使用它的下游子系统：</p>
+  <p>整体来看，控制词元构成模型使用的协议层：它们标记用于后训练的聊天角色，包围由服务后端解析并剥离的测试时推理轨迹，在 MRoPE 坐标系中锚定视觉图像块词元，并封装用于智能体执行的结构化工具调用 JSON。下方每一项都将一个词元映射到使用它的下游子系统：</p>
 
   <div class="tbl-wrap">
     <table>
@@ -413,7 +413,7 @@
           <td><strong>视觉锚点</strong></td>
           <td><code>&lt;|vision_start|&gt;</code> … <code>&lt;|vision_end|&gt;</code></td>
           <td>多模态 SigLIP 前端（§07）</td>
-          <td>包围映射至 MRoPE 坐标的交错 2D/3D 视觉图块词元。</td>
+          <td>包围映射至 MRoPE 坐标的交错 2D/3D 视觉图像块词元。</td>
         </tr>
         <tr>
           <td><strong>结构化工具调用</strong></td>

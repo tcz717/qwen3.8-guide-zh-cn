@@ -789,7 +789,7 @@ function stackSegments(pairs) {
       name: "超块步骤 2 · DeltaNet 循环细化",
       type: "线性注意力混合器 + SwiGLU FFN",
       state: "S_t ← α·(S_{t-1}(I - β k k^T) + β k v^T)",
-      desc: "第二次循环传递。多层深度使 DeltaNet 能够组合关联记忆，在压缩后的前缀状态上执行多步推理和语义特征提取。",
+      desc: "第二次循环传递。多层深度使 DeltaNet 能够组合联想记忆，在压缩后的前缀状态上执行多步推理和语义特征提取。",
       benefit: "通过学习到的衰减门控 $\\alpha_t$ 过滤瞬时语法噪声。"
     },
     "3": {
@@ -1612,7 +1612,7 @@ function stackSegments(pairs) {
 
   const VISION_STAGES = {
     "1": {
-      name: "阶段 01 · 图像分块与空间平铺",
+      name: "阶段 01 · 图像块化与空间平铺",
       tensor: "输入 [B, C=3, H, W] → 图像块 [B, N_patches, 3×14×14 = 588]",
       desc: "将输入 RGB 图像分解为规则的二维网格，其中包含互不重叠的 14×14 像素图像块。初始二维卷积将 588 个像素值投影为 1,536 维线性嵌入。",
       insight: "动态原生分辨率支持通过将任意宽高比平铺到 224px 坐标块中，避免几何失真和宽高比扭曲。"
@@ -1685,7 +1685,7 @@ function stackSegments(pairs) {
   const visMergeToggle = $("visMergeToggle");
 
   const PRESETS = {
-    "224x224x1":   { w: 224,  h: 224,  frames: 1,  name: "标准图块（224×224）" },
+    "224x224x1":   { w: 224,  h: 224,  frames: 1,  name: "标准图像块（224×224）" },
     "800x600x1":   { w: 800,  h: 600,  frames: 1,  name: "网页截图（800×600）" },
     "1920x1080x1": { w: 1920, h: 1080, frames: 1,  name: "1080p 幻灯片（1920×1080）" },
     "3840x2160x1": { w: 3840, h: 2160, frames: 1,  name: "4K 高分辨率图表（3840×2160）" },
@@ -1915,8 +1915,8 @@ function stackSegments(pairs) {
 
   const MTP_NODES = {
     backbone: {
-      badge: "目标主干",
-      title: "主 Transformer 主干（第 64 层）",
+      badge: "目标骨干网络",
+      title: "Transformer 骨干网络（第 64 层）",
       math: "h_t = RMSNorm(Block₆₄(h_t⁽⁶³⁾)) ∈ ℝ^(B × 1 × 5120)",
       desc: "经过全部 64 层（48 个 DeltaNet 层 + 16 个完整注意力层）生成最终的 5120 维隐藏状态 h_t。该激活向量是标准生成与推测分支扩展的基础根状态。",
       shape: "[批, 1, 5120]",
@@ -1934,7 +1934,7 @@ function stackSegments(pairs) {
       badge: "MTP 草稿头（K=1）",
       title: "MTP 头 1（深度 1 推测头）",
       math: "h̃_(t+1) = Block_MTP1([RMSNorm(h_t); Embed(x_(t+1))])",
-      desc: "专用于预测提前 1 步词元的混合 Transformer 块（DeltaNet + RMSNorm）。它接收拼接后的主干表示和根词元嵌入，并投影为草稿词元 x̃_(t+2)。",
+      desc: "专用于预测提前 1 步词元的混合 Transformer 块（DeltaNet + RMSNorm）。它接收拼接后的骨干网络表示和根词元嵌入，并投影为草稿词元 x̃_(t+2)。",
       shape: "[批, 1, 5120]",
       dtype: "bfloat16（约 1.3B 参数）"
     },
@@ -1956,7 +1956,7 @@ function stackSegments(pairs) {
     },
     verifier: {
       badge: "单次验证器",
-      title: "目标主干并行树验证器",
+      title: "目标骨干网络并行树验证器",
       math: "P(x_(t+1), x̃_(t+2), x̃_(t+3) | x_(≤t)) = Forward_Target(Batch, M_tree)",
       desc: "使用二维因果树注意力掩码，对所有候选词元执行单次前向传播。验证延迟与标准单词元生成相同，因为内存带宽只需为整个候选批读取一次权重。",
       shape: "[批, K+1, 5120]",
@@ -2120,7 +2120,7 @@ function stackSegments(pairs) {
 
     // 1. Target Backbone
     const backboneY = depthK === 1 ? 65 : depthK === 2 ? 100 : 120;
-    const bb = drawNode("backbone", 20, backboneY, 130, 68, "主干网络", "第 64 层隐藏态（h_t）", "d=5120 · 27.58B", "rgba(184,52,31,0.1)", PAL.amber, PAL.amber);
+    const bb = drawNode("backbone", 20, backboneY, 130, 68, "骨干网络", "第 64 层隐藏态（h_t）", "d=5120 · 27.58B", "rgba(184,52,31,0.1)", PAL.amber, PAL.amber);
 
     // 2. Shared LM Head
     const lm = drawNode("lm_head", 185, 18, 150, 52, "共享 LM 头", "Softmax(W_u · h_t)", "→ 根 x_{t+1}（248k）", "rgba(29,110,107,0.1)", PAL.mint, PAL.mint);
@@ -2726,7 +2726,7 @@ function stackSegments(pairs) {
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--rose);line-height:1.5;background:rgba(138,51,36,0.06);padding:8px 12px;border-radius:6px;border-top:2px solid var(--rose)">
-          ✗ <b>注意力泄漏缺陷：</b> 若不重置注意力掩码，文档 2 和文档 3 会直接关注先前文档的词元。关联记忆写入会被无关文档历史污染，RoPE 频率也会漂移并超出文档的真实长度。
+          ✗ <b>注意力泄漏缺陷：</b> 若不重置注意力掩码，文档 2 和文档 3 会直接关注先前文档的词元。联想记忆写入会被无关文档历史污染，RoPE 频率也会漂移并超出文档的真实长度。
         </div>
       `;
     }
@@ -4113,7 +4113,7 @@ function stackSegments(pairs) {
           tag: "线性注意力",
           shape: `状态：[${B}, 48, 128, 128]`,
           bytes: formatBytes(B * 48 * 128 * 128 * b),
-          math: "带学习遗忘机制的关联记忆检索"
+          math: "带学习遗忘机制的联想记忆检索"
         },
         {
           op: "层 4k+2：门控 DeltaNet #3 + SwiGLU",
@@ -4189,120 +4189,6 @@ function stackSegments(pairs) {
   /* ------------------------------------------------------------
      2. Widget: PyTorch Implementation Studio (#w-code-lab)
      ------------------------------------------------------------ */
-  const PYTHON_PROSE_TRANSLATIONS = [
-    ["Qwen 3.8-27B — Complete Hybrid Architecture From Scratch (PyTorch)", "Qwen 3.8-27B——从零实现的完整混合架构（PyTorch）"],
-    ["64-Layer Hybrid Backbone (16 super-blocks of 3x Gated DeltaNet + 1x Gated Attention)", "64 层混合骨干网络（16 个超级块，每块含 3× 门控 DeltaNet + 1× 门控注意力）"],
-    ["Apache 2.0 Reference Implementation · August 2026", "Apache 2.0 参考实现 · 2026 年 8 月"],
-    ["3 DeltaNet : 1 Gated Attention", "3 个 DeltaNet : 1 个门控注意力"],
-    ["DeltaNet specs (48 layers)", "DeltaNet 规格（48 层）"],
-    ["Gated Attention specs (16 layers)", "门控注意力规格（16 层）"],
-    ["Grouped-Query Attention (GQA 6:1)", "分组查询注意力（GQA 6:1）"],
-    ["[Time, Height, Width]", "[时间、高度、宽度]"],
-    ["Feed-Forward specs", "前馈网络规格"],
-    ["SwiGLU intermediate dimension", "SwiGLU 中间维度"],
-    ["Vocab & Context", "词表与上下文"],
-    ["248k vocab with 32-multiple padding", "248k 词表，填充至 32 的倍数"],
-    ["262k native context window", "262k 原生上下文窗口"],
-    ["2-step speculative prediction heads", "2 步推测预测头"],
-    ["Root Mean Square Layer Normalization", "均方根层归一化"],
-    ["Swish-Gated Linear Unit Feed-Forward Network", "Swish 门控线性单元前馈网络"],
-    ["Gated DeltaNet Linear Attention Layer", "门控 DeltaNet 线性注意力层"],
-    ["Features L2 key/query normalization, input-dependent write gate β_t,", "采用 L2 键/查询归一化、依赖输入的写入门 β_t、"],
-    ["learned decay rate α_t, and associative memory state update.", "学习得到的衰减率 α_t，以及关联记忆状态更新。"],
-    ["Single fused input projection for Q, K, V", "Q、K、V 的单个融合输入投影"],
-    ["Input-dependent write gate beta_t", "依赖输入的写入门 beta_t"],
-    ["Log-parameterized learned decay rate alpha", "以对数参数化的学习衰减率 alpha"],
-    ["Output projection", "输出投影"],
-    ["Reshape to multi-head format", "重塑为多头格式"],
-    ["L2-Normalization across head dimension", "沿头维度进行 L2 归一化"],
-    ["L2-Normalization across feature dimension", "沿特征维度进行 L2 归一化"],
-    ["Expand Q/K from 16 to 48 heads to match V (1:3 GQA mapping)", "将 Q/K 从 16 个头扩展至 48 个头以匹配 V（1:3 GQA 映射）"],
-    ["Gates: write strength beta in (0, 2), decay alpha in (0, 1)", "门控：写入强度 beta ∈ (0, 2)，衰减 alpha ∈ (0, 1)"],
-    ["Initialize recurrent associative state", "初始化循环关联状态"],
-    [": S in R^[B, H_v, d_h, d_h]", "：S ∈ R^[B, H_v, d_h, d_h]"],
-    ["Stepwise / Chunked delta-rule associative scan", "逐步 / 分块 Delta 规则关联扫描"],
-    ["Error prediction", "误差预测"],
-    ["Predict retrieved value", "预测检索值"],
-    ["Delta state update", "Delta 状态更新"],
-    ["Associative delta update", "关联 Delta 更新"],
-    ["Readout", "读取"],
-    ["Gated Full Self-Attention with 3D MRoPE and Sigmoid Output Gate", "采用 3D MRoPE 和 Sigmoid 输出门的门控全自注意力"],
-    ["Gated Full Attention with 3D Multimodal RoPE and Sigmoid Gate", "采用 3D 多模态 RoPE 和 Sigmoid 门的门控全注意力"],
-    ["Partial rotary embedding across 3D coordinates", "跨 3D 坐标的部分旋转嵌入"],
-    ["Channels 0..63 receive rotary phase; channels 64..255 remain unmodified", "通道 0..63 接收旋转相位；通道 64..255 保持不变"],
-    ["Fallback 1D linear positions", "回退到 1D 线性位置"],
-    ["Apply 3D Multimodal Rotary Position Embedding", "应用 3D 多模态旋转位置嵌入"],
-    ["Handle KV-cache concatenation for autoregressive inference", "处理自回归推理中的 KV 缓存拼接"],
-    ["Grouped-Query Attention (GQA 24:4 -> 6:1 repeat)", "分组查询注意力（GQA 24:4 -> 6:1 重复）"],
-    ["Transpose to [B, H, T, d_h] for Scaled Dot-Product Attention", "转置为 [B, H, T, d_h] 以执行缩放点积注意力"],
-    ["Output Sigmoid Gate modulation", "输出 Sigmoid 门调制"],
-    ["1 of 16 Super-Blocks containing 3x Gated DeltaNet + 1x Gated Attention layers.", "16 个超级块之一，包含 3× 门控 DeltaNet 层 + 1× 门控注意力层。"],
-    ["Total layers per super-block: 4. Total model layers: 16 * 4 = 64.", "每个超级块共 4 层。模型总层数：16 * 4 = 64。"],
-    ["3 Linear-Attention DeltaNet sub-layers", "3 个线性注意力 DeltaNet 子层"],
-    ["1 Full-Attention Gated sub-layer", "1 个全注意力门控子层"],
-    ["Pass through 3 Gated DeltaNet layers", "通过 3 个门控 DeltaNet 层"],
-    ["Pass through 1 Gated Attention layer", "通过 1 个门控注意力层"],
-    ["Multi-Token Prediction Speculative Decoding Head", "多词元预测推测解码头"],
-    ["K lightweight draft blocks (norm + linear) share ONE dedicated vocab", "K 个轻量草稿块（归一化 + 线性层）共享一个专用词表"],
-    ["projection: params ≈ K·d² + d·V ≈ 1.32B at full scale.", "投影：完整规模下参数量约为 K·d² + d·V ≈ 1.32B。"],
-    ["Predicts K future draft tokens in parallel during training and inference.", "在训练和推理期间并行预测未来 K 个草稿词元。"],
-    ["Complete Qwen 3.8-27B Language Model", "完整的 Qwen 3.8-27B 语言模型"],
-    ["Assembled from 16 Hybrid Super-Blocks (64 layers total), RMSNorm,", "由 16 个混合超级块（共 64 层）、RMSNorm、"],
-    ["Language Modeling Head, and MTP Speculative Prediction Modules.", "语言模型头和 MTP 推测预测模块组成。"],
-    ["Token Embeddings (248,320 padded vocabulary)", "词元嵌入（填充后的 248,320 词表）"],
-    ["n_layers/4 Super-blocks = 64 layers at full scale (48 DeltaNet + 16 Gated Attention)", "n_layers/4 个超级块 = 完整规模下 64 层（48 个 DeltaNet + 16 个门控注意力）"],
-    ["Final LayerNorm & Untied LM Head", "最终 LayerNorm 与非绑定 LM 头"],
-    ["Multi-Token Prediction Head (K=2 drafts)", "多词元预测头（K=2 个草稿）"],
-    ["Pass through all 16 super-blocks (64 layers total)", "通过全部 16 个超级块（共 64 层）"],
-    ["Gated DeltaNet Layer: O(T) associative linear attention", "门控 DeltaNet 层：O(T) 关联线性注意力"],
-    ["Key Properties:", "关键特性："],
-    ["L2 normalization across Q and K prevents gradient explosions.", "对 Q 和 K 进行 L2 归一化可防止梯度爆炸。"],
-    ["Input-dependent beta_t in (0, 2) controls associative write strength.", "依赖输入的 beta_t ∈ (0, 2) 控制关联写入强度。"],
-    ["Parameterized alpha decay rate controls forgetting horizon.", "参数化的 alpha 衰减率控制遗忘范围。"],
-    ["Recurrent matrix state S in R^[B, H_v, d_h, d_h] remains constant in memory.", "R^[B, H_v, d_h, d_h] 中的循环矩阵状态 S 占用固定内存。"],
-    ["1D fallback or 3D MRoPE rotary frequencies", "1D 回退或 3D MRoPE 旋转频率"],
-    ["GQA repeat", "GQA 重复"],
-    ["GQA (24 Q heads : 4 KV heads = 6:1 compression ratio).", "GQA（24 个 Q 头 : 4 个 KV 头 = 6:1 压缩比）。"],
-    ["MRoPE [11, 11, 10] splits rotary channels across Temporal/Height/Width coordinates.", "MRoPE [11, 11, 10] 按时间/高度/宽度坐标划分旋转通道。"],
-    ["Partial RoPE (channels 0..63 rotated, 64..255 untouched).", "部分 RoPE（旋转通道 0..63，通道 64..255 保持不变）。"],
-    ["Sigmoid output gate σ(x W_g) softly suppresses attention artifacts.", "Sigmoid 输出门 σ(x W_g) 柔和地抑制注意力伪影。"],
-    ["RMSNorm with learned scale parameter", "采用可学习缩放参数的 RMSNorm"],
-    ["SwiGLU with 3.4× expansion ratio", "扩展比为 3.4× 的 SwiGLU"],
-    ["1 of 16 Super-Blocks: 3 DeltaNet Layers + 1 Gated Attention Layer", "16 个超级块之一：3 个 DeltaNet 层 + 1 个门控注意力层"],
-    ["Multi-Token Prediction Heads for K-step speculation", "用于 K 步推测的多词元预测头"],
-    ["K lightweight draft blocks share ONE dedicated vocab projection", "K 个轻量草稿块共享一个专用词表投影"],
-    ["(params ≈ K·d² + d·V ≈ 1.32B at full scale). Allows generating 2–3", "（完整规模下参数量约为 K·d² + d·V ≈ 1.32B）。可在自回归解码期间"],
-    ["tokens per verification step during autoregressive decoding.", "每个验证步骤生成 2–3 个词元。"],
-    ["Returns [draft_1_logits, draft_2_logits]", "返回 [draft_1_logits, draft_2_logits]"],
-    ["Qwen 3.8-27B From Scratch Architecture Verification", "Qwen 3.8-27B 从零实现架构验证"],
-    ["Instantiate toy scale test configuration", "实例化小规模测试配置"],
-    ["2 super-blocks", "2 个超级块"],
-    ["Initializing model:", "正在初始化模型："],
-    ["layers (", "层（"],
-    ["hybrid pattern)...", "混合模式）……"],
-    ["Model initialized successfully! Parameter count:", "模型初始化成功！参数数量："],
-    ["elements.", "个。"],
-    ["Test batch forward pass", "测试批量前向传播"],
-    ["Running forward pass with batch size B=", "正在运行前向传播，批大小 B="],
-    ["sequence length T=", "序列长度 T="],
-    ["Forward pass completed in", "前向传播完成，用时"],
-    ["Primary LM Logits shape:", "主 LM logits 形状："],
-    ["Expected", "预期"],
-    ["MTP Draft Logits shape:", "MTP 草稿 logits 形状："],
-    ["draft heads", "个草稿头"],
-    ["Shape mismatch!", "形状不匹配！"],
-    ["[SUCCESS] All tensor shape assertions passed cleanly! Architecture is valid.", "[成功] 所有张量形状断言均已通过！架构有效。"],
-    ["Multi-Token Prediction", "多词元预测"],
-    ["Partial RoPE", "部分 RoPE"]
-  ];
-
-  function translatePythonProse(src) {
-    return PYTHON_PROSE_TRANSLATIONS.reduce(
-      (text, [from, to]) => text.replaceAll(from, to),
-      src
-    );
-  }
-
   // Python sources live beside the studio markup as <script type="text/plain" data-py="…">
   // blocks (_parts/05_bench_code_end.html). text/plain is never executed by browsers and
   // needs no fetch(), so file:// keeps working; textContent is exact because the Python
@@ -4342,7 +4228,7 @@ function stackSegments(pairs) {
   document.querySelectorAll('script[type="text/plain"][data-py]').forEach(el => {
     const f = CODE_FILES[el.dataset.py];
     if (!f) return;
-    f.code = translatePythonProse(el.textContent.replace(/^\n/, "").replace(/\n$/, ""));
+    f.code = el.textContent.replace(/^\n/, "").replace(/\n$/, "");
   });
 
   let activeFile = "full";
