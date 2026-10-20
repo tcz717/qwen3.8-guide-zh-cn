@@ -1,46 +1,46 @@
 <!-- ============================================================ 06 FFN + RESIDUAL -->
 <section id="ffn">
-  <div class="sec-tag">06 · FFN &amp; the residual stream</div>
-  <h2>Where 62% of parameters and 71% of arithmetic reside</h2>
-  <p class="lead">Every one of the 64 hybrid layers terminates with an identical SwiGLU Feed-Forward Network (FFN) of intermediate width $d_{ff} = 17,408$. Carrying 17.11 billion parameters, the FFN blocks form the primary factual associative storage of the network, reading from and writing to a 5,120-dimensional pre-norm residual communication bus.</p>
+  <div class="sec-tag">06 · FFN 与残差流</div>
+  <h2>62% 的参数与 71% 的运算所在之处</h2>
+  <p class="lead">64 个混合层都以相同的 SwiGLU 前馈网络（FFN）结束，其中间宽度为 $d_{ff} = 17,408$。FFN 块拥有 171.1 亿参数，是网络主要的事实关联存储，并从 5,120 维预归一化残差通信总线读取和写入。</p>
 
-  <h3>The FFN as a per-position key–value memory</h3>
-  <p>The labor division established in §03 is exact: the <em>mixer</em> (DeltaNet or attention) moves information <em>across</em> positions and never looks at two tokens through the same matrix; the <em>FFN</em> transforms each position <em>independently</em>, with no knowledge of its neighbours. A 5,120-vector $\mathbf{x}_l$ arrives at the FFN, and a new 5,120-vector leaves, one token at a time, through three matrices that are shared across all positions but applied per-token. Where the mixer answers "what does this token <em>know about</em>?", the FFN answers "what does this token <em>mean</em>, given what it now carries?"</p>
-  <p>The clearest way to read eq.(8) is not as a nonlinear MLP but as an <em>associative memory</em> in the sense of Geva et al. Reshape the up-projection as $17,408$ row-vectors $\mathbf{k}_i$ (the $i$-th row of $W_{\text{up}}$) and the down-projection as $17,408$ column-vectors $\mathbf{v}_i$ (the $i$-th column of $W_{\text{down}}$). Each hidden unit $i$ computes a scalar address $a_i = \mathbf{x} \cdot \mathbf{k}_i$, passes it through an activation, and votes $\mathbf{v}_i$ into the output:</p>
-  <div class="math" aria-label="FFN read as a key-value memory: each of the 17408 hidden units is a (key, value) pair; the input dot-products against the key, the activation gates the vote, and the values sum back to d_model.">
-    \text{FFN}(\mathbf{x}) = \sum_{i=1}^{17,408} \mathbf{v}_i \cdot \phi\!\left(\mathbf{x} \cdot \mathbf{k}_i\right) \quad \text{with } \phi = \text{SwiGLU gate},\; \mathbf{k}_i \in \mathbb{R}^{5120},\; \mathbf{v}_i \in \mathbb{R}^{5120}
+  <h3>作为逐位置键值记忆的 FFN</h3>
+  <p>§03 确立的分工十分明确：<em>混合器</em>（DeltaNet 或注意力）在<em>不同位置之间</em>移动信息，绝不会让两个词元通过同一个矩阵被共同处理；<em>FFN</em> 则完全不了解相邻位置，<em>独立</em>变换每个位置。一个 5,120 维向量 $\mathbf{x}_l$ 进入 FFN，经由三个位于所有位置间共享、但逐词元应用的矩阵，输出新的 5,120 维向量。混合器回答“这个词元<em>知道什么</em>？”，FFN 则回答“根据当前携带的信息，这个词元<em>意味着什么</em>？”</p>
+  <p>理解式 (8) 最清楚的方式不是把它看作非线性 MLP，而是 Geva 等人所说的<em>联想记忆</em>。将上投影视为 $17,408$ 个行向量 $\mathbf{k}_i$，下投影视为 $17,408$ 个列向量 $\mathbf{v}_i$。每个隐藏单元 $i$ 计算标量地址 $a_i = \mathbf{x} \cdot \mathbf{k}_i$，经过激活后把 $\mathbf{v}_i$ 投票到输出中：</p>
+  <div class="math" aria-label="将 FFN 视作键值记忆：17408 个隐藏单元各是一对键和值；输入与键点积，激活函数门控投票，值再求和回到 d_model。">
+    \text{FFN}(\mathbf{x}) = \sum_{i=1}^{17,408} \mathbf{v}_i \cdot \phi\!\left(\mathbf{x} \cdot \mathbf{k}_i\right) \quad \text{其中 } \phi = \text{SwiGLU 门控},\; \mathbf{k}_i \in \mathbb{R}^{5120},\; \mathbf{v}_i \in \mathbb{R}^{5120}
   </div>
-  <p>The FFN, not the mixer, holds the network's <em>factual</em> storage: each $(\mathbf{k}_i, \mathbf{v}_i)$ pair is a memory slot that fires when the incoming residual stream matches its key, contributing its value to the bus. With $17,408$ slots per layer and $64$ layers, that is $1.11$ million independent memory records, the substrate on which facts are stored during pretraining and recalled at inference. The mixer's job is to deliver the right $\mathbf{x}$ to the right layer so the right slots fire.</p>
-  <p>The intermediate width $d_{ff} = 17,408 \approx 3.4 \cdot d_{\text{model}}$ is the network's single largest capacity lever. Unlike head counts or layer depth, it scales storage <em>and</em> per-token compute linearly, and it is where the bulk of the 27.58 B parameters actually live. The classic transformer uses a $4\times$ expansion; Qwen 3.8 uses $3.4\times$ because the SwiGLU gate recovers enough expressivity per unit that a smaller multiple suffices, as the next subsection shows, saving parameters that are instead spent on the 64-layer depth and the 5,120-wide bus.</p>
+  <p>网络的<em>事实</em>存储位于 FFN 而非混合器：每个 $(\mathbf{k}_i, \mathbf{v}_i)$ 对都是记忆槽；输入残差流匹配其键时，记忆槽触发并把值贡献给总线。每层 $17,408$ 个槽、共 $64$ 层，即 111 万条独立记忆记录；事实在预训练中存入其中，在推理时被召回。混合器负责把正确的 $\mathbf{x}$ 送往正确层，使正确记忆槽触发。</p>
+  <p>中间宽度 $d_{ff} = 17,408 \approx 3.4 \cdot d_{\text{model}}$ 是网络最大的容量杠杆，线性扩展存储<em>同时</em>扩展逐词元计算，也是 275.8 亿参数的主要所在。经典 Transformer 使用 $4\times$ 扩展；SwiGLU 门控提高了每个单元的表达力，使 Qwen 3.8 可采用 $3.4\times$，把节省的参数用于 64 层深度和 5,120 宽总线。</p>
 
   <!-- SwiGLU Mathematical Derivation -->
-  <div class="math" aria-label="Equation 8: SwiGLU FFN. Output is the down projection of the elementwise product of the gate projection and SiLU of the up projection. Gate and up weight matrices are 5120 by 17408, down is 17408 by 5120; d_ff is 17408 (about 3.4 times d_model, rounded to a multiple of 256), giving 267 million FFN parameters per layer and 17.11 billion over 64 layers.">
-    \text{FFN}(x) = \left( (x W_{\text{gate}}) \odot \text{SiLU}(x W_{\text{up}}) \right) W_{\text{down}} \quad \text{where } \text{SiLU}(z) = z \cdot \sigma(z)&nbsp;&nbsp;<span class="eq-no">(8)</span><br>
-    W_{\text{gate}}, W_{\text{up}} \in \mathbb{R}^{5120 \times 17408} \quad ; \quad W_{\text{down}} \in \mathbb{R}^{17408 \times 5120} \quad ; \quad d_{ff} = 17,408 \approx 3.4 \cdot d_{\text{model}} \;\; (\text{rounded to a multiple of } 256)<br>
-    \text{Params / Layer} = 3 \times (5,120 \times 17,408) = 267.39\text{M} \implies 64 \text{ Layers} = \mathbf{17.11\text{B Parameters}}
+  <div class="math" aria-label="式 8：SwiGLU FFN。输出是门控投影与上投影经 SiLU 后逐元素乘积的下投影。门控和上投影权重矩阵为 5120×17408，下投影为 17408×5120；d_ff 为 17408，约为 d_model 的 3.4 倍并取整到 256 的倍数；每层有 2.67 亿 FFN 参数，64 层共 171.1 亿。">
+    \text{FFN}(x) = \left( (x W_{\text{gate}}) \odot \text{SiLU}(x W_{\text{up}}) \right) W_{\text{down}} \quad \text{其中 } \text{SiLU}(z) = z \cdot \sigma(z)&nbsp;&nbsp;<span class="eq-no">(8)</span><br>
+    W_{\text{gate}}, W_{\text{up}} \in \mathbb{R}^{5120 \times 17408} \quad ; \quad W_{\text{down}} \in \mathbb{R}^{17408 \times 5120} \quad ; \quad d_{ff} = 17,408 \approx 3.4 \cdot d_{\text{model}} \;\; (\text{取整到 } 256 \text{ 的倍数})<br>
+    \text{每层参数} = 3 \times (5,120 \times 17,408) = 267.39\text{M} \implies 64 \text{ 层} = \mathbf{17.11\text{B 参数}}
   </div>
 
-  <h3>Why SwiGLU: a gate per unit kills the dead-unit problem</h3>
-  <p>To see what eq.(8) buys over a plain activation, walk down the ladder of FFN transfer functions that Fig. 3 plots. A <strong>ReLU</strong> unit fires as $\max(0, \mathbf{x}\cdot\mathbf{k}_i)$: the unit is either fully on or fully off, and once its pre-activation $\mathbf{x}\cdot\mathbf{k}_i$ is pushed negative by gradient updates, it receives zero gradient and dies permanently, a wasted memory slot. <strong>GELU</strong> and <strong>SiLU</strong> ($z\sigma(z)$) soften this: the transition through zero is smooth, so a "barely off" unit still leaks a small gradient and can recover. But in all three, the on/off decision is a fixed function of the <em>same</em> dot product that produces the value: the unit cannot be silenced for one input and active for another that happens to land at the same address.</p>
-  <p>The Gated Linear Unit (GLU) breaks this coupling by introducing a <em>second</em> projection, the gate. Instead of $\phi(\mathbf{x}\cdot\mathbf{k}_i)\,\mathbf{v}_i$ with a fixed $\phi$, SwiGLU computes</p>
-  <div class="math" aria-label="SwiGLU unit i: the gate projection x·g_i decides how much value v_i contributes, independently of the up projection x·k_i that sets the magnitude. SiLU is applied to the up branch.">
-    \text{unit}_i(\mathbf{x}) = \underbrace{(\mathbf{x}\cdot\mathbf{g}_i)}_{\text{gate } \in \mathbb{R}} \;\cdot\; \underbrace{\text{SiLU}(\mathbf{x}\cdot\mathbf{k}_i)}_{\text{value } \in \mathbb{R}} \;\cdot\; \mathbf{v}_i
+  <h3>为何使用 SwiGLU：逐单元门控消除“死亡单元”问题</h3>
+  <p>要理解式 (8) 相比普通激活带来了什么，可沿着图 3 所绘的 FFN 传递函数逐一观察。<strong>ReLU</strong> 单元按 $\max(0,\mathbf{x}\cdot\mathbf{k}_i)$ 触发：单元要么完全开启，要么完全关闭；一旦梯度更新把预激活 $\mathbf{x}\cdot\mathbf{k}_i$ 推到负值，它就会收到零梯度并永久死亡，浪费一个记忆槽。<strong>GELU</strong> 与 <strong>SiLU</strong>（$z\sigma(z)$）缓解了这一问题：过零转换是平滑的，因此“刚刚关闭”的单元仍会泄露少量梯度并可恢复。但在这三者中，开关决策都是产生值的<em>同一个</em>点积的固定函数：单元无法对一个输入静默，却对恰好落在同一地址的另一个输入激活。</p>
+  <p>门控线性单元（GLU）引入<em>第二个</em>投影——门控——来解除这种耦合。SwiGLU 不再使用固定 $\phi$ 的 $\phi(\mathbf{x}\cdot\mathbf{k}_i)\,\mathbf{v}_i$，而是计算</p>
+  <div class="math" aria-label="SwiGLU 单元 i：门控投影 x·g_i 独立于设定幅值的上投影 x·k_i，决定值 v_i 的贡献量；SiLU 应用于上分支。">
+    \text{unit}_i(\mathbf{x}) = \underbrace{(\mathbf{x}\cdot\mathbf{g}_i)}_{\text{门控 } \in \mathbb{R}} \;\cdot\; \underbrace{\text{SiLU}(\mathbf{x}\cdot\mathbf{k}_i)}_{\text{值 } \in \mathbb{R}} \;\cdot\; \mathbf{v}_i
   </div>
-  <p>Now the on/off decision and the value magnitude come from <em>different</em> directions in the 5,120-dim input space: the gate vector $\mathbf{g}_i$ is learned independently of the key $\mathbf{k}_i$. A unit can be wide-open for inputs that match $\mathbf{k}_i$ but gated off for inputs that match $\mathbf{g}_i$ in a conflicting direction: a data-dependent, second-order filter that no fixed activation can express. Because the gate is its own $5120 \times 17408$ matrix, this expressivity costs one extra projection (the third in eq.(8)), which is the price SwiGLU pays and the reason the expansion ratio can drop from $4\times$ to $3.4\times$ without losing capacity.</p>
-  <p>Two consequences fall out of this gating. First, dead units largely disappear: even when $\mathbf{x}\cdot\mathbf{k}_i < 0$ would silence a ReLU slot, the gate $\mathbf{x}\cdot\mathbf{g}_i$ can still route a non-zero contribution, so the gradient through $\mathbf{k}_i$ and $\mathbf{g}_i$ rarely vanishes simultaneously. Second, the per-unit output is now a product of two input-dependent scalars, so the FFN can represent multiplicative interactions between features, something a plain MLP can only approximate wastefully through its width. The activation explorer below sweeps $x$ and shows the resulting non-monotonic, self-gated transfer surface.</p>
+  <p>开关决策和值幅度如今来自 5,120 维输入空间的<em>不同</em>方向：门控向量 $\mathbf{g}_i$ 独立于键 $\mathbf{k}_i$ 学习。一个单元可以对匹配 $\mathbf{k}_i$ 的输入完全开启，却对沿冲突方向匹配 $\mathbf{g}_i$ 的输入关闭；这是固定激活无法表达的数据依赖二阶滤波器。由于门控拥有自己的 $5120 \times 17408$ 矩阵，这种表达力要付出一个额外投影（式 (8) 中的第三个投影）；这正是 SwiGLU 的代价，也解释了为何扩展率可从 $4\times$ 降至 $3.4\times$ 而不损失容量。</p>
+  <p>这种门控带来两项结果。第一，死亡单元基本消失：即使 $\mathbf{x}\cdot\mathbf{k}_i<0$ 会让 ReLU 槽静默，门控 $\mathbf{x}\cdot\mathbf{g}_i$ 仍可路由非零贡献，因此穿过 $\mathbf{k}_i$ 与 $\mathbf{g}_i$ 的梯度很少同时消失。第二，逐单元输出现在是两个输入相关标量的乘积，因此 FFN 能表示特征间的乘法交互；普通 MLP 只能通过浪费宽度来近似这种交互。下方激活浏览器扫描 $x$，展示由此产生的非单调、自门控传递曲面。</p>
 
   <!-- Widget 1: Interactive SwiGLU Activation Explorer (#w-ffn) -->
   <div class="widget" id="w-ffn">
-    <div class="w-head"><span class="w-title">SwiGLU gating dynamics &amp; activation transfer explorer</span><span class="w-tag">activation physics</span></div>
-    <div class="w-desc">Continuous transfer functions of ReLU, GELU, and SiLU alongside the gated SwiGLU unit $(x W_{\text{gate}}) \odot \text{SiLU}(x W_{\text{up}})$: smooth, non-monotonic channel filtering across 17,408 hidden units, plotted for a swept input activation $x$.</div>
+    <div class="w-head"><span class="w-title">SwiGLU 门控动力学与激活传递浏览器</span><span class="w-tag">激活机理</span></div>
+    <div class="w-desc">比较 ReLU、GELU、SiLU 与门控 SwiGLU 单元 $(x W_{\text{gate}}) \odot \text{SiLU}(x W_{\text{up}})$ 的连续传递函数：扫描输入激活 $x$，绘制 17,408 个隐藏单元上的平滑非单调通道滤波。</div>
     
     <div class="widget-visual">
-      <svg id="ffnSvg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plot of ReLU, GELU, SiLU activation curves plus a gated SiLU-unit transfer function"></svg>
+      <svg id="ffnSvg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ReLU、GELU、SiLU 激活曲线及门控 SiLU 单元传递函数图"></svg>
     </div>
-    <div class="fig-cap"><b>Fig. 3</b> — Activation transfer functions: ReLU (hard zero), GELU (smooth Gaussian-gated), and SiLU (self-gated z·σ(z)) alongside the SwiGLU unit output (x W_gate) ⊙ SiLU(x W_up).</div>
+    <div class="fig-cap"><b>图 3</b> — 激活传递函数：ReLU（硬置零）、GELU（平滑高斯门控）、SiLU（自门控 z·σ(z)）与 SwiGLU 单元输出 (x W_gate) ⊙ SiLU(x W_up)。</div>
     <div class="w-controls">
       <div class="w-ctl" style="flex:1">
-        <label for="ffnX">input activation magnitude (x ∈ [-6.0, +6.0])</label>
+        <label for="ffnX">输入激活幅度（x ∈ [-6.0, +6.0]）</label>
         <input type="range" id="ffnX" min="-6" max="6" step="0.1" value="0">
       </div>
     </div>
@@ -49,174 +49,152 @@
 
   <!-- Widget 2: Residual Bus Communication & RMSNorm Variance Tracker (#w-residual-bus) -->
   <div class="widget" id="w-residual-bus">
-    <div class="w-head"><span class="w-title">Residual bus signal propagation &amp; RMSNorm variance tracker</span><span class="w-tag">signal propagation</span></div>
-    <div class="w-desc">Activation propagation through the 64-layer residual communication bus: Pre-RMSNorm arbitration holds stream variance at ≈1.0 across all 48 DeltaNet and 16 Attention updates, while an unnormalized stream diverges exponentially.</div>
+    <div class="w-head"><span class="w-title">残差总线信号传播与 RMSNorm 方差跟踪器</span><span class="w-tag">信号传播</span></div>
+    <div class="w-desc">激活在 64 层残差通信总线中的传播：预 RMSNorm 仲裁使 48 次 DeltaNet 和 16 次注意力更新中的流方差保持在 ≈1.0，而未归一化流呈指数发散。</div>
     
     <div class="packing-ctl">
-      <div class="seg" id="resBusNormSeg" role="group" aria-label="RMSNorm bus mode">
-        <button data-mode="prenorm" class="on" aria-pressed="true">Pre-RMSNorm Bus Arbitration (Stable Var ≈ 1.0 · Active)</button>
-        <button data-mode="unnormed" aria-pressed="false">Unnormalized Stream (Exponential Explosion Bug)</button>
+      <div class="seg" id="resBusNormSeg" role="group" aria-label="RMSNorm 总线模式">
+        <button data-mode="prenorm" class="on" aria-pressed="true">预 RMSNorm 总线仲裁（方差稳定在 ≈1.0 · 已启用）</button>
+        <button data-mode="unnormed" aria-pressed="false">未归一化流（指数爆炸缺陷）</button>
       </div>
     </div>
 
     <div class="loss-display" style="margin-top:var(--s-3)">
       <div class="loss-plot-wrap">
-        <svg id="resBusSvg" viewBox="0 0 560 220" role="img" aria-label="Residual stream variance growth across 64 layers"></svg>
+        <svg id="resBusSvg" viewBox="0 0 560 220" role="img" aria-label="残差流方差在 64 层中的增长"></svg>
       </div>
-      <div class="fig-cap"><b>Fig. 4</b> — Residual bus variance across 64 layers: Pre-RMSNorm keeps the stream at var ≈ 1.0; an unnormalized stream diverges exponentially after ~20 layers.</div>
+      <div class="fig-cap"><b>图 4</b> — 64 层中的残差总线方差：预 RMSNorm 将流方差保持在 ≈1.0；未归一化流在约 20 层后指数发散。</div>
       <div class="loss-stats" id="resBusStats" aria-live="polite"></div>
     </div>
   </div>
 
-  <h3>The 17.11 billion: where the parameters actually live</h3>
-  <p>Before the FLOP table, account for the parameters themselves. Every figure in Table 5 falls out of one multiplication. Each FFN holds three matrices: the gate $W_{\text{gate}}$, the up $W_{\text{up}}$, and the down $W_{\text{down}}$. The first two lift the 5,120-dim bus up to the 17,408-wide hidden store; the third projects it back down. In BF16, that is</p>
-  <div class="math" aria-label="Per-layer FFN parameter count: three projections of 5120 by 17408 each, giving 267.39 million per layer and 17.11 billion over 64 layers — 62 percent of the 27.58B total.">
-    \underbrace{3 \times (5{,}120 \times 17{,}408)}_{\text{gate + up + down}} = 267.39\text{M / layer} \;\;\xrightarrow{\times 64}\;\; 17.11\text{B} \;=\; 62.1\% \text{ of } 27.58\text{B}
+  <h3>171.1 亿参数究竟位于何处</h3>
+  <p>先核算参数本身。表 5 的数字都源于一次乘法。每个 FFN 有门控 $W_{\text{gate}}$、上投影 $W_{\text{up}}$ 和下投影 $W_{\text{down}}$ 三个矩阵。前两者把 5,120 维总线提升到 17,408 宽隐藏存储，第三个再投影回来。在 BF16 下即</p>
+  <div class="math" aria-label="逐层 FFN 参数量：三个 5120×17408 投影，每层 2.6739 亿，64 层共 171.1 亿，占总计 275.8 亿的 62%。">
+    \underbrace{3 \times (5{,}120 \times 17{,}408)}_{\text{门控 + 上投影 + 下投影}} = 267.39\text{M / 层} \;\;\xrightarrow{\times 64}\;\; 17.11\text{B} \;=\; 27.58\text{B 的 } 62.1\%
   </div>
-  <p>Three observations worth holding onto. <em>(i)</em> The extra gate matrix is the SwiGLU tax: a vanilla 2-matrix FFN of the same width would cost $178.3$M/layer; SwiGLU's third projection adds $89.1$M, and in return buys the per-unit gating that lets the width shrink from $4\times$ to $3.4\times$, a net parameter win. <em>(ii)</em> The width $17,408$ is rounded to a multiple of $256$ for the same Tensor-Core MMA-tile reason as the vocabulary padding in §02: a $256$-wide tile keeps the down-projection's GEMM dimensions clean on Hopper/Blackwell, so the "wasted" $17,408 - 17,408$-ish slots are not waste but alignment headroom. <em>(iii)</em> Because the FFN is the only sub-layer present on <em>all 64</em> layers (the mixers split 48/16), its per-layer parameter mass dominates the total: $267$M $\times$ $64$ swamps the mixers' $83.9$M $\times$ $48$ and $104.9$M $\times$ $16$ combined, which is the structural reason the FFN is both the factual store <em>and</em> the arithmetic center.</p>
+  <p>三点值得注意。<em>(i)</em> 额外门控矩阵是 SwiGLU 的代价：同宽普通双矩阵 FFN 每层需 $178.3$M 参数；SwiGLU 的第三个投影增加 $89.1$M，换来逐单元门控，使宽度可从 $4\times$ 降到 $3.4\times$，最终仍节省参数。<em>(ii)</em> $17,408$ 取整到 $256$ 的倍数，原因与 §02 的词表填充相同，都是为了适配 Tensor Core MMA 分块：256 宽分块使下投影的 GEMM 维度在 Hopper/Blackwell 上保持规整，因此看似<em>“浪费”</em>的对齐槽并非浪费，而是对齐余量。<em>(iii)</em> FFN 是唯一存在于<em>全部 64 层</em>的子层（两类混合器按 48/16 分布），因此其逐层参数量占据总量主导：$267$M $\times$ $64$ 远超混合器的 $83.9$M $\times$ $48$ 与 $104.9$M $\times$ $16$ 之和。这正是 FFN 同时成为事实存储和运算中心的结构性原因。</p>
 
   <!-- FLOP Accounting Breakdown -->
-  <h3>Arithmetic FLOP accounting across the forward pass</h3>
-  <p>Per token, per layer, matrix multiplication FLOPs equal $2 \times \text{parameters}$. In Qwen 3.8, arithmetic is heavily dominated by FFN tensor-core operations:</p>
+  <h3>前向传播中的 FLOP 运算核算</h3>
+  <p>每个词元、每层的矩阵乘法 FLOP 等于 $2 \times \text{参数量}$。Qwen 3.8 的运算主要由 FFN Tensor Core 操作占据：</p>
 
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 5 — Per-token FLOP accounting:</strong> sub-layer parameter count, MACs/token/layer, 64-layer share of total FLOPs, and hardware bottleneck across the 64-layer forward pass.</caption>
+      <caption><strong>表 5 — 逐词元 FLOP 核算：</strong>64 层前向传播中各子层的参数量、MAC/词元/层、总 FLOP 占比及硬件瓶颈。</caption>
       <thead>
         <tr>
-          <th scope="col">Sub-Layer Component</th>
-          <th scope="col" class="r">Parameters / Layer</th>
-          <th scope="col" class="r">MACs / Token / Layer</th>
-          <th scope="col" class="r">Total 64-Layer Compute</th>
-          <th scope="col">Hardware Bottleneck</th>
+          <th scope="col">子层组件</th><th scope="col" class="r">参数/层</th><th scope="col" class="r">MAC/词元/层</th><th scope="col" class="r">64 层总计算占比</th><th scope="col">硬件瓶颈</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>SwiGLU FFN</strong> (All 64 Layers)</td>
+          <td><strong>SwiGLU FFN</strong>（全部 64 层）</td>
           <td class="r">267.4M</td>
           <td class="r hl">267.4M MACs</td>
-          <td class="r good"><strong>71.0% of total FLOPs</strong></td>
-          <td>Tensor Core Compute Bound</td>
+          <td class="r good"><strong>总 FLOP 的 71.0%</strong></td><td>受 Tensor Core 算力限制</td>
         </tr>
         <tr>
-          <td><strong>Gated DeltaNet Mixer</strong> (48 Layers)</td>
+          <td><strong>门控 DeltaNet 混合器</strong>（48 层）</td>
           <td class="r">83.9M</td>
           <td class="r">83.9M MACs</td>
-          <td class="r">16.7% of total FLOPs</td>
-          <td>Associative State Memory Bandwidth</td>
+          <td class="r">总 FLOP 的 16.7%</td><td>关联状态内存带宽</td>
         </tr>
         <tr>
-          <td><strong>Gated Attention Mixer</strong> (16 Layers)</td>
+          <td><strong>门控注意力混合器</strong>（16 层）</td>
           <td class="r">104.9M</td>
           <td class="r">104.9M MACs</td>
-          <td class="r">7.0% of total FLOPs</td>
-          <td>FlashAttention SRAM Memory Bound</td>
+          <td class="r">总 FLOP 的 7.0%</td><td>受 FlashAttention SRAM 带宽限制</td>
         </tr>
         <tr>
-          <td><strong>Untied LM Head</strong> (Final Layer)</td>
+          <td><strong>非绑定 LM 头</strong>（最终层）</td>
           <td class="r">1.27B</td>
           <td class="r">1.27B MACs</td>
-          <td class="r">5.3% of total FLOPs</td>
-          <td>HBM Bandwidth (Amortized by MTP)</td>
+          <td class="r">总 FLOP 的 5.3%</td><td>HBM 带宽（由 MTP 摊销）</td>
         </tr>
       </tbody>
     </table>
   </div>
 
   <!-- RMSNorm Mathematical Formalism -->
-  <h3>RMSNorm bus arbitration &amp; QK-normalization</h3>
-  <div class="math" aria-label="Equations 9 and 10: RMSNorm divides x by the root mean square of its elements, then multiplies by a learned 5120-dim per-channel gain. The residual block updates x by adding the mixer output on the first norm and the FFN output on the second norm.">
-    \text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^d x_i^2 + \epsilon}} \odot \boldsymbol{\gamma} \quad \text{where } \boldsymbol{\gamma} \in \mathbb{R}^{5120} \text{ is a learned per-channel gain}&nbsp;&nbsp;<span class="eq-no">(9)</span><br>
+  <h3>RMSNorm 总线仲裁与 QK 归一化</h3>
+  <div class="math" aria-label="式 9 和 10：RMSNorm 用 x 除以各元素均方根，再乘以学习到的 5120 维逐通道增益。残差块把首次归一化后的混合器输出和第二次归一化后的 FFN 输出加到 x 上。">
+    \text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^d x_i^2 + \epsilon}} \odot \boldsymbol{\gamma} \quad \text{其中 } \boldsymbol{\gamma} \in \mathbb{R}^{5120} \text{ 是学习到的逐通道增益}&nbsp;&nbsp;<span class="eq-no">(9)</span><br>
     \mathbf{x}_{l+1} = \mathbf{x}_l + \text{Mixer}\left(\text{RMSNorm}_1(\mathbf{x}_l)\right) + \text{FFN}\left(\text{RMSNorm}_2(\mathbf{x}_l)\right)&nbsp;&nbsp;<span class="eq-no">(10)</span>
   </div>
 
-  <h3>Pre-RMSNorm: why the bus stays at variance 1</h3>
-  <p>Eq.(10) is the bus from §01 made concrete, and its <em>pre</em>-norm placement is the single most load-bearing micro-decision in the architecture. Read the two clauses carefully: $\text{RMSNorm}_1$ and $\text{RMSNorm}_2$ sit <em>inside</em> the mixer and FFN arguments, not outside. The sub-layers never see the raw residual $\mathbf{x}_l$; they see a normalized <em>view</em> of it, while the un-normalized $\mathbf{x}_l$ is the thing that accumulates.</p>
-  <p>Contrast this with <em>post</em>-norm, $\mathbf{x}_{l+1} = \text{RMSNorm}(\mathbf{x}_l + \text{Mixer}(\mathbf{x}_l))$. There the norm applied <em>after</em> the residual add rescales the whole stream each layer, so early-layer signal gets progressively shrunk and gradients through the deep stack become unstable. That is the divergence the "Unnormalized Stream" toggle in the variance tracker above dramatizes, but post-norm has its own failure mode where the norm fights the residual. <em>Pre</em>-norm separates the two concerns: the residual stream is free to grow (it is a sum, not a normalised quantity), while every sub-layer reads a unit-scale input and therefore produces a unit-scale output regardless of depth. Each layer contributes a depth-controlled increment; the bus is a running sum of bounded updates rather than a recursively re-scaled vector.</p>
-  <p>The arithmetic behind the widget's stable line is direct. RMSNorm divides by the root-mean-square, so the normalized vector has RMS exactly $1$ (before the learned gain $\boldsymbol{\gamma}$). If a sub-layer's output magnitude is roughly independent of its input magnitude (true for both the $\sigma$-gated attention and the gated SwiGLU, whose gates re-normalize large inputs), then each residual update adds a term of bounded variance, and the stream's variance grows roughly linearly with depth, not exponentially:</p>
-  <div class="math" aria-label="Variance growth under pre-norm: each layer adds a bounded-variance increment, so the stream grows linearly with depth rather than exponentially. The learned gamma rescales per channel; without pre-norm the increments compound.">
-    \text{Var}(\mathbf{x}_{l+1}) \;\approx\; \text{Var}(\mathbf{x}_l) + c \;\;\Rightarrow\;\; \text{Var}(\mathbf{x}_L) \approx L \cdot c \quad \text{(pre-norm, linear in depth)}, \qquad \text{Var}(\mathbf{x}_L) \sim c^{L} \quad \text{(unnormalized, exponential)}
+  <h3>预 RMSNorm：总线方差为何保持为 1</h3>
+  <p>式 (10) 具体化了 §01 的总线，而其<em>预</em>归一化位置是整个架构中最关键的微观决策之一。仔细看两个子句：$\text{RMSNorm}_1$ 与 $\text{RMSNorm}_2$ 位于混合器和 FFN 的参数<em>内部</em>，而非外部。子层永远看不到原始残差 $\mathbf{x}_l$，只看到它的归一化<em>视图</em>；真正持续累积的则是未归一化的 $\mathbf{x}_l$。</p>
+  <p>可将其与<em>后</em>归一化 $\mathbf{x}_{l+1}=\text{RMSNorm}(\mathbf{x}_l+\text{Mixer}(\mathbf{x}_l))$ 对比。后归一化在残差相加<em>之后</em>施加，每层都会重新缩放整条流，导致早期层信号逐渐收缩，穿过深层堆栈的梯度变得不稳定。上方方差跟踪器的“未归一化流”开关展示的是发散现象，而后归一化本身还有归一化与残差相互对抗的故障模式。<em>预</em>归一化把两项职责分开：残差流可自由增长（它是求和，而非归一化量），每个子层则无论深度如何都读取单位尺度输入，从而产生单位尺度输出。每层贡献一个受深度控制的增量；总线是有界更新的运行总和，而非递归重缩放的向量。</p>
+  <p>组件中稳定曲线背后的算术很直接。RMSNorm 除以均方根，因此归一化向量在应用学习增益 $\boldsymbol{\gamma}$ 之前的 RMS 恰为 $1$。如果子层输出幅度大致独立于输入幅度——$\sigma$ 门控注意力和门控 SwiGLU 都满足这一点，因为其门控会重新归一化较大输入——那么每次残差更新只增加一个方差有界项，流方差会随深度近似线性而非指数增长：</p>
+  <div class="math" aria-label="预归一化下的方差增长：每层增加一个方差有界的增量，因此流随深度线性而非指数增长。学习到的 gamma 逐通道重缩放；没有预归一化时增量会复合。">
+    \text{Var}(\mathbf{x}_{l+1}) \;\approx\; \text{Var}(\mathbf{x}_l) + c \;\;\Rightarrow\;\; \text{Var}(\mathbf{x}_L) \approx L \cdot c \quad \text{（预归一化，随深度线性增长）}, \qquad \text{Var}(\mathbf{x}_L) \sim c^{L} \quad \text{（未归一化，指数增长）}
   </div>
-  <p>The tracker shows the unnormalized stream blowing past usable dynamic range around layer 20, since $c^{20}$ for even a modest per-layer gain $c > 1$ is already catastrophic, while the pre-norm line holds at $\text{var} \approx 1$ across all 64. The learned per-channel gain $\boldsymbol{\gamma} \in \mathbb{R}^{5120}$ is the one knob RMSNorm keeps from full LayerNorm: it lets each channel re-scale after normalization, recovering any deliberate anisotropy (some channels should carry more signal than others) without re-introducing the depth instability. RMSNorm drops LayerNorm's <em>mean subtraction</em> because the residual stream is approximately zero-mean by symmetry of the sub-layer outputs, so centering adds compute and a stat that is nearly constant, a small but real saving repeated $129$ times.</p>
-  <p>The bus is the same 5,120-dimensional channel introduced in §01; here it acquires its traffic rules. Each of the 64 layers is a pair of <em>parallel</em> readers of the normalized stream: the mixer reads $\text{RMSNorm}_1(\mathbf{x}_l)$ and routes across positions, the FFN reads $\text{RMSNorm}_2(\mathbf{x}_l)$ and transforms per-position, and both write back additively. Because both readers see the same normalized input and write to the same bus, the mixer and FFN never contend: the mixer decides which positions' vectors arrive at the FFN's slots, the FFN decides what those slots return to the bus, and the residual sum composes the two without interference. The 129 RMSNorms are the arbiters that keep this traffic at unit scale; QK-Norm does the same job inside attention, holding the $256$-dim dot-product logits in a bounded softmax regime so the §05 $\sigma$-gate sees well-scaled probabilities rather than saturated ones.</p>
+  <p>跟踪器显示未归一化流在约第 20 层越过可用动态范围，因为即使每层增益只是略大于 1，$c^{20}$ 也已具有灾难性；预归一化曲线则在全部 64 层保持 $\text{var}\approx1$。学习到的逐通道增益 $\boldsymbol{\gamma}\in\mathbb{R}^{5120}$ 是 RMSNorm 从完整 LayerNorm 保留的唯一调节旋钮：它允许各通道在归一化后重新缩放，恢复有意的各向异性（某些通道本就应携带更多信号），却不重新引入深度不稳定。RMSNorm 省略 LayerNorm 的<em>均值相减</em>，因为子层输出的对称性使残差流近似零均值；中心化只会增加计算和一个几乎恒定的统计量，重复 129 次后便形成虽小却真实的节省。</p>
+  <p>这条总线就是 §01 引入的 5,120 维通道，此处为它规定通信规则。64 层中的每一层都有两个归一化流的<em>并行</em>读取者：混合器读取 $\text{RMSNorm}_1(\mathbf{x}_l)$ 并跨位置路由，FFN 读取 $\text{RMSNorm}_2(\mathbf{x}_l)$ 并逐位置变换，二者都以加法写回。由于两个读取者看到相同的归一化输入并写入同一总线，混合器与 FFN 不会争用：混合器决定哪些位置的向量到达 FFN 槽，FFN 决定这些槽向总线返回什么，残差求和则无干扰地组合二者。129 个 RMSNorm 是让流量保持单位尺度的仲裁器；QK-Norm 在注意力内部执行同样工作，把 256 维未归一化分数（logits）保持在有界 softmax 区间，使 §05 的 $\sigma$ 门控看到尺度适当而非饱和的概率。</p>
 
-  <p>There are exactly <strong>129 RMSNorms</strong> in the core backbone: two per layer (pre-mixer and pre-FFN across 64 layers = 128) plus the final pre-LM head norm. QK-Norm inside all 16 attention layers also keeps dot-product logits $(q^T k / \sqrt{d_k})$ inside a bounded softmax regime, preventing gradient explosions during large-batch pretraining. With the bus stabilised and the FFN's 17.11 B parameters seated as the factual store, the remaining question is how non-text modality enters that bus, which is the vision front-end of §07.</p>
+  <p>核心骨干网络恰有 <strong>129 个 RMSNorm</strong>：64 层各两个（混合器前与 FFN 前，共 128 个），再加最终 LM 头前的一个。16 个注意力层内的 QK-Norm 也把点积得分 $(q^T k / \sqrt{d_k})$ 保持在有界 softmax 区间，防止大批量预训练中的梯度爆炸。总线稳定后，§07 将说明非文本模态如何通过视觉前端进入其中。</p>
 </section>
 
 <!-- ============================================================ 07 VISION -->
 <section id="vision">
-  <div class="sec-tag">07 · Vision front-end &amp; multimodal projection</div>
-  <h2>How continuous pixels become discrete 5,120-dimensional tokens</h2>
-  <p class="lead">Qwen 3.8 is natively multimodal from the ground up: a SigLIP-style Vision Transformer (ViT) converts images and high-fps video frames into dense patch embeddings, a 2-layer MLP projector aligns visual geometry with the language model's 5,120-dim residual stream, and 3D MRoPE assigns spatial-temporal coordinates $[T, H, W]$. Roughly 333 weight tensors (~0.9B parameters) comprise the visual front-end.</p>
+  <div class="sec-tag">07 · 视觉前端与多模态投影</div>
+  <h2>连续像素如何变成离散的 5,120 维词元</h2>
+  <p class="lead">Qwen 3.8 从底层起即原生支持多模态：SigLIP 风格的视觉 Transformer（ViT）将图像和高帧率视频帧转换为密集图像块嵌入，双层 MLP 投影器将视觉几何与语言模型的 5,120 维残差流对齐，三维 MRoPE 则分配时空坐标 $[T, H, W]$。视觉前端约含 333 个权重张量（约 9 亿参数）。</p>
 
-  <h3>The five-stage bridge, from continuous pixels to the residual bus</h3>
-  <p>The backbone built in §§03–06 is a discrete-token machine: it understands only one currency, a 5,120-dimensional vector on the residual bus, addressed by the FFN's 1.11 M key–value slots and routed by the §05 attention. An image, by contrast, is a continuous two-dimensional field of RGB triples: it has no tokens, no position indices, and no native address on that bus. The vision front-end is the translator that converts one into the other, and its five stages are best read as a single contraction: <em>pixels → patches → patch features → merged features → bus-native tokens</em>, with dimension changing $3 \to 1{,}536 \to 1{,}536 \to 6{,}144 \to 5{,}120$ and token count falling by $4\times$ at the merge.</p>
-  <p><strong>Patchify</strong> turns a grid of pixels into a sequence of patch tokens, the vision analogue of §02's token-embedding lookup, lifting raw input into the first feature space. <strong>SigLIP ViT</strong> runs the same self-attention machinery as §05 over those patch tokens, producing features that carry semantics rather than raw color. <strong>2×2 Merge</strong> compresses four neighbouring patch features into one, trading sub-pixel acuity for a $4\times$ token-count cut. <strong>MLP Project</strong> is the single dimension-changing step, the only place the 1,536-dim vision space is mapped onto the 5,120-dim bus. <strong>MRoPE Splice</strong> attaches the 3D $[T,H,W]$ coordinates from §05 and interleaves the result into the text token stream. After stage 5, a vision token is, to the backbone, indistinguishable from a text token: same bus, same FFN slots, same attention, same MRoPE. That equivalence is the whole point of a native multimodal design.</p>
-  <p>The widget below lets you click through the five stages; the prose that follows unpacks the mechanism behind each one, beginning with the patchify step that every later stage depends on.</p>
+  <h3>从连续像素到残差总线的五阶段桥梁</h3>
+  <p>§§03–06 构建的骨干网络是一台离散词元机器：它只理解残差总线上的 5,120 维向量，由 FFN 的 111 万个键值槽寻址并由 §05 的注意力路由。图像则是连续的二维 RGB 三元组场，没有词元、位置索引或总线原生地址。视觉前端负责二者之间的翻译，其五个阶段可视作一次连续收缩：<em>像素 → 图像块 → 图像块特征 → 合并特征 → 总线原生词元</em>；维度按 $3 \to 1{,}536 \to 1{,}536 \to 6{,}144 \to 5{,}120$ 变化，合并时词元数降至四分之一。</p>
+  <p><strong>图像分块</strong>把像素网格变为图像块词元序列，它是 §02 词元嵌入查找的视觉对应物，负责把原始输入提升到第一个特征空间。<strong>SigLIP ViT</strong>在这些图像块词元上运行与 §05 相同的自注意力机制，产生承载语义而非原始颜色的特征。<strong>2×2 合并</strong>把四个相邻图像块特征压缩为一个，以亚像素精度换取词元数缩减 $4\times$。<strong>MLP 投影</strong>是唯一改变维度的步骤，也是唯一把 1,536 维视觉空间映射到 5,120 维总线之处。<strong>MRoPE 拼接</strong>附加 §05 的三维 $[T,H,W]$ 坐标，并把结果交错插入文本词元流。完成阶段 5 后，视觉词元对骨干网络而言与文本词元不可区分：使用相同总线、相同 FFN 槽、相同注意力和相同 MRoPE。这种等价性正是原生多模态设计的全部意义。</p>
+  <p>点击下方五个阶段可查看详情；后文从所有后续阶段所依赖的图像分块操作开始解释各机制。</p>
 
   <!-- Interactive 5-Stage Patch-to-Residual Pipeline (#w-vision-pipe) -->
   <div class="widget" id="w-vision-pipe">
-    <div class="w-head"><span class="w-title">Interactive 5-stage vision-to-language transformation pipeline</span><span class="w-tag">multimodal pipeline</span></div>
-    <div class="w-desc">The five stages of the multimodal front-end: an input image or video frame is decomposed, encoded, spatially compressed, and interleaved into the language model's residual stream. Click a stage for its detail card.</div>
+    <div class="w-head"><span class="w-title">交互式五阶段视觉到语言转换流水线</span><span class="w-tag">多模态流水线</span></div>
+    <div class="w-desc">多模态前端的五个阶段：输入图像或视频帧经过分解、编码和空间压缩，再交错插入语言模型的残差流。点击阶段可查看详情卡片。</div>
     
     <div class="pipe" id="visionPipe">
       <div class="stage active" data-stage="1">
-        <div class="st-num">STAGE 1</div>
-        <div class="st-name">Patchify</div>
-        <div class="st-desc">14×14 px conv kernel → 256 patches per 224px tile</div>
+        <div class="st-num">阶段 1</div><div class="st-name">图像分块</div><div class="st-desc">14×14 像素卷积核 → 每个 224 像素图块 256 个图像块</div>
       </div>
       <div class="stage" data-stage="2">
-        <div class="st-num">STAGE 2</div>
+        <div class="st-num">阶段 2</div>
         <div class="st-name">SigLIP ViT</div>
-        <div class="st-desc">Transformer encoder → ℝ^(N × 1536) patch features</div>
+        <div class="st-desc">Transformer 编码器 → ℝ^(N × 1536) 图像块特征</div>
       </div>
       <div class="stage" data-stage="3">
-        <div class="st-num">STAGE 3</div>
-        <div class="st-name">2×2 Merge</div>
-        <div class="st-desc">Spatial 2×2 neighbor concat → 4× token reduction</div>
+        <div class="st-num">阶段 3</div><div class="st-name">2×2 合并</div><div class="st-desc">空间 2×2 相邻图像块拼接 → 词元数降至 1/4</div>
       </div>
       <div class="stage" data-stage="4">
-        <div class="st-num">STAGE 4</div>
-        <div class="st-name">MLP Project</div>
-        <div class="st-desc">2-layer MLP → ℝ^5120 matching LM residual bus</div>
+        <div class="st-num">阶段 4</div><div class="st-name">MLP 投影</div><div class="st-desc">双层 MLP → 与 LM 残差总线匹配的 ℝ^5120</div>
       </div>
       <div class="stage" data-stage="5">
-        <div class="st-num">STAGE 5</div>
-        <div class="st-name">MRoPE Splice</div>
-        <div class="st-desc">3D [T, H, W] coordinates &amp; token interleaving</div>
+        <div class="st-num">阶段 5</div><div class="st-name">MRoPE 拼接</div><div class="st-desc">三维 [T, H, W] 坐标与词元交错</div>
       </div>
     </div>
 
     <div class="funnel-detail-card" id="visionDetailCard" aria-live="polite" style="margin-top:var(--s-3)"></div>
   </div>
 
-  <h3>Patchify: a strided convolution is a per-patch linear projection</h3>
-  <p>Stage 1 is a single convolutional layer with a $14 \times 14$ kernel, stride $14$, lifting $3$ input channels to $1{,}536$ output channels. Read it mechanically: the kernel slides over the image in non-overlapping $14 \times 14$ blocks, and at each placement it takes the $14 \cdot 14 \cdot 3 = 588$ pixel values inside the window, flattens them, and multiplies by a $588 \to 1{,}536$ weight matrix. That is, point for point, a linear projection of one image patch into a $1{,}536$-dim embedding vector, implemented as a convolution purely because a conv expresses "apply this same projection to every spatial window" in one fused Tensor-Core kernel. A $224 \times 224$ tile thus yields $(224/14)^2 = 16^2 = 256$ patch tokens, each a $1{,}536$-vector. Higher resolutions are handled by tiling the image into $224$-px blocks and processing each tile, then concatenating. That <em>native-resolution</em> approach lets a 4K diagram produce tens of thousands of patches without retraining the ViT at that scale.</p>
-  <p>The patchify step is the direct vision analogue of §02's token embedding. There, a discrete token id $x_t \in \{0, \dots, 248319\}$ indexes a row of a $248320 \times 5120$ embedding table, a lookup. Here, a continuous $588$-vector patch is multiplied by a $588 \times 1536$ matrix, a projection. Both lift raw input into the first feature space their respective towers consume; the only difference is that text input is discrete (so a lookup suffices) and image input is continuous (so a linear map is required). After patchify, the image is no longer pixels. It is a sequence of $256$ tokens on a $1{,}536$-dim channel, ready for the same transformer machinery that processes text.</p>
+  <h3>图像分块：步幅卷积就是逐图像块线性投影</h3>
+  <p>阶段 1 是一个卷积层：核为 $14 \times 14$、步幅为 $14$，把 $3$ 个输入通道提升到 $1{,}536$ 个输出通道。机械地看，卷积核以互不重叠的 $14 \times 14$ 图像块滑过图像；每到一个位置，就取窗口内 $14 \cdot 14 \cdot 3 = 588$ 个像素值，将其展平，再乘以 $588 \to 1{,}536$ 权重矩阵。逐点而言，这就是把一个图像块线性投影为 $1{,}536$ 维嵌入向量；之所以用卷积实现，只因卷积能在一个融合 Tensor Core 内核中表达“对每个空间窗口应用同一投影”。因此，一个 $224 \times 224$ 图块会产生 $(224/14)^2 = 16^2 = 256$ 个图像块词元，每个都是 $1{,}536$ 维向量。更高分辨率通过把图像切成 224 像素图块、分别处理各图块再拼接来支持。这种<em>原生分辨率</em>方法让一张 4K 图表可以产生数万个图像块，而无需在该尺度上重新训练 ViT。</p>
+  <p>图像分块步骤直接对应 §02 的词元嵌入。在文本侧，离散词元 ID $x_t \in \{0, \dots, 248319\}$ 索引 $248320 \times 5120$ 嵌入表中的一行，即执行查找；在视觉侧，连续的 $588$ 维图像块向量乘以 $588 \times 1536$ 矩阵，即执行投影。两者都把原始输入提升到各自塔所使用的第一个特征空间；唯一区别在于文本输入是离散的（查找即可），图像输入是连续的（必须使用线性映射）。图像分块后，图像不再是像素，而成为 1,536 维通道上的 256 个词元序列，可供处理文本的同一套 Transformer 机制使用。</p>
 
   <!-- Widget 2: Vision Token Economics & Context Budget Calculator (#w-vision-calc) -->
   <div class="widget" id="w-vision-calc">
-    <div class="w-head"><span class="w-title">Multimodal token economics &amp; context budget calculator</span><span class="w-tag">token economics</span></div>
-    <div class="w-desc">Exact token counts, VRAM embedding footprint, and context-budget consumption for high-resolution document screenshots, UI images, and multi-frame video inputs.</div>
+    <div class="w-head"><span class="w-title">多模态词元经济性与上下文预算计算器</span><span class="w-tag">词元经济性</span></div>
+    <div class="w-desc">精确计算高分辨率文档截图、界面图像及多帧视频输入的词元数、VRAM 嵌入占用和上下文预算消耗。</div>
     
     <div class="calc-ctl">
       <div class="w-ctl">
-        <label for="visPresetSel">modality / resolution preset</label>
+        <label for="visPresetSel">模态/分辨率预设</label>
         <select id="visPresetSel">
-          <option value="224x224x1">Standard Tile (224 × 224 px · 1 image)</option>
-          <option value="800x600x1" selected>Web Screenshot (800 × 600 px · 1 image)</option>
-          <option value="1920x1080x1">1080p Document / Slide (1920 × 1080 px · 1 image)</option>
-          <option value="3840x2160x1">4K High-Res Diagram (3840 × 2160 px · 1 image)</option>
-          <option value="448x448x16">Short Video Clip (448 × 448 px · 16 frames)</option>
-          <option value="640x360x64">Long Video Sequence (640 × 360 px · 64 frames)</option>
+          <option value="224x224x1">标准图块（224 × 224 像素 · 1 张图像）</option><option value="800x600x1" selected>网页截图（800 × 600 像素 · 1 张图像）</option><option value="1920x1080x1">1080p 文档/幻灯片（1920 × 1080 像素 · 1 张图像）</option><option value="3840x2160x1">4K 高分辨率图表（3840 × 2160 像素 · 1 张图像）</option><option value="448x448x16">短视频片段（448 × 448 像素 · 16 帧）</option><option value="640x360x64">长视频序列（640 × 360 像素 · 64 帧）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="visMergeToggle">2×2 spatial patch merge</label>
+        <label for="visMergeToggle">2×2 空间图像块合并</label>
         <select id="visMergeToggle">
-          <option value="true" selected>Enabled (4× Token Compression · Default)</option>
-          <option value="false">Disabled (Raw 14×14 Patches)</option>
+          <option value="true" selected>启用（词元压缩 4 倍 · 默认）</option>          <option value="false">禁用（原始 14×14 图像块）</option>
         </select>
       </div>
     </div>
@@ -224,147 +202,136 @@
     <div class="calc-readout" id="visCalcReadout" aria-live="polite"></div>
   </div>
 
-  <h3>The SigLIP ViT: attention over patches, the same recipe as §05</h3>
-  <p>Once patchify has produced a sequence of $1{,}536$-dim tokens, the ViT tower encodes them with $30$ layers of self-attention: $16$ heads, $d_v = 1{,}536$, MLP width $6{,}144$ ($4\times$ expansion, the classic ratio, since the ViT predates the SwiGLU parameter-saving of §06). The mechanism is identical to §05's Gated Attention: query/key/value projections, softmax over patch positions, a residual bus, Pre-RMSNorm. The only differences are the working dimension ($1{,}536$ not $5{,}120$), the position system (learned 2D patch-position embeddings rather than MRoPE, since within the ViT every token is an image patch with a fixed grid coordinate), and the absence of the GQA/MRoPE machinery that the multimodal bus requires. In other words, vision and text use the <em>same</em> mixer once input has been lifted into token space; the front-end's entire job is to get pixels into that space and then align it to the LLM's bus.</p>
-  <p>The ViT's $849.6$ M parameters, the overwhelming bulk of the $0.9$ B visual front-end, are spent exactly where §06 predicted they would be: in the per-layer FFN (here a $4\times$-expanded MLP, $30$ layers of $1536 \times 6144$ projections), with the attention projections a small minority. The same FFN-as-associative-memory reading applies: the ViT's slots store visual primitives (edges, textures, object parts, OCR glyphs) that fire when a patch's features match their keys. By layer 30 the output is a sequence of semantic feature vectors, one per patch, that no longer resemble pixels.</p>
+  <h3>SigLIP ViT：对图像块应用注意力，与 §05 配方相同</h3>
+  <p>图像分块生成 1,536 维词元序列后，ViT 塔用 30 层自注意力编码它们：16 个头、$d_v = 1{,}536$、MLP 宽度 $6{,}144$（经典的 $4\times$ 扩展率，因为该 ViT 早于 §06 中节省参数的 SwiGLU）。其机制与 §05 的门控注意力完全相同：查询/键/值投影、跨图像块位置的 softmax、残差总线和预 RMSNorm。区别仅在于工作维度（$1{,}536$ 而非 $5{,}120$）、位置系统（学习到的二维图像块位置嵌入，而非 MRoPE，因为 ViT 内每个词元都是具有固定网格坐标的图像块），以及没有多模态总线所需的 GQA/MRoPE 机制。换言之，一旦输入被提升到词元空间，视觉与文本便使用<em>相同</em>的混合器；前端的全部工作就是把像素送入该空间，再将其与 LLM 总线对齐。</p>
+  <p>ViT 的 $849.6$ M 参数占 $0.9$ B 视觉前端的绝大部分，而且正如 §06 所预测，主要花在逐层 FFN 上（这里是 $4\times$ 扩展 MLP，即 30 层 $1536 \times 6144$ 投影），注意力投影只占少数。同样可以把 FFN 理解为联想记忆：ViT 的槽存储视觉基元（边缘、纹理、物体部件、OCR 字形），当图像块特征匹配其键时触发。到第 30 层，输出成为每个图像块一个的语义特征向量序列，已不再类似像素。</p>
 
   <!-- SigLIP Loss Mathematics -->
-  <h3>Sigmoid contrastive pretraining (the "S" in SigLIP)</h3>
-  <p>Standard CLIP models train vision-text pairs with a global softmax normalization across batch size $B$. This creates a severe synchronization bottleneck in multi-GPU distributed clusters because every negative sample competes in a shared denominator. SigLIP replaces global softmax with independent pairwise sigmoid binary classification losses:</p>
+  <h3>Sigmoid 对比预训练（SigLIP 中的“S”）</h3>
+  <p>标准 CLIP 在批大小 $B$ 上用全局 softmax 归一化训练图文对；所有负样本共享分母，造成多 GPU 同步瓶颈。SigLIP 将其替换为独立的成对 sigmoid 二分类损失：</p>
 
   <div class="math">
-    L_{\text{SigLIP}} = -\sum_{i=1}^B \sum_{j=1}^B \log \sigma\left(z_{ij} \cdot (2 \cdot \mathbf{1}[i=j] - 1)\right) \quad \text{where } z_{ij} = \frac{t_i^T v_j}{\tau} - b&nbsp;&nbsp;<span class="eq-no">(11)</span><br>
-    \tau \text{ (learned temperature)}, \; b \text{ (learned bias)}; \quad \text{No global denominator} \implies \mathcal{O}(1) \text{ communication scaling}
+    L_{\text{SigLIP}} = -\sum_{i=1}^B \sum_{j=1}^B \log \sigma\left(z_{ij} \cdot (2 \cdot \mathbf{1}[i=j] - 1)\right) \quad \text{其中 } z_{ij} = \frac{t_i^T v_j}{\tau} - b&nbsp;&nbsp;<span class="eq-no">(11)</span><br>
+    \tau \text{（学习温度）}, \; b \text{（学习偏置）}; \quad \text{无全局分母} \implies \mathcal{O}(1) \text{ 通信扩展}
   </div>
 
-  <p>The mechanism is easier to see by contrasting the two losses term by term. CLIP's InfoNCE loss for pair $i$ is $-\log \frac{\exp(t_i^T v_i / \tau)}{\sum_{j=1}^B \exp(t_i^T v_j / \tau)}$: a softmax whose denominator sums over every other pair $j$ in the batch. That denominator is the bottleneck: to compute it correctly, every GPU must contribute its local pairs to a global allgather, so batch size $B$ is bounded by inter-GPU communication, not by how much data you have. SigLIP replaces the single $B$-way softmax with $B^2$ independent binary decisions: for each $(i, j)$ pair, compute $z_{ij} = t_i^T v_j / \tau - b$ and apply a sigmoid, treating matching pairs $(i=j)$ as positives (target $+1$) and mismatched pairs $(i \ne j)$ as negatives (target $-1$):</p>
-  <div class="math" aria-label="One SigLIP pair term: a sigmoid binary logistic on the cosine-similarity of a text and image embedding, positive for matched pairs and negative for mismatched pairs. No global denominator, so no cross-GPU allgather is needed.">
+  <p>逐项对比两种损失最容易看清其机制。CLIP 对配对 $i$ 的 InfoNCE 损失为 $-\log \frac{\exp(t_i^T v_i / \tau)}{\sum_{j=1}^B \exp(t_i^T v_j / \tau)}$：这是一个 softmax，其分母对批内所有其他配对 $j$ 求和。该分母正是瓶颈：要正确计算它，每个 GPU 都必须通过全局 allgather 贡献本地配对，因此批大小 $B$ 受 GPU 间通信限制，而非受可用数据量限制。SigLIP 将单个 $B$ 路 softmax 替换为 $B^2$ 个独立二分类决策：对每个 $(i,j)$ 配对计算 $z_{ij}=t_i^Tv_j/\tau-b$ 并应用 sigmoid；匹配对 $(i=j)$ 作为正类（目标 $+1$），不匹配对 $(i\ne j)$ 作为负类（目标 $-1$）：</p>
+  <div class="math" aria-label="单个 SigLIP 配对项：对图文嵌入余弦相似度应用 sigmoid 二元逻辑回归；匹配对为正，不匹配对为负。没有全局分母，因此无需跨 GPU allgather。">
     \ell_{ij} = -\log \sigma\!\left(z_{ij} \cdot y_{ij}\right), \quad y_{ij} = 2\cdot\mathbf{1}[i=j] - 1 \in \{-1, +1\} \;\;\Rightarrow\;\; L_{\text{SigLIP}} = \sum_{i,j} \ell_{ij}
   </div>
-  <p>Because each $\ell_{ij}$ depends only on pair $(i,j)$ and not on any global sum, no allgather is required. The loss decomposes across GPUs, and batch size can grow to $32{,}000+$ pairs per step limited only by device memory. The learned bias $b$ shifts the decision boundary so the sigmoid is not pinned at $0.5$ when cosines are near zero, and the learned temperature $\tau$ controls how sharply the similarity comparison gates. A second, subtler benefit: in CLIP each negative is only a fractional pressure inside one softmax, so a single hard negative barely registers; in SigLIP each negative is its own full-strength binary decision, so fine-grained distinctions (a zebra vs a horse, an uppercase O vs a zero) get a complete gradient signal, which is the mechanism behind the richer OCR and spatial semantics.</p>
-
-  <p>SigLIP therefore scales to global batches of 32k+ pairs per step, yielding visual representations with significantly richer spatial and fine-grained OCR semantics than CLIP.</p>
+  <p>由于每个 $\ell_{ij}$ 只依赖配对 $(i,j)$，而不依赖任何全局求和，因此无需 allgather。损失可跨 GPU 分解，批大小只受设备内存限制，可增长到每步 32,000 多个配对。学习到的偏置 $b$ 移动决策边界，使余弦相似度接近零时 sigmoid 不会固定在 $0.5$；学习到的温度 $\tau$ 则控制相似度比较的门控锐度。它还有第二项更微妙的收益：在 CLIP 中，每个负样本只是一次 softmax 内的部分压力，因此单个困难负样本几乎不起作用；在 SigLIP 中，每个负样本都是独立、全强度的二元决策，因此细粒度差异（斑马与马、大写 O 与数字零）会获得完整梯度信号，这正是其 OCR 和空间语义更丰富的机制。</p>
+  <p>因此 SigLIP 可扩展到每步 32k 以上的全局批量，并产生比 CLIP 更丰富的空间与细粒度 OCR 语义。</p>
 
   <!-- 2x2 Merge & Projector Mechanics -->
-  <h3>The 2×2 spatial merge &amp; MLP projector</h3>
+  <h3>2×2 空间合并与 MLP 投影器</h3>
   <div class="math">
-    \text{Concat}\left(\mathbf{v}_{2h, 2w}, \mathbf{v}_{2h+1, 2w}, \mathbf{v}_{2h, 2w+1}, \mathbf{v}_{2h+1, 2w+1}\right) \in \mathbb{R}^{4 \cdot d_v = 6,144}<br>
-    \mathbf{h}_{\text{vision}} = \text{Linear}_{6144 \to 5120}\left(\text{SiLU}\left(\text{Linear}_{6144 \to 6144}(\mathbf{v}_{\text{merged}})\right)\right) \in \mathbb{R}^{5,120}
+    \text{拼接}\left(\mathbf{v}_{2h, 2w}, \mathbf{v}_{2h+1, 2w}, \mathbf{v}_{2h, 2w+1}, \mathbf{v}_{2h+1, 2w+1}\right) \in \mathbb{R}^{4 \cdot d_v = 6,144}<br>
+    \mathbf{h}_{\text{vision}} = \text{线性}_{6144 \to 5120}\left(\text{SiLU}\left(\text{线性}_{6144 \to 6144}(\mathbf{v}_{\text{merged}})\right)\right) \in \mathbb{R}^{5,120}
   </div>
 
-  <p>Spatial merging trades sub-pixel acuity for a $4\times$ reduction in sequence length, transforming a 10,764-token 1080p frame into a 2,691-token payload that the hybrid backbone ingests at thousands of tokens per second.</p>
+  <p>空间合并以亚像素精度换取序列长度缩短 $4\times$，把含 10,764 个词元的 1080p 帧变为 2,691 个词元的载荷，供混合骨干网络以每秒数千词元处理。</p>
 
-  <p>Read the two projector lines as a single dimensional handoff. The merger concatenates four neighbouring $1{,}536$-vectors into a $6{,}144$-vector. This is <em>not</em> a learned operation, just a spatial reshape that says "treat a $2 \times 2$ block of patches as one super-patch." The MLP projector then does the only dimension change in the whole front-end: a SwiGLU-style 2-layer MLP $6{,}144 \to 6{,}144 \to 5{,}120$, landing the merged feature exactly on the residual bus from §06. After this projection the vision token is bus-native: the backbone's attention will route it, its FFN slots will fire on it, and the §05 MRoPE will position it, exactly as if it were a text token. That is why the projector, at $69.2$ M parameters, is tiny compared with the ViT but structurally the most important component in the tower: it is the bridge from the vision's $1{,}536$-dim channel onto the LLM's $5{,}120$-dim bus, and the place where "vision feature" becomes "token the backbone can reason about."</p>
-  <p>The token-budget arithmetic the calculator above runs is one multiplication of patchify and one division of merge. Raw patch tokens for an input are $(W/14) \times (H/14) \times T_{\text{frames}}$; the $2 \times 2$ merge then divides by $4$ (modulo tile-boundary rounding):</p>
-  <div class="math" aria-label="Vision token budget: patches are width over 14 times height over 14 times frames; the 2x2 merge divides by 4. A 1080p single frame gives about 2691 bus-native tokens, which is the context-budget cost of one image.">
-    N_{\text{tokens}} = \frac{1}{4} \cdot \left\lceil \tfrac{W}{14} \right\rceil \left\lceil \tfrac{H}{14} \right\rceil \cdot T \quad \Rightarrow \quad 1080\text{p frame: } \tfrac{\lceil 1920/14\rceil \times \lceil 1080/14\rceil}{4} = \tfrac{138 \times 78}{4} = 2{,}691 \text{ bus tokens}
+  <p>应把投影器的两行公式视为一次完整的维度交接。合并器把四个相邻的 1,536 维向量拼成一个 6,144 维向量。这<em>不是</em>学习操作，只是空间重塑，含义是“把一个 $2 \times 2$ 图像块区域当作一个超级图像块”。随后 MLP 投影器执行整个前端唯一的维度变化：SwiGLU 风格双层 MLP 采用 $6{,}144 \to 6{,}144 \to 5{,}120$，使合并特征精确落到 §06 的残差总线上。投影后，视觉词元成为总线原生词元：骨干网络的注意力会路由它，FFN 槽会被它触发，§05 的 MRoPE 会为它定位，一切都与文本词元完全相同。因此，投影器虽只有 6,920 万参数、远小于 ViT，却是视觉塔中结构上最重要的组件：它是从视觉的 1,536 维通道通往 LLM 的 5,120 维总线的桥梁，也是“视觉特征”转变为“骨干网络可以推理的词元”之处。</p>
+  <p>词元预算等于图像块数量乘法再除以合并倍率。原始图像块词元为 $(W/14)\times(H/14)\times T_{\text{frames}}$；$2\times2$ 合并后除以 $4$（另计图块边界取整）：</p>
+  <div class="math" aria-label="视觉词元预算：图像块数等于宽度除以 14、乘以高度除以 14、再乘以帧数；2×2 合并后除以 4。单帧 1080p 图像约产生 2691 个总线原生词元，即一张图像的上下文预算成本。">
+    N_{\text{tokens}} = \frac{1}{4} \cdot \left\lceil \tfrac{W}{14} \right\rceil \left\lceil \tfrac{H}{14} \right\rceil \cdot T \quad \Rightarrow \quad 1080\text{p 帧：} \tfrac{\lceil 1920/14\rceil \times \lceil 1080/14\rceil}{4} = \tfrac{138 \times 78}{4} = 2{,}691 \text{ 个总线词元}
   </div>
-  <p>Each of those tokens costs the same context budget as a text token, a $5{,}120$-dim slot in the $262{,}144$-token window, so a single 1080p screenshot consumes about $2.7$ k of context, a 4K diagram about $10.7$ k, and a 64-frame video proportionally more. This is the resolution-versus-context tradeoff the calculator makes explicit: the front-end can ingest arbitrarily high resolution, but every $14 \times 14$ patch is eventually paid for in the backbone's attention FLOPs and KV cache, so the $2 \times 2$ merge is the lever that keeps rich visual input from crowding out the text reasoning around it.</p>
-  <p>The final stage, MRoPE splice, attaches coordinates and interleaves. Image patches receive a $[T, H, W]$ triple with $T = 0$ and $(H, W)$ set to their grid position; video frames vary $T$ by frame index. This is precisely what §05's MRoPE was built for: its three disjoint $[11,11,10]$ rotary sections give vision tokens independent $H$ and $W$ axes that text tokens leave at zero, so the two modalities share one position space without collision. The splice then drops the vision tokens into the text stream at the position of the <code>&lt;image&gt;</code> / <code>&lt;video&gt;</code> sentinel, after which the backbone has a single, mixed-modality sequence to route and transform.</p>
+  <p>每个视觉词元与文本词元消耗相同的上下文预算，即 262,144 词元窗口中的一个 5,120 维槽。因此单张 1080p 截图消耗约 2.7k 上下文，4K 图表约消耗 10.7k，64 帧视频则按比例更多。这就是计算器明确展示的分辨率—上下文权衡：前端可以摄取任意高的分辨率，但每个 $14 \times 14$ 图像块最终都要消耗骨干网络的注意力 FLOP 和 KV 缓存，因此 $2 \times 2$ 合并正是防止丰富视觉输入挤占周边文本推理空间的杠杆。</p>
+  <p>最后一个阶段 MRoPE 拼接负责附加坐标并进行交错。图像块取得 $[T,H,W]$ 三元组，其中 $T=0$，$(H,W)$ 设为其网格位置；视频帧的 $T$ 随帧索引变化。这正是 §05 的 MRoPE 所针对的场景：三个互不相交的 $[11,11,10]$ 旋转区段为视觉词元提供独立的 $H$、$W$ 轴，而文本词元在这些轴上保持为零，使两种模态共享同一位置空间而不冲突。随后，拼接过程在 <code>&lt;image&gt;</code>/<code>&lt;video&gt;</code> 哨兵位置把视觉词元放入文本流，此后骨干网络只需路由和变换一个统一的混合模态序列。</p>
 
   <!-- Visual Tower Parameter Breakdown Table -->
-  <h3>Visual tower component accounting</h3>
+  <h3>视觉塔组件核算</h3>
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 6 — Visual-tower component accounting:</strong> patch conv, ViT blocks, 2×2 merger, MLP projector: parameter counts and functional role for each stage.</caption>
+      <caption><strong>表 6 — 视觉塔组件核算：</strong>图像块卷积、ViT 块、2×2 合并器、MLP 投影器：各阶段的参数量与功能角色。</caption>
       <thead>
         <tr>
-          <th scope="col">Visual Component</th>
-          <th scope="col">Dimension / Architecture</th>
-          <th scope="col" class="r">Parameters</th>
-          <th scope="col">Functional Role</th>
+          <th scope="col">视觉组件</th><th scope="col">维度/架构</th><th scope="col" class="r">参数量</th><th scope="col">功能角色</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Patch Convolution</strong></td>
-          <td>Kernel $14 \times 14$, Stride 14, 3 $\to$ 1,536 channels</td>
+          <td><strong>图像块卷积</strong></td>
+          <td>卷积核 $14 \times 14$，步幅 14，3 $\to$ 1,536 通道</td>
           <td class="r">0.90M</td>
-          <td>Linearly projects $14\times 14$ RGB pixel patches into ViT embedding space.</td>
+          <td>将 $14\times 14$ RGB 像素图像块线性投影到 ViT 嵌入空间。</td>
         </tr>
         <tr>
-          <td><strong>SigLIP ViT Tower</strong></td>
-          <td>30 layers, 16 heads, $d_v = 1,536$, MLP dim 6,144</td>
+          <td><strong>SigLIP ViT 塔</strong></td>
+          <td>30 层、16 个头、$d_v = 1,536$、MLP 维度 6,144</td>
           <td class="r">849.6M</td>
-          <td>Extracts high-level semantic, structural, and OCR features across patches.</td>
+          <td>跨图像块提取高级语义、结构和 OCR 特征。</td>
         </tr>
         <tr>
-          <td><strong>2×2 Merge &amp; Projector</strong></td>
-          <td>2-layer MLP with SiLU: $\mathbb{R}^{6,144} \to \mathbb{R}^{5,120}$</td>
+          <td><strong>2×2 合并与投影器</strong></td>
+          <td>采用 SiLU 的双层 MLP：$\mathbb{R}^{6,144} \to \mathbb{R}^{5,120}$</td>
           <td class="r">69.2M</td>
-          <td>Compresses spatial token count by $4\times$ and aligns geometry with LM residual stream.</td>
+          <td>将空间词元数压缩 $4\times$，并使几何表示与 LM 残差流对齐。</td>
         </tr>
         <tr>
-          <td><strong>Total Visual Front-End</strong></td>
-          <td>~333 weight tensors</td>
+          <td><strong>视觉前端合计</strong></td>
+          <td>约 333 个权重张量</td>
           <td class="r good"><strong>≈0.9B</strong></td>
-          <td>Patch conv + ViT blocks + merger/projector; active only on visual token ingestion. Components sum to 919.7M, carried as ≈0.9B in the parameter budget.</td>
+          <td>图像块卷积 + ViT 块 + 合并器/投影器；仅在摄取视觉词元时启用。组件合计 9.197 亿参数，在参数预算中记作约 9 亿。</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>The $0.90 + 849.6 + 69.2 = 919.7\text{M} \approx 0.9\text{B}$ accounting has one structural footnote: the visual front-end is <em>conditionally active</em>. Unlike the backbone, which fires on every token, these $333$ weight tensors only execute when the input contains an <code>&lt;image&gt;</code> or <code>&lt;video&gt;</code> sentinel; for a pure-text request they sit idle in HBM, costing VRAM but zero FLOPs. That is what makes a $0.9$ B vision tower affordable on a model whose FFN alone is $17.11$ B: it is a detachable peripheral, not a always-on component, and the §12 inference optimizations can keep it resident or swap it depending on whether the request is multimodal. The remaining structural question is how the backbone is trained to look ahead more than one token at a time, which the Multi-Token Prediction heads of §08 answer.</p>
+  <p>$0.90 + 849.6 + 69.2 = 919.7\text{M} \approx 0.9\text{B}$ 的核算有一项结构性说明：视觉前端是<em>条件激活</em>的。骨干网络会对每个词元运行，而这 333 个权重张量只在输入含 <code>&lt;image&gt;</code> 或 <code>&lt;video&gt;</code> 哨兵时执行；纯文本请求中，它们闲置于 HBM，只占 VRAM 而不消耗 FLOP。因此，9 亿参数的视觉塔对仅 FFN 就有 171.1 亿参数的模型仍然可负担：它是可拆卸外设，而非始终开启的组件；§12 的推理优化可根据请求是否为多模态决定常驻或换出。余下的结构问题是如何训练骨干网络一次前瞻多个词元，§08 的多词元预测头将给出答案。</p>
 </section>
 
 <!-- ============================================================ 08 MTP -->
 <section id="mtp">
-  <div class="sec-tag">08 · Multi-Token Prediction &amp; speculative decoding</div>
-  <h2>Dual-purpose multi-future supervision and zero-overhead drafting</h2>
-  <p class="lead">Qwen 3.8 trains with native Multi-Token Prediction (MTP) heads integrated directly into the backbone. During pretraining, MTP provides dense multi-step credit assignment that deepens associative memory retention across DeltaNet layers; at inference, those same heads emit candidate draft tokens for free, accelerating autoregressive generation by 1.8×–2.4× without requiring a secondary draft model.</p>
+  <div class="sec-tag">08 · 多词元预测与推测解码</div><h2>兼具多未来监督与零开销草拟</h2>
+  <p class="lead">Qwen 3.8 将原生多词元预测（MTP）头直接集成到骨干网络。预训练时，MTP 提供密集多步信用分配，增强 DeltaNet 层的联想记忆保持；推理时，同一组头免费产生候选草稿词元，无需第二个草拟模型即可将自回归生成加速 1.8×–2.4×。</p>
 
-  <h3>Why look ahead? The one-token horizon problem</h3>
-  <p>A purely next-token language model, eq.(12) alone, has a structural mismatch between how it is trained and how it is used. At training time the backbone's hidden state $\mathbf{h}_t$ receives a gradient signal from exactly one loss term, the prediction of $x_{t+1}$. It is therefore optimised to encode "what comes next," a one-token horizon. At inference time, however, that same $\mathbf{h}_t$ must support a long coherent continuation: every token from $t+1$ onward is generated by re-reading the growing context, but the quality of those generations is bounded by how much lookahead $\mathbf{h}_t$ was pressured to encode during training. The model is never explicitly trained to <em>plan</em> beyond one step.</p>
-  <p>MTP closes that gap by supervising $\mathbf{h}_t$ against several futures at once. With $K=2$ auxiliary heads, the same hidden state is asked to predict $x_{t+1}$ (the main head), $x_{t+2}$ (head 1), and $x_{t+3}$ (head 2) simultaneously. The gradient now flows back from three targets through three heads, so $\mathbf{h}_t$ is pressured to carry information useful for a two-token lookahead rather than a one-token guess. For the 48 DeltaNet layers this is especially load-bearing: their recurrent state $S_t$ (§04) is an associative memory that must remain <em>retrievable</em> for $K$ future positions, so the multi-future loss forces $S_t$ to store durable, multi-step structure rather than a single ephemeral prediction. The benefit is denser supervision, shorter gradient paths, and a state trained to age well.</p>
+  <h3>为何前瞻？单词元视野问题</h3>
+  <p>仅使用式 (12) 的纯下一词元语言模型，其训练方式与使用方式之间存在结构性错配。训练时，骨干网络的隐藏状态 $\mathbf{h}_t$ 只从一个损失项接收梯度信号，即对 $x_{t+1}$ 的预测。因此，它被优化为编码“接下来是什么”，视野仅有一个词元。然而在推理时，同一个 $\mathbf{h}_t$ 必须支撑一段长而连贯的续写：从 $t+1$ 开始的每个词元都是通过重新读取不断增长的上下文生成的，但这些生成的质量受限于训练期间 $\mathbf{h}_t$ 被迫编码了多少前瞻信息。模型从未被显式训练去<em>规划</em>一步之后的内容。</p>
+  <p>MTP 通过同时用多个未来目标监督 $\mathbf{h}_t$ 来弥合这一差距。当有 $K=2$ 个辅助头时，同一个隐藏状态要同时预测 $x_{t+1}$（主头）、$x_{t+2}$（头 1）和 $x_{t+3}$（头 2）。此时梯度从三个目标经由三个头回传，迫使 $\mathbf{h}_t$ 携带有助于两词元前瞻的信息，而不只是做单词元猜测。对 48 个 DeltaNet 层而言，这一点尤其关键：其循环状态 $S_t$（§04）是联想记忆，必须在未来 $K$ 个位置上仍然<em>可检索</em>，因此多未来损失迫使 $S_t$ 存储持久的多步结构，而非一次转瞬即逝的预测。由此可获得更密集的监督、更短的梯度路径，以及经过训练、能随时间保持有效的状态。</p>
 
   <!-- Mathematical Formalism of MTP -->
-  <h3>The multi-future training objective</h3>
-  <p>Standard autoregressive language models optimize only next-token cross-entropy $L_{\text{LM}}$. MTP augments this with $K$ auxiliary prediction heads ($K=2$ in Qwen 3.8), each predicting future tokens $x_{t+1+k}$ conditioned on the backbone's final hidden state $h_t$ and embedded prior drafts:</p>
+  <h3>多未来训练目标</h3>
+  <p>标准自回归语言模型只优化下一词元交叉熵 $L_{\text{LM}}$。MTP 增加 $K$ 个辅助预测头（Qwen 3.8 中 $K=2$），各自在骨干最终隐藏状态 $h_t$ 与先前草稿嵌入的条件下预测未来词元 $x_{t+1+k}$：</p>
 
   <div class="math">
     L_{\text{LM}} = -\sum_{t=1}^T \log P(x_{t+1} \mid x_{\le t})&nbsp;&nbsp;<span class="eq-no">(12)</span><br>
-    L_{\text{MTP}, k} = -\sum_{t=1}^T \log \hat{P}_k(x_{t+1+k} \mid x_{\le t}, \tilde{x}_{t+1 \dots t+k}) \quad \text{for } k \in \{1, \dots, K\}&nbsp;&nbsp;<span class="eq-no">(13)</span><br>
-    L_{\text{total}} = L_{\text{LM}} + \sum_{k=1}^K \lambda_k L_{\text{MTP}, k} \quad \text{where } \lambda_k \in [0.1, 0.4] \text{ annealed during curriculum}
+    L_{\text{MTP}, k} = -\sum_{t=1}^T \log \hat{P}_k(x_{t+1+k} \mid x_{\le t}, \tilde{x}_{t+1 \dots t+k}) \quad \text{其中 } k \in \{1, \dots, K\}&nbsp;&nbsp;<span class="eq-no">(13)</span><br>
+    L_{\text{total}} = L_{\text{LM}} + \sum_{k=1}^K \lambda_k L_{\text{MTP}, k} \quad \text{其中 } \lambda_k \in [0.1, 0.4] \text{ 在课程中退火}
   </div>
 
-  <p>This yields two benefits: (1) <strong>Dense Credit Assignment:</strong> Backpropagation flows simultaneously from $x_{t+1}, x_{t+2}, x_{t+3}$, shortening gradient path lengths and forcing the 48 DeltaNet layers to maintain associative states $S_t$ that remain valid across multi-token lookaheads. (2) <strong>Zero-Overhead Speculation:</strong> At runtime, the depth-1 MTP heads generate candidate tokens in the same forward step as the main model, completely eliminating the parameter and VRAM overhead of separate draft models.</p>
+  <p>它带来两项收益：(1) <strong>密集信用分配：</strong>反向传播同时从 $x_{t+1}, x_{t+2}, x_{t+3}$ 流回，缩短梯度路径，并迫使 48 个 DeltaNet 层维持在多词元前瞻中仍然有效的关联状态 $S_t$。(2) <strong>零开销推测：</strong>运行时，深度为 1 的 MTP 头在与主模型相同的前向步骤中生成候选词元，彻底消除独立草拟模型的参数和 VRAM 开销。</p>
 
-  <h3>The cascade: how $K$ heads share one hidden state</h3>
-  <p>The $K$ MTP heads are not $K$ independent predictors; they form a serial cascade that reuses the backbone's $\mathbf{h}_t$ and the shared $248{,}320$-token embedding. The main LM head produces $P(x_{t+1} \mid \mathbf{h}_t)$. Head $k$ produces $P(x_{t+1+k} \mid \mathbf{h}_t, \tilde{x}_{t+1}, \dots, \tilde{x}_{t+k})$. It is conditioned on the <em>embeddings of the tokens already drafted</em> by the shallower heads, which is what the $\tilde{x}$ symbols in eq.(13) denote. During training these drafts are <em>teacher-forced</em> to the ground-truth tokens, so each head learns the conditional distribution of its future token given the true prefix; during inference they are the argmax outputs of the previous head, chained forward. Because every head taps the same $\mathbf{h}_t$ and the same embedding table, the only <em>new</em> parameters are the $K$ projection matrices, the $+2.4\%$ per head that the telemetry card reports ($+4.8\% \approx 1.32$ B for $K=2$, $\sim 2.6$ GB in BF16), with zero extra vocabulary or embedding cost.</p>
+  <h3>级联：$K$ 个头如何共享一个隐藏状态</h3>
+  <p>$K$ 个 MTP 头不是 $K$ 个相互独立的预测器；它们组成串行级联，复用骨干网络的 $\mathbf{h}_t$ 和共享的 $248{,}320$ 词元嵌入。主 LM 头产生 $P(x_{t+1} \mid \mathbf{h}_t)$。头 $k$ 产生 $P(x_{t+1+k} \mid \mathbf{h}_t, \tilde{x}_{t+1}, \dots, \tilde{x}_{t+k})$。它以所有较浅层头<em>已经草拟出的词元嵌入</em>为条件；式 (13) 中的 $\tilde{x}_{t+1}, \dots, \tilde{x}_{t+k}$ 正是这些先前草稿。训练期间，这些草稿通过<em>教师强制</em>设为真实词元，因此每个头学习的是给定真实前缀时其未来词元的条件分布；推理期间，它们则是前一个头的 argmax 输出，并向前串接。由于每个头都接入同一个 $\mathbf{h}_t$ 和同一张嵌入表，唯一的<em>新增</em>参数是 $K$ 个投影矩阵，也就是遥测卡所报告的每头 $+2.4\%$（$K=2$ 时 $+4.8\% \approx 1.32$ B，BF16 下约 $2.6$ GB），词表和嵌入成本均为零。</p>
 
-  <h3>The draft–verify–accept cycle, step by step</h3>
-  <p>At inference the MTP heads convert one forward pass into $K+1$ candidate tokens, which the target model then verifies in a <em>single</em> parallel pass. The cycle is:</p>
-  <p><strong>(1) Draft.</strong> A forward pass over the current prefix produces $\mathbf{h}_t$. The main head emits the root token $x_{t+1}$; MTP head 1, reading $\mathbf{h}_t$ and the embedding of $x_{t+1}$, emits draft $\tilde{x}_{t+2}$; head 2, reading $\mathbf{h}_t$ and the embeddings of $x_{t+1}, \tilde{x}_{t+2}$, emits draft $\tilde{x}_{t+3}$. The $K+1$ tokens are appended to the sequence as a speculative extension.</p>
-  <p><strong>(2) Verify.</strong> One forward pass over the $K+1$-token extension scores <em>all</em> positions in parallel, under a 2D tree causal mask (Fig. 5b) that lets each position attend only to its causal ancestors and not to speculative siblings. The target model thus produces its own argmax at each of the $K+1$ positions in the time it takes to run one pass, not $K+1$ sequential passes.</p>
-  <p><strong>(3) Accept-and-resample.</strong> Walk the extension left to right and accept the longest prefix where the draft's token equals the target's argmax. At the first divergence, discard the remainder and resample that single position from the <em>target's</em> distribution. Advance the context by (accepted tokens $+ 1$), and repeat.</p>
-  <p>The speedup lives in step 2. Autoregressive generation is memory-bandwidth-bound: the dominant cost per token is reading the $1.27$ B-parameter untied LM head from HBM to produce one distribution (the §01 "MTP amortizes LM-head bandwidth" note). By verifying $K+1$ tokens in one pass, MTP amortises that HBM read across $K+1$ candidates, so the bandwidth-bound head, the inference bottleneck identified in Table 5, is paid once per $K+1$ tokens rather than once per token. The verification pass itself is compute-heavier (it scores $K+1$ positions), but on memory-bound consumer GPUs the bandwidth saving dominates, which is why the wall-clock gain is $1.8$–$2.4\times$ rather than the naive $K+1$.</p>
-  <p>Branching speculative decoding needs a tree mask. A linear chain mask treats the drafts as one serial continuation; a branching tree mask (beam $2$ in Fig. 5b) lets each head propose multiple alternative tokens, arranged so position $i$ attends only to its ancestors. The mask matrix $M_{i,j} = 0$ if $j$ is an ancestor of $i$ and $-\infty$ otherwise, an asymmetric triangular block structure that evaluates every branch of the speculative tree concurrently in a single self-attention computation, with no cross-pollination between sibling hypotheses. The widget below lets you toggle between the linear chain and the branching tree to see how the mask restructures.</p>
+  <h3>草拟—验证—接受循环详解</h3>
+  <p>推理时，MTP 头在一次前向传播中产生 $K+1$ 个候选，目标模型再以<em>一次</em>并行传播验证。循环如下：</p>
+  <p><strong>(1) 草拟。</strong>对当前前缀进行一次前向传播，得到 $\mathbf{h}_t$。主头发出根词元 $x_{t+1}$；MTP 头 1 读取 $\mathbf{h}_t$ 和 $x_{t+1}$ 的嵌入，发出草稿 $\tilde{x}_{t+2}$；头 2 读取 $\mathbf{h}_t$ 以及 $x_{t+1}, \tilde{x}_{t+2}$ 的嵌入，发出草稿 $\tilde{x}_{t+3}$。这 $K+1$ 个词元作为推测扩展追加到序列中。</p>
+  <p><strong>(2) 验证。</strong>对这个包含 $K+1$ 个词元的扩展进行一次前向传播，在二维树形因果掩码（图 5b）下并行评分<em>所有</em>位置；该掩码让每个位置只能关注其因果祖先，不能关注推测分支中的兄弟节点。因此，目标模型在一次传播所需的时间内，对 $K+1$ 个位置分别产生自己的 argmax，而无需进行 $K+1$ 次顺序传播。</p>
+  <p><strong>(3) 接受并重采样。</strong>从左到右遍历扩展，接受草稿词元等于目标 argmax 的最长前缀。在首次分歧处丢弃其余部分，并从<em>目标模型</em>的分布中重新采样这一个位置。将上下文推进（已接受词元数 $+ 1$）个位置，然后重复。</p>
+  <p>加速发生在步骤 2。自回归生成受内存带宽限制：每个词元的主要成本，是从 HBM 读取拥有 $1.27$ B 参数的非绑定 LM 头来产生一个分布（参见 §01 的“MTP 摊薄 LM 头带宽”注释）。通过一次验证 $K+1$ 个词元，MTP 将这次 HBM 读取摊到 $K+1$ 个候选上，因此表 5 所指出的带宽受限 LM 头这一推理瓶颈，只需每 $K+1$ 个词元支付一次，而不是每个词元支付一次。验证传播本身需要更多计算（它会为 $K+1$ 个位置评分），但在受内存带宽限制的消费级 GPU 上，带宽节省占主导，因此实际耗时收益是 $1.8$–$2.4\times$，而不是朴素估计的 $K+1$。</p>
+  <p>分支推测解码需要树形掩码。线性链掩码把草稿视为串行延续；分支树掩码（图 5b 中束宽为 $2$）允许每个头提出多个备选，并使位置 $i$ 只关注祖先。若 $j$ 是 $i$ 的祖先，则 $M_{i,j}=0$，否则为 $-\infty$。这种非对称三角分块结构在一次自注意力计算中并发评估所有分支，且兄弟假设互不污染。下方组件可切换两种结构。</p>
 
   <!-- Widget 1: Interactive Speculative Decoding Simulator (#w-mtp) -->
   <div class="widget" id="w-mtp">
-    <div class="w-head"><span class="w-title">Live MTP speculative decoding &amp; speedup simulator</span><span class="w-tag">speculative engine</span></div>
-    <div class="w-desc">The draft-verify-resume cycle in real time: the model emits $K$ draft tokens per forward pass and the target verifies all drafts in a single parallel step. Green marks accepted speculative drafts; red marks rejected tails; amber marks the resampled target correction token.</div>
+    <div class="w-head"><span class="w-title">实时 MTP 推测解码与加速模拟器</span><span class="w-tag">推测引擎</span></div>
+    <div class="w-desc">实时展示草拟—验证—继续循环：模型每次前向传播产生 $K$ 个草稿词元，目标在单个并行步骤中验证全部草稿。绿色表示接受，红色表示拒绝，琥珀色表示重采样的目标纠正词元。</div>
     
     <div class="w-controls">
-      <button class="w-btn primary" id="mtpStep">Step</button>
-      <button class="w-btn" id="mtpAuto" aria-label="Auto-run speculative decoding cycles">Play ▶</button>
-      <button class="w-btn" id="mtpReset">Reset</button>
+      <button class="w-btn primary" id="mtpStep">单步</button><button class="w-btn" id="mtpAuto" aria-label="自动运行推测解码循环">播放 ▶</button><button class="w-btn" id="mtpReset">重置</button>
       
       <div class="w-ctl">
-        <label for="mtpDomainSel">domain acceptance preset (β)</label>
+        <label for="mtpDomainSel">领域接受率预设（β）</label>
         <select id="mtpDomainSel">
-          <option value="0.88" selected>Structured JSON / Code AST (β = 0.88 · ~2.3× speedup)</option>
-          <option value="0.78">Standard Python / TypeScript (β = 0.78 · ~1.9× speedup)</option>
-          <option value="0.55">Creative Natural Language (β = 0.55 · ~1.4× speedup)</option>
+          <option value="0.88" selected>结构化 JSON / 代码 AST（β = 0.88 · 约 2.3× 加速）</option><option value="0.78">标准 Python / TypeScript（β = 0.78 · 约 1.9× 加速）</option><option value="0.55">创意自然语言（β = 0.55 · 约 1.4× 加速）</option>
         </select>
       </div>
 
       <div class="w-ctl">
-        <label for="mtpK">draft heads depth (K)</label>
+        <label for="mtpK">草拟头深度（K）</label>
         <select id="mtpK">
-          <option value="1">K = 1 draft token / pass</option>
-          <option value="2" selected>K = 2 draft tokens / pass (Native 3.8)</option>
-          <option value="3">K = 3 draft tokens / pass</option>
+          <option value="1">K = 1 个草稿词元/次传播</option><option value="2" selected>K = 2 个草稿词元/次传播（3.8 原生）</option><option value="3">K = 3 个草稿词元/次传播</option>
         </select>
       </div>
     </div>
@@ -375,22 +342,20 @@
 
   <!-- Widget 2: Interactive MTP Drafting & Single-Pass Verification Flow (#w-mtp-tree) -->
   <div class="widget" id="w-mtp-tree">
-    <div class="w-head"><span class="w-title">MTP architectural layout &amp; single-pass verification tree</span><span class="w-tag">tree verification</span></div>
-    <div class="w-desc">How MTP structures draft heads and executes parallel causal verification: instead of sequential drafting passes, the target model verifies the root token and all proposed drafts simultaneously in a single forward pass under a unified 2D causal tree mask.</div>
+    <div class="w-head"><span class="w-title">MTP 架构布局与单次传播验证树</span><span class="w-tag">树形验证</span></div>
+    <div class="w-desc">MTP 如何组织草拟头并执行并行因果验证：目标模型不再顺序草拟，而是在统一二维因果树掩码下，以一次前向传播同时验证根词元和所有草稿。</div>
     
     <div class="w-controls">
-      <div class="seg" id="mtpViewSeg" role="group" aria-label="MTP exploration views">
-        <button data-view="arch" class="on" aria-pressed="true">Architecture &amp; Dataflow</button>
-        <button data-view="mask" aria-pressed="false">2D Tree Causal Mask</button>
-        <button data-view="verif" aria-pressed="false">Parallel Verification Cycle</button>
+      <div class="seg" id="mtpViewSeg" role="group" aria-label="MTP 浏览视图">
+        <button data-view="arch" class="on" aria-pressed="true">架构与数据流</button><button data-view="mask" aria-pressed="false">二维树形因果掩码</button><button data-view="verif" aria-pressed="false">并行验证循环</button>
       </div>
 
       <div class="w-ctl">
-        <label for="mtpTreeDepth">draft depth (K)</label>
+        <label for="mtpTreeDepth">草拟深度（K）</label>
         <select id="mtpTreeDepth">
-          <option value="1">K = 1 (2 tokens / pass · +2.4% params)</option>
-          <option value="2" selected>K = 2 (Native Qwen 3.8 · 3 tokens / pass · +4.8% params)</option>
-          <option value="3">K = 3 (Deep lookahead · 4 tokens / pass · +7.2% params)</option>
+          <option value="1">K = 1（2 个词元/次传播 · 参数 +2.4%）</option>
+          <option value="2" selected>K = 2（Qwen 3.8 原生 · 3 个词元/次传播 · 参数 +4.8%）</option>
+          <option value="3">K = 3（深度前瞻 · 4 个词元/次传播 · 参数 +7.2%）</option>
         </select>
       </div>
     </div>
@@ -400,9 +365,9 @@
         <!-- View 1: Architecture SVG -->
         <div class="mtp-view-panel" id="mtpPanelArch">
           <div class="mtp-svg-wrap">
-            <svg id="mtpTreeSvg" viewBox="0 0 680 290" role="img" aria-label="MTP architectural forward pass and draft tree diagram"></svg>
+            <svg id="mtpTreeSvg" viewBox="0 0 680 290" role="img" aria-label="MTP 架构前向传播与草稿树图"></svg>
           </div>
-          <div class="fig-cap"><b>Fig. 5</b> — MTP forward+verify architecture: $K$ draft heads propose $K+1$ candidate continuations; the target model scores the root token and all candidate draft tokens simultaneously in a single forward pass under a unified causal-mask tree. Click any component above to inspect its tensor contract.</div>
+          <div class="fig-cap"><b>图 5</b> — MTP 前向与验证架构：$K$ 个草拟头提出 $K+1$ 个候选延续；目标模型在统一因果掩码树下，以一次前向传播同时评分根词元和全部候选草稿词元。点击组件可检查其张量约定。</div>
         </div>
 
         <!-- View 2: 2D Tree Causal Mask -->
@@ -410,27 +375,27 @@
           <div class="mtp-mask-wrap">
             <div class="mtp-mask-matrix-view">
               <div class="mtp-mask-grid-head">
-                <span class="mtp-mask-title">Attention Mask Matrix $M_{i,j}$ ($-\infty$ / $0$)</span>
-                <div class="seg sm" id="mtpMaskTopologySeg" role="group" aria-label="Mask topology">
-                  <button data-topo="chain" class="on" aria-pressed="true">Linear Speculative Chain</button>
-                  <button data-topo="tree" aria-pressed="false">Branching Tree (Beam 2)</button>
+                <span class="mtp-mask-title">注意力掩码矩阵 $M_{i,j}$（$-\infty$ / $0$）</span>
+                <div class="seg sm" id="mtpMaskTopologySeg" role="group" aria-label="掩码拓扑">
+                  <button data-topo="chain" class="on" aria-pressed="true">线性推测链</button>
+                  <button data-topo="tree" aria-pressed="false">分支树（束宽 2）</button>
                 </div>
               </div>
               <div class="mtp-mask-table-wrap" id="mtpMaskTableWrap"></div>
-              <div class="mtp-mask-explainer" id="mtpMaskExplainer" aria-live="polite">Hover over any cell or token row in the matrix to see its valid attention receptive field.</div>
+              <div class="mtp-mask-explainer" id="mtpMaskExplainer" aria-live="polite">将鼠标悬停在矩阵中的任意单元格或词元行，可查看其有效注意力感受野。</div>
             </div>
             <div class="mtp-mask-legend">
               <div class="mask-legend-row">
                 <span class="mask-legend-chip allowed">1.0 / 0 dB</span>
-                <span><strong>Causal Attention Allowed</strong>: token attends to self or causal ancestors.</span>
+                <span><strong>允许因果注意力</strong>：词元关注自身或因果祖先。</span>
               </div>
               <div class="mask-legend-row">
                 <span class="mask-legend-chip masked">0.0 / -∞</span>
-                <span><strong>Causal Attention Masked</strong>: prevents illegal future leakage or sibling interference.</span>
+                <span><strong>屏蔽因果注意力</strong>：防止非法未来泄漏或兄弟节点干扰。</span>
               </div>
             </div>
           </div>
-          <div class="fig-cap"><b>Fig. 5b</b>: 2D Tree Attention Causal Mask. By constructing an asymmetric triangular block mask, all $K+1$ speculative positions are evaluated concurrently in one self-attention computation without cross-pollinating alternative speculative branches.</div>
+          <div class="fig-cap"><b>图 5b</b>：二维树形注意力因果掩码。通过构造非对称三角分块掩码，一次自注意力计算即可并发评估全部 $K+1$ 个推测位置，备选分支之间不会交叉污染。</div>
         </div>
 
         <!-- View 3: Single-Pass Verification Cycle -->
@@ -438,38 +403,38 @@
           <div class="mtp-verif-wrap">
             <div class="mtp-verif-bar">
               <div class="verif-prompt-box">
-                <span class="verif-label">PREFIX CONTEXT:</span>
+                <span class="verif-label">前缀上下文：</span>
                 <span class="verif-text" id="mtpVerifPromptText"><code>def compute_attention_scores(q, k, v):</code></span>
               </div>
-              <button class="w-btn primary sm" id="mtpVerifStepBtn">Simulate Step ⚡</button>
+              <button class="w-btn primary sm" id="mtpVerifStepBtn">模拟一步 ⚡</button>
             </div>
             <div class="mtp-verif-candidates" id="mtpVerifCandidates"></div>
             <div class="mtp-verif-comparison" id="mtpVerifComparison"></div>
           </div>
-          <div class="fig-cap"><b>Fig. 5c</b>: Single-pass parallel verification cycle. All $K+1$ tokens are scored in parallel by the target backbone. The sequence is accepted up to the first divergence, where the target model resamples the correction token.</div>
+          <div class="fig-cap"><b>图 5c</b>：单次传播并行验证循环。目标骨干网络并行评分全部 $K+1$ 个词元；序列接受到首次分歧处，目标模型在此重采样纠正词元。</div>
         </div>
       </div>
 
       <!-- Right Column: Telemetry & Dynamic Inspector Card -->
       <div class="mtp-tree-info-col">
         <div class="rf-stat-box">
-          <div class="rf-head">MTP Execution &amp; Memory Contract</div>
-          <div class="rf-row"><span>Extra Parameter Weight</span><span class="val mint" id="mtpStatWeight">+4.8% (~2.6 GB)</span></div>
-          <div class="rf-row"><span>Draft Verification Latency</span><span class="val" id="mtpStatLatency">1 Forward Pass</span></div>
-          <div class="rf-row"><span>Shared LM Head Vocab</span><span class="val" id="mtpStatVocab">248,320 (0 extra params)</span></div>
-          <div class="rf-row"><span>Target Output Distribution</span><span class="val mint" id="mtpStatDist">Exact Match (KL = 0.0)</span></div>
+          <div class="rf-head">MTP 执行与内存约定</div>
+          <div class="rf-row"><span>额外参数权重</span><span class="val mint" id="mtpStatWeight">+4.8%（约 2.6 GB）</span></div>
+          <div class="rf-row"><span>草稿验证延迟</span><span class="val" id="mtpStatLatency">1 次前向传播</span></div>
+          <div class="rf-row"><span>共享 LM 头词表</span><span class="val" id="mtpStatVocab">248,320（0 个额外参数）</span></div>
+          <div class="rf-row"><span>目标输出分布</span><span class="val mint" id="mtpStatDist">精确匹配（KL = 0.0）</span></div>
         </div>
 
         <div class="mtp-inspector-card" id="mtpInspectorCard">
           <div class="inspector-header">
-            <span class="inspector-badge" id="mtpInspectBadge">LAYER COMPONENT</span>
-            <span class="inspector-title" id="mtpInspectTitle">Main Backbone Layer 64</span>
+            <span class="inspector-badge" id="mtpInspectBadge">层组件</span>
+            <span class="inspector-title" id="mtpInspectTitle">主骨干网络第 64 层</span>
           </div>
           <div class="inspector-math" id="mtpInspectMath">h_t = RMSNorm(Block₆₄(h_t⁽⁶³⁾)) ∈ ℝ^(B × 1 × 5120)</div>
-          <div class="inspector-body" id="mtpInspectDesc">Computes the deep contextual representation for the current token position. The resulting hidden state $h_t$ is simultaneously dispatched to the Shared LM Head and the cascade of MTP draft heads.</div>
+          <div class="inspector-body" id="mtpInspectDesc">计算当前词元位置的深层上下文表示。所得隐藏状态 $h_t$ 同时发送到共享 LM 头和 MTP 草拟头级联。</div>
           <div class="inspector-props" id="mtpInspectProps">
-            <div class="ip-item"><span class="ip-lbl">TENSOR SHAPE</span><span class="ip-val" id="mtpInspectShape">[Batch, 1, 5120]</span></div>
-            <div class="ip-item"><span class="ip-lbl">PRECISION</span><span class="ip-val" id="mtpInspectDtype">bfloat16 (Layer 64)</span></div>
+            <div class="ip-item"><span class="ip-lbl">张量形状</span><span class="ip-val" id="mtpInspectShape">[批量, 1, 5120]</span></div>
+            <div class="ip-item"><span class="ip-lbl">精度</span><span class="ip-val" id="mtpInspectDtype">bfloat16（第 64 层）</span></div>
           </div>
         </div>
       </div>
@@ -477,256 +442,242 @@
   </div>
 
   <!-- Mathematical Acceptance Guarantee -->
-  <h3>Acceptance-rate mathematics &amp; exact distribution preservation</h3>
-  <p>Speculative decoding carries one mathematical guarantee: the output distribution is <strong>provably identical</strong> to standard greedy or nucleus autoregressive sampling from the target model. Draft proposals can only accelerate generation; they can never alter the output probabilities or introduce draft-model hallucinations:</p>
+  <h3>接受率数学与精确分布保持</h3>
+  <p>推测解码具有一项数学保证：输出分布与目标模型的标准贪心或核自回归采样<strong>可证明地完全相同</strong>。草稿只能加速生成，绝不会改变输出概率或引入草拟模型幻觉：</p>
 
   <div class="math">
-    \mathbb{E}[\text{Tokens Accepted per Verification Step}] = \frac{1 - \beta^{K+1}}{1 - \beta} \quad ; \quad \text{Speedup Factor } \mathcal{S} \approx \frac{\mathbb{E}[\text{Tokens}]}{1 + \gamma_{\text{verify}}}
+    \mathbb{E}[\text{每个验证步骤接受的词元}] = \frac{1 - \beta^{K+1}}{1 - \beta} \quad ; \quad \text{加速因子 } \mathcal{S} \approx \frac{\mathbb{E}[\text{词元}]}{1 + \gamma_{\text{verify}}}
   </div>
 
-  <p>For $K=2$ draft heads at $\beta = 0.85$, the model accepts an expected $\mathbf{2.57\text{ tokens per forward pass}}$, translating to a net $>2.2\times$ wall-clock throughput increase on consumer GPUs where memory bandwidth is the primary bottleneck.</p>
+  <p>当 $K=2$、$\beta=0.85$ 时，模型每次前向传播期望接受 $\mathbf{2.57\text{ 个词元}}$；在以内存带宽为主要瓶颈的消费级 GPU 上，实际吞吐量提升超过 $2.2\times$。</p>
 
-  <p>The $\frac{1 - \beta^{K+1}}{1 - \beta}$ expression is a finite geometric series, and it falls straight out of the accept-and-resample rule. The root token $x_{t+1}$ is the main head's own output, so it is always correct. That is the leading $1$. Draft $\tilde{x}_{t+2}$ is accepted with probability $\beta$ (the chance the draft matches the target's argmax), contributing $\beta$. Draft $\tilde{x}_{t+3}$ is accepted only if <em>both</em> it and the draft before it match, contributing $\beta^2$, and so on. Summing the expected contributions of the root and the $K$ drafts gives</p>
-  <div class="math" aria-label="Expected accepted tokens as a finite geometric series: root always accepted (1), draft k accepted with probability beta^k, sum 1+beta+...+beta^K = (1-beta^{K+1})/(1-beta).">
-    \mathbb{E}[\text{accepted}] = \sum_{k=0}^{K} \beta^k = 1 + \beta + \beta^2 + \dots + \beta^K = \frac{1 - \beta^{K+1}}{1 - \beta}
+  <p>$\frac{1 - \beta^{K+1}}{1 - \beta}$ 表达式是有限等比级数，直接由接受并重采样规则推导而来。根词元 $x_{t+1}$ 是主头自己的输出，所以始终正确，这就是首项 $1$。草稿 $\tilde{x}_{t+2}$ 以概率 $\beta$（草稿与目标 argmax 匹配的概率）被接受，贡献 $\beta$。只有当草稿 $\tilde{x}_{t+3}$ 及其前一个草稿<em>都</em>匹配时，它才会被接受，贡献 $\beta^2$，依此类推。将根词元和 $K$ 个草稿的期望贡献相加，得到</p>
+  <div class="math" aria-label="期望接受词元构成有限等比级数：根词元始终接受，草稿 k 以 beta 的 k 次方概率接受，总和为 1+beta+...+beta^K。">
+    \mathbb{E}[\text{接受数}] = \sum_{k=0}^{K} \beta^k = 1 + \beta + \beta^2 + \dots + \beta^K = \frac{1 - \beta^{K+1}}{1 - \beta}
   </div>
-  <p>Plugging the three domain presets (with $K=2$) recovers the simulator's speedup tiers exactly: structured code ($\beta = 0.88$) gives $(1 - 0.88^3)/0.12 = 2.66 \to \sim 2.3\times$ after the verification-pass overhead; standard code ($\beta = 0.78$) gives $2.39 \to \sim 1.9\times$; creative text ($\beta = 0.55$) gives $1.85 \to \sim 1.4\times$. The $\gamma_{\text{verify}}$ term in the speedup factor is the wall-clock cost of the single verification pass relative to a generation step, small on bandwidth-bound hardware, which is why $\mathcal{S}$ tracks $\mathbb{E}[\text{tokens}]$ closely there and sags on compute-bound servers.</p>
-  <p>The "exact distribution preservation" guarantee, the $\text{KL} = 0.0$ in the telemetry card, is a consequence of step 3, not a separate mechanism. Accepted drafts are, by definition, tokens where the draft's choice <em>equals</em> the target's argmax, so they are samples the target would have produced anyway. At the first divergence the correction token is resampled from the <em>target's</em> full distribution, not the draft's, so the marginal distribution of every emitted token is exactly the target's $P(x_{t+1} \mid x_{\le t})$. Drafts can only accelerate; they can never inject their own probabilities, which is why a wrong draft is silently discarded rather than corrupting the output. That is the Leviathan et al. rejection-sampling guarantee that makes speculative decoding distribution-safe.</p>
+  <p>代入三个领域预设（$K=2$）恰好可以还原模拟器的加速档位：结构化代码（$\beta = 0.88$）得到 $(1 - 0.88^3)/0.12 = 2.66 \to \sim 2.3\times$（计入验证传播开销后）；标准代码（$\beta = 0.78$）得到 $2.39 \to \sim 1.9\times$；创意文本（$\beta = 0.55$）得到 $1.85 \to \sim 1.4\times$。加速因子中的 $\gamma_{\text{verify}}$ 项，是单次验证传播相对于一次生成步骤的实际耗时；它在带宽受限硬件上很小，因此 $\mathcal{S}$ 会紧密跟随 $\mathbb{E}[\text{词元}]$，而在算力受限服务器上则会下滑。</p>
+  <p>“精确保持分布”的保证，也就是遥测卡中的 $\text{KL} = 0.0$，是步骤 3 的结果，而不是另一个独立机制。根据定义，被接受的草稿所在位置上，草稿选择<em>等于</em>目标 argmax，因此它们本来就是目标会产生的样本。在首次分歧处，纠正词元从<em>目标模型</em>的完整分布而非草稿分布中重新采样，因此每个发出词元的边缘分布都精确等于目标的 $P(x_{t+1} \mid x_{\le t})$。草稿只能加速，绝不能注入自身的概率；错误草稿会被静默丢弃，而不会污染输出。正是 Leviathan 等人的这一拒绝采样保证，使推测解码具有分布安全性。</p>
 
   <!-- MTP vs Separate Draft Model Comparison Matrix -->
-  <h3>Native MTP vs separate draft model comparison</h3>
+  <h3>原生 MTP 与独立草拟模型对比</h3>
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 7 — Native MTP heads vs separate draft model:</strong> VRAM footprint, draft-target distribution match, training cost, and acceptance-rate behavior compared head-to-head.</caption>
+      <caption><strong>表 7 — 原生 MTP 头与独立草拟模型：</strong>逐项比较 VRAM 占用、草稿—目标分布匹配、训练成本和接受率行为。</caption>
       <thead>
         <tr>
-          <th scope="col">Architectural Dimension</th>
-          <th scope="col">Native MTP Heads (Qwen 3.8-27B)</th>
-          <th scope="col">Separate Small Draft Model (e.g. 1.5B Model)</th>
+          <th scope="col">架构维度</th>
+          <th scope="col">原生 MTP 头（Qwen 3.8-27B）</th>
+          <th scope="col">独立小型草拟模型（如 1.5B 模型）</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>VRAM Memory Footprint</strong></td>
-          <td class="r good"><strong>+4.8% parameter overhead</strong> (~2.6 GB BF16)</td>
-          <td class="r bad">+20% to +35% VRAM (+3–6 GB weights + KV cache)</td>
+          <td><strong>VRAM 内存占用</strong></td>
+          <td class="r good"><strong>参数开销 +4.8%</strong>（BF16 约 2.6 GB）</td>
+          <td class="r bad">VRAM +20% 至 +35%（3–6 GB 权重 + KV 缓存）</td>
         </tr>
         <tr>
-          <td><strong>KV Cache Synchronization</strong></td>
-          <td class="r good"><strong>Zero extra KV cache</strong>; shares main backbone tables</td>
-          <td class="r bad">Requires separate KV cache management &amp; synchronization</td>
+          <td><strong>KV 缓存同步</strong></td>
+          <td class="r good"><strong>零额外 KV 缓存</strong>；共享主骨干网络表</td>
+          <td class="r bad">需要独立管理和同步 KV 缓存</td>
         </tr>
         <tr>
-          <td><strong>Vocabulary &amp; Embedding Alignment</strong></td>
-          <td class="r good"><strong>100% Shared LM Head</strong> ($248,320$ vocabulary)</td>
-          <td class="r">Often suffers tokenizer discrepancies or embedding drift</td>
+          <td><strong>词表与嵌入对齐</strong></td>
+          <td class="r good"><strong>100% 共享 LM 头</strong>（$248,320$ 词表）</td>
+          <td class="r">常有分词器差异或嵌入漂移</td>
         </tr>
         <tr>
-          <td><strong>Latency per Draft Token</strong></td>
-          <td class="r good"><strong>Near-zero latency</strong> (Single fused linear projection)</td>
-          <td class="r bad">Full forward pass latency across small draft model layers</td>
+          <td><strong>每个草稿词元的延迟</strong></td>
+          <td class="r good"><strong>近零延迟</strong>（单次融合线性投影）</td>
+          <td class="r bad">需承担小型草拟模型各层的完整前向传播延迟</td>
         </tr>
         <tr>
-          <td><strong>Training Regularization Payoff</strong></td>
-          <td class="r good"><strong>Improves base model reasoning</strong> via multi-step loss</td>
-          <td class="r">Zero training benefit to the target foundation model</td>
+          <td><strong>训练正则化收益</strong></td>
+          <td class="r good"><strong>通过多步损失改善基础模型推理</strong></td>
+          <td class="r">对目标基础模型训练没有收益</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>Each row of Table 7 is a consequence of the MTP heads living <em>inside</em> the backbone rather than beside it. The shared $248{,}320$-vocabulary LM head (§02) means drafts are produced in the exact token space the target reasons in, with no tokenizer drift and no embedding misalignment, which is the single largest source of acceptance-rate collapse in separate-draft setups. The shared KV cache means the verification pass reuses the backbone's already-materialised keys and values rather than maintaining a second cache that must be synchronised token-by-token. And the training-regulariser row is the asymmetry that makes MTP structurally superior: a separate draft model is a pure inference tax with zero benefit to the foundation model, whereas the MTP multi-step loss is paid during pretraining for a backbone that is <em>more</em> capable at single-token generation too. The dense credit assignment of §08's first subsection makes the base model better, and the drafting capability is a free by-product. The cost is the $+4.8\%$ parameter overhead, carried only at inference and shed when MTP is disabled for non-speculative serving.</p>
-  <p>With the architecture's forward path, multimodal ingress, and training-time lookahead all specified, the remaining input to the model is the one no amount of architecture can compensate for: the data it is trained on. The §09 pipeline turns $120$ PB of raw web into the $36$ T tokens that fill the FFN's memory slots and the MTP heads' futures.</p>
+  <p>表 7 中的每一行都源于 MTP 头位于骨干网络<em>内部</em>而非旁侧。共享的 $248{,}320$ 词表 LM 头（§02）意味着草稿直接在目标模型进行推理的同一词元空间中产生，不存在分词器漂移和嵌入错位；后两者正是独立草拟方案中接受率崩溃的最大单一来源。共享 KV 缓存意味着验证传播会复用骨干网络已经物化的键和值，而非维护必须逐词元同步的第二份缓存。训练正则化一行所体现的不对称性，则使 MTP 在结构上更胜一筹：独立草拟模型纯粹是推理税，对基础模型毫无益处；而 MTP 多步损失在预训练期间投入成本，得到的骨干网络连<em>单词元</em>生成也更为出色。§08 第一小节的密集信用分配改善了基础模型，草拟能力只是免费的副产品。代价是 $+4.8\%$ 的参数开销，它仅在推理时携带，并可在非推测服务中禁用 MTP 时卸载。</p>
+  <p>架构的前向路径、多模态入口和训练期前瞻均已明确，剩下的是任何架构都无法弥补的输入：训练数据。§09 流水线将 $120$ PB 原始网页转化为 $36$ T 个词元，用来填充 FFN 的记忆槽和 MTP 头所预测的未来。</p>
 </section>
 
 <!-- ============================================================ 09 DATA -->
 <section id="data">
-  <div class="sec-tag">09 · Data pipeline &amp; synthesis</div>
-  <h2>From 120 petabytes of raw web to 36 trillion clean tokens</h2>
-  <p class="lead">A 27.6B-parameter hybrid model demands high-quality data at scale: 36 trillion tokens spanning 119 natural and programming languages, with ≈39% synthetically amplified through automated verifier loops. This section details the ingestion funnel, deduplication mathematics, model-in-the-loop synthesis, and sequence packing protocols.</p>
+  <div class="sec-tag">09 · 数据流水线与合成</div><h2>从 120 PB 原始网页到 36 万亿个干净词元</h2>
+  <p class="lead">27.6B 参数的混合模型需要大规模高质量数据：36 万亿词元覆盖 119 种自然语言和编程语言，其中约 39% 由自动验证器循环合成增强。本节详述摄取漏斗、去重数学、模型在环合成和序列打包协议。</p>
 
-  <h3>The funnel: 120 PB of raw web, distilled to 36 T tokens</h3>
-  <p>Read the pipeline as a chain of <em>lossy filters</em>, each removing one specific failure mode. The numbers in the widget above are not arbitrary volumes but the survivors of the previous stage's filter, and the retention ratios tell you where the data actually comes from:</p>
-  <div class="math" aria-label="Data funnel retention: 120 PB raw crawl to 45 PB parsed text (37.5 percent, markup/OCR strip), to 22 T organic tokens (dedup/quality/decontam), plus 14 T verifier-gated synthetic, equals 36 T final. Synthetic share 14/36 = 38.9 percent.">
-    \underbrace{120\text{ PB}}_{\text{raw crawl}} \xrightarrow[\text{strip + OCR}]{0.375} \underbrace{45\text{ PB}}_{\text{parsed text}} \xrightarrow[\text{dedup + quality + decontam}]{} \underbrace{22\text{ T}}_{\text{organic}} \;+\; \underbrace{14\text{ T}}_{\text{synthetic}} = \underbrace{36\text{ T}}_{\text{pretraining shards}}, \quad \tfrac{14}{36} = 38.9\%
+  <h3>漏斗：将 120 PB 原始网页蒸馏为 36 T 词元</h3>
+  <p>可将流水线视为一串<em>有损过滤器</em>，每个过滤器消除一种特定故障模式。各阶段数字是上一阶段过滤后的留存量，留存率揭示数据的实际来源：</p>
+  <div class="math" aria-label="数据漏斗留存：120 PB 原始抓取数据经标记剥离和 OCR 变为 45 PB 解析文本，留存率 37.5%；再经去重、质量过滤和去污染变为 22 T 有机词元，加上 14 T 经验证器筛选的合成词元，最终得到 36 T 预训练分片；合成占比 14/36 = 38.9%。">
+    \underbrace{120\text{ PB}}_{\text{原始抓取}} \xrightarrow[\text{剥离 + OCR}]{0.375} \underbrace{45\text{ PB}}_{\text{解析文本}} \xrightarrow[\text{去重 + 质量 + 去污染}]{} \underbrace{22\text{ T}}_{\text{有机}} \;+\; \underbrace{14\text{ T}}_{\text{合成}} = \underbrace{36\text{ T}}_{\text{预训练分片}}, \quad \tfrac{14}{36} = 38.9\%
   </div>
-  <p>Stage 1 harvests $120$ PB of raw web (Common Crawl, books, code repositories, PDFs, and image sets), most of it duplicate, spam, SEO boilerplate, or non-text. Stage 2 strips HTML markup and runs OCR over images and PDFs to extract $45$ PB of parsed text (a $37.5\%$ retention; the discarded bytes are image data and markup, the latter routed separately to the §07 vision tower). Stage 3 is the highest-leverage cut: deduplication, quality classification, language identification, and decontamination reduce $45$ PB of parsed text to $22$ T <em>organic</em> tokens, the human/web portion. Stage 4 adds $14$ T of verifier-gated synthetic data (Table 8) to fill capability gaps the organic corpus under-covers, and Stage 5 packs the $36$ T total into fixed-length training shards. The $39\%$ synthetic share is not a budget target but the output of a generate-versus-verify tradeoff: synthesis is cheap to produce and expensive to verify, so $14$ T is where the verification budget saturated.</p>
+  <p>阶段 1 采集 $120$ PB 原始网页（Common Crawl、书籍、代码仓库、PDF 和图像集），其中大部分是重复内容、垃圾信息、SEO 样板或非文本数据。阶段 2 剥离 HTML 标记，并对图像和 PDF 运行 OCR，提取出 $45$ PB 解析文本（留存率为 $37.5\%$；从文本流中丢弃的字节主要是图像数据和标记，其中图像数据另行送往 §07 视觉塔）。阶段 3 是杠杆最高的一次裁减：去重、质量分类、语言识别和去污染将 $45$ PB 解析文本缩减为 $22$ T 个<em>有机</em>词元，即人类与网页来源的部分。阶段 4 添加 $14$ T 经验证器把关的合成数据（表 8），以填补有机语料覆盖不足的能力缺口；阶段 5 将总计 $36$ T 个词元打包为固定长度的训练分片。$39\%$ 的合成占比不是预算目标，而是生成与验证权衡的产物：合成内容生成便宜、验证昂贵，因此 $14$ T 正是验证预算达到饱和的位置。</p>
 
   <!-- Metric Badges Strip -->
   <div class="stat-grid three-up">
     <div class="stat">
       <div class="num">36T</div>
-      <div class="lbl">Tokens (Qwen3 Base)</div>
-      <div class="sub">2.0× jump vs Qwen 2.5's 18T</div>
+      <div class="lbl">词元（Qwen3 基础模型）</div><div class="sub">相比 Qwen 2.5 的 18T 提升 2.0×</div>
     </div>
     <div class="stat">
       <div class="num">119</div>
-      <div class="lbl">Languages grounded</div>
-      <div class="sub">4.1× jump vs Qwen 2.5's 29</div>
+      <div class="lbl">覆盖语言</div><div class="sub">相比 Qwen 2.5 的 29 种提升 4.1×</div>
     </div>
     <div class="stat">
       <div class="num">120+ PB</div>
-      <div class="lbl">Raw ingest volume</div>
-      <div class="sub">Compressed to 36T high-density tokens</div>
+      <div class="lbl">原始摄取量</div><div class="sub">压缩为 36T 高密度词元</div>
     </div>
   </div>
 
   <!-- Widget 1: Interactive 5-Stage Ingestion Funnel (#w-data-funnel) -->
   <div class="widget" id="w-data-funnel">
-    <div class="w-head"><span class="w-title">Live 5-stage data processing &amp; token funnel</span><span class="w-tag">data pipeline</span></div>
-    <div class="w-desc">The end-to-end data pipeline from petabyte-scale web scraping to tokenized pretraining shards: per-stage data volumes, retention ratios, and filtering algorithms. Click any processing stage for its detail card.</div>
+    <div class="w-head"><span class="w-title">实时五阶段数据处理与词元漏斗</span><span class="w-tag">数据流水线</span></div>
+    <div class="w-desc">从 PB 级网页抓取到词元化预训练分片的端到端数据流水线：展示各阶段数据量、留存率和过滤算法。点击任一阶段查看详情。</div>
     
     <div class="funnel-pipeline" id="funnelPipeline">
       <div class="funnel-step active" data-step="1">
         <div class="fs-num">01</div>
-        <div class="fs-name">Harvest &amp; Crawl</div>
-        <div class="fs-vol">120+ PB Raw</div>
+        <div class="fs-name">采集与抓取</div><div class="fs-vol">120+ PB 原始数据</div>
       </div>
       <div class="funnel-step" data-step="2">
         <div class="fs-num">02</div>
-        <div class="fs-name">Multimodal OCR</div>
-        <div class="fs-vol">45 PB Parsed</div>
+        <div class="fs-name">多模态 OCR</div><div class="fs-vol">45 PB 已解析</div>
       </div>
       <div class="funnel-step" data-step="3">
         <div class="fs-num">03</div>
-        <div class="fs-name">Dedup &amp; Filter</div>
-        <div class="fs-vol">22T Organic</div>
+        <div class="fs-name">去重与过滤</div><div class="fs-vol">22T 有机词元</div>
       </div>
       <div class="funnel-step" data-step="4">
         <div class="fs-num">04</div>
-        <div class="fs-name">Model Synthesis</div>
-        <div class="fs-vol">+14T Synthetic</div>
+        <div class="fs-name">模型合成</div><div class="fs-vol">+14T 合成词元</div>
       </div>
       <div class="funnel-step" data-step="5">
         <div class="fs-num">05</div>
-        <div class="fs-name">Packed Shards</div>
-        <div class="fs-vol">36T Sharded</div>
+        <div class="fs-name">打包分片</div><div class="fs-vol">36T 已分片</div>
       </div>
     </div>
 
     <div class="funnel-detail-card" id="funnelDetailCard" aria-live="polite"></div>
   </div>
 
-  <h3>Why deduplication is the highest-leverage filter</h3>
-  <p>The single largest waste in a raw web crawl is <em>repetition</em>: the same article, boilerplate footer, or license text is mirrored across thousands of sites, so a naive corpus is dominated by near-identical copies. Training on duplicates is doubly harmful. It spends FLOPs re-learning what the model already knows, and it biases the §06 FFN's key–value memory toward the duplicated content, since the slots that fire on boilerplate get reinforced out of proportion and crowd out rarer, more informative facts. Deduplication removes both failures at once, and because it operates on cheap string signatures rather than expensive model scores, it is the most FLOPs-efficient cut in the funnel: every duplicate token removed is a training FLOP that never runs.</p>
-  <p>The mechanism is MinHash locality-sensitive hashing. Each document is shingled into overlapping $n$-gram windows, each shingle is hashed, and the document is represented by the minimum hashes of $b$ random bands. Two documents sharing a band are near-duplicate candidates; exact-match on the band signatures clusters them without ever comparing documents pairwise (which would be $O(N^2)$ over billions of documents). Near-dup removal also catches <em>template</em> boilerplate, the pages that share $80\%$ of their content with a million others, which is the bulk of what Stage 3 discards. Running dedup <em>before</em> the quality classifier matters: it is cheaper to deduplicate cheap data than to first pay a model to score copies you are about to throw away.</p>
+  <h3>为何去重是杠杆最高的过滤器</h3>
+  <p>原始网页抓取中最大的单项浪费是<em>重复</em>：同一篇文章、样板页脚或许可证文本被镜像到数千个网站，因此朴素语料库会被几乎相同的副本占据。对重复内容进行训练具有双重危害：它不仅耗费 FLOP 来重新学习模型已经知道的内容，还会使 §06 FFN 的键值记忆偏向重复内容，因为那些对样板文本激活的槽会被不成比例地强化，挤占更罕见、更有信息量的事实。去重同时消除这两种问题；而且它使用廉价的字符串签名而非昂贵的模型评分，因此是漏斗中 FLOP 效率最高的一次裁减：每移除一个重复词元，就有一次训练 FLOP 永远不必执行。</p>
+  <p>其机制是 MinHash 局部敏感哈希。先将每篇文档切分成重叠的 $n$-gram 窗口，再对每个分片进行哈希，并用 $b$ 个随机分带各自的最小哈希值表示该文档。共享某一分带的两篇文档会成为近重复候选；对分带签名进行精确匹配即可将其聚类，全程无需对文档做两两比较（对于数十亿篇文档，这会是 $O(N^2)$）。近重复移除也能捕获<em>模板</em>样板，也就是与其他上百万页面共享 $80\%$ 内容的页面；这正是阶段 3 丢弃内容的主体。在质量分类器<em>之前</em>运行去重很重要：先对廉价数据去重，比先让模型为即将丢弃的副本评分成本更低。</p>
 
   <!-- Widget 2: Dynamic Corpus Mix & Domain Weighting Visualizer (#w-data-mix) -->
   <div class="widget" id="w-data-mix">
-    <div class="w-head"><span class="w-title">Curriculum domain mix &amp; token weighting explorer</span><span class="w-tag">token mix</span></div>
-    <div class="w-desc">Pretraining domain balance across curriculum stages: Stage 1 focuses on broad world knowledge, Stage 2 shifts heavily to formal reasoning and code, and Stage 3 shifts to long-horizon document sequences.</div>
+    <div class="w-head"><span class="w-title">课程领域混合与词元加权浏览器</span><span class="w-tag">词元混合</span></div>
+    <div class="w-desc">各课程阶段的预训练领域平衡：阶段 1 聚焦广泛世界知识，阶段 2 大幅转向形式推理与代码，阶段 3 转向长视野文档序列。</div>
     
     <div class="mix-stage-ctl">
-      <div class="seg" id="mixStageSeg" role="group" aria-label="Curriculum domain stage selector">
-        <button data-stage="s1" class="on" aria-pressed="true">Stage 1: General Foundation (30T)</button>
-        <button data-stage="s2" aria-pressed="false">Stage 2: STEM &amp; Code Reasoning (+5T)</button>
-        <button data-stage="s3" aria-pressed="false">Stage 3: Long-Context 262k (~1T)</button>
+      <div class="seg" id="mixStageSeg" role="group" aria-label="课程领域阶段选择器">
+        <button data-stage="s1" class="on" aria-pressed="true">阶段 1：通用基础（30T）</button>
+        <button data-stage="s2" aria-pressed="false">阶段 2：STEM 与代码推理（+5T）</button>
+        <button data-stage="s3" aria-pressed="false">阶段 3：262k 长上下文（约 1T）</button>
       </div>
     </div>
 
     <!-- Visual Stacked Domain Mix Bar -->
     <div class="mix-bar-wrap">
       <div class="mix-stacked-bar" id="mixStackedBar">
-        <div class="msb-seg web" id="msbWeb" title="Web Crawl &amp; Books"></div>
-        <div class="msb-seg code" id="msbCode" title="Code &amp; Repositories"></div>
-        <div class="msb-seg stem" id="msbStem" title="STEM &amp; Mathematics"></div>
-        <div class="msb-seg multi" id="msbMulti" title="Multilingual &amp; Multimodal"></div>
+        <div class="msb-seg web" id="msbWeb" title="网页抓取与书籍"></div>
+        <div class="msb-seg code" id="msbCode" title="代码与仓库"></div>
+        <div class="msb-seg stem" id="msbStem" title="STEM 与数学"></div>
+        <div class="msb-seg multi" id="msbMulti" title="多语言与多模态"></div>
       </div>
       <div class="mix-legend">
-        <div class="vl-item"><span class="vl-sw" style="background:var(--sky)"></span>Web &amp; Books</div>
-        <div class="vl-item"><span class="vl-sw" style="background:var(--mint)"></span>Code &amp; Repositories</div>
-        <div class="vl-item"><span class="vl-sw" style="background:var(--amber)"></span>STEM &amp; Mathematics</div>
-        <div class="vl-item"><span class="vl-sw" style="background:var(--iris)"></span>Multilingual &amp; Multimodal</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--sky)"></span>网页与书籍</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--mint)"></span>代码与仓库</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--amber)"></span>STEM 与数学</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--iris)"></span>多语言与多模态</div>
       </div>
     </div>
 
     <div class="mix-stats" id="mixStats" aria-live="polite"></div>
   </div>
 
-  <h3>The curriculum mix is a schedule, not a ratio</h3>
-  <p>The domain bar above is an <em>annealed schedule</em>, not a fixed recipe. It shifts across the three pretraining stages, and the shift is the data-side analogue of the MTP $\lambda_k$ annealing in §08. Stage 1 ($30$ T) is broad world knowledge: web and books dominate, because the model must first fill the FFN's memory slots with the long tail of facts, entities, and common-sense associations that later stages will reason over. Stage 2 ($+5$ T) tilts hard toward STEM and code, so the bar's code and STEM segments swell, because once the slots exist, the model needs formal-reasoning distributions to learn the multi-step inference (and the §08 multi-future loss) that the organic web under-represents. Stage 3 ($\sim 1$ T) shifts to long-horizon $262$k-token documents, up-weighting sequences that exercise the §03 DeltaNet recurrent state and the §05 262k MRoPE extrapolation at their full length.</p>
-  <p>The principle is the same one that governs §10's loss-temperature annealing: the easiest, broadest distribution is learned first, and the harder, more specialised distributions are introduced only once the base representation is stable. A fixed mix from step one would either starve the reasoning capabilities (if web-heavy) or destabilise early training (if code-heavy before the base facts exist). The schedule lets each capability arrive when the model has the substrate to absorb it, which is why the widget's three stage buttons show three genuinely different bars, not three views of one corpus.</p>
+  <h3>课程混合是一套调度，而非固定比例</h3>
+  <p>上方领域条是一套<em>退火调度</em>，而非固定配方。它随三个预训练阶段而变化，这种变化是 §08 中 MTP $\lambda_k$ 退火在数据侧的对应物。阶段 1（$30$ T）学习广泛的世界知识：网页和书籍占主导，因为模型必须先用长尾事实、实体和常识关联填充 FFN 的记忆槽，后续阶段才能在其上进行推理。阶段 2（$+5$ T）大幅转向 STEM 和代码，因此领域条中的代码与 STEM 区段会扩张；原因是记忆槽一旦建立，模型就需要形式推理分布，才能学习有机网页覆盖不足的多步推断（以及 §08 的多未来损失）。阶段 3（$\sim 1$ T）转向长视野的 $262$k 词元文档，提高那些能以完整长度锻炼 §03 DeltaNet 循环状态和 §05 262k MRoPE 外推的序列权重。</p>
+  <p>其原则与 §10 的损失温度退火相同：先学习最容易、最广泛的分布，只有在基础表示稳定后，才引入更难、更专业的分布。如果从第一步起就使用固定混合，要么会因网页权重过高而让推理能力缺乏数据，要么会因基础事实尚未建立时代码权重过高而使早期训练不稳定。调度让每项能力都在模型已有吸收基础时到来，因此组件的三个阶段按钮展示的是三条真正不同的领域条，而不是同一语料库的三种视图。</p>
 
   <!-- Widget 3: Sequence Packing & Boundary Mask Isolation (#w-data-packing) -->
   <div class="widget" id="w-data-packing">
-    <div class="w-head"><span class="w-title">Best-fit sequence packing &amp; boundary mask inspector</span><span class="w-tag">packing protocol</span></div>
-    <div class="w-desc">Packing multiple documents into fixed-length 4,096 sequences eliminates padding waste (98% fill rate), but requires strict attention mask boundaries and position-ID resets to prevent cross-document memory leakage.</div>
+    <div class="w-head"><span class="w-title">最佳适配序列打包与边界掩码检查器</span><span class="w-tag">打包协议</span></div>
+    <div class="w-desc">把多个文档打包进固定长度 4,096 的序列可消除填充浪费（填充率 98%），但必须严格设置注意力掩码边界并重置位置 ID，防止跨文档记忆泄漏。</div>
     
     <div class="packing-ctl">
-      <div class="seg" id="packingModeSeg" role="group" aria-label="Sequence packing mode">
-        <button data-mode="isolated" class="on" aria-pressed="true">Correct Mask Reset (Isolated Documents)</button>
-        <button data-mode="leaked" aria-pressed="false">Naive Concatenation (Attention Bleed Bug)</button>
+      <div class="seg" id="packingModeSeg" role="group" aria-label="序列打包模式">
+        <button data-mode="isolated" class="on" aria-pressed="true">正确重置掩码（文档隔离）</button><button data-mode="leaked" aria-pressed="false">朴素拼接（注意力渗漏缺陷）</button>
       </div>
     </div>
 
     <div class="packing-visual" id="packingVisual" aria-live="polite"></div>
   </div>
 
-  <h3>Sequence packing: the FLOPs-per-byte lever</h3>
-  <p>Documents have a power-law length distribution: most are short, a few are very long, so naively padding each to a fixed training length wastes roughly half the compute on zeros. Sequence packing eliminates that waste: variable-length documents are sorted and greedily bin-packed into fixed-length sequences (4,096 for the dense pretraining stages, $262{,}144$ for the long-context stage), and best-fit-decreasing packing achieves the $\approx 98\%$ fill rate the widget reports. The arithmetic of the saving is direct: a $98\%$ fill versus a $\sim 50\%$ padded fill is nearly a $2\times$ increase in useful tokens per forward pass, which is a $2\times$ throughput gain at zero model cost, purely from how the data is laid out.</p>
-  <div class="math" aria-label="Sequence packing fill rate: best-fit-decreasing packs variable-length docs into fixed 4096 (or 262k) bins to 98 percent fill, versus ~50 percent with padding — a 2x useful-tokens-per-pass gain at zero model cost.">
-    \text{fill}_{\text{padded}} \sim 50\% \;\to\; \text{fill}_{\text{packed}} \approx 98\% \quad\Rightarrow\quad \text{useful tokens / pass} \;\approx\; 1.96\times
+  <h3>序列打包：每字节 FLOP 的杠杆</h3>
+  <p>文档长度呈幂律分布：大多数很短，少数非常长，因此朴素地将每篇文档填充到固定训练长度，会把约一半计算浪费在零上。序列打包可消除这种浪费：先对变长文档排序，再贪心地将其装箱到固定长度的序列中（密集预训练阶段为 4,096，长上下文阶段为 $262{,}144$），最佳适配递减打包可达到组件所报告的 $\approx 98\%$ 填充率。节省量的计算很直接：$98\%$ 的打包填充率与 $\sim 50\%$ 的普通填充率相比，每次前向传播的有效词元数几乎增加 $2\times$；这纯粹来自数据布局方式，无需任何模型成本即可获得 $2\times$ 吞吐量。</p>
+  <div class="math" aria-label="序列打包填充率：最佳适配递减法把变长文档装入固定 4096 或 262k 容器，达到 98% 填充率；普通填充约为 50%，无需模型成本即可使每次传播的有效词元增加约两倍。">
+    \text{填充率}_{\text{普通填充}} \sim 50\% \;\to\; \text{填充率}_{\text{打包}} \approx 98\% \quad\Rightarrow\quad \text{有效词元/次传播} \;\approx\; 1.96\times
   </div>
-  <p>Packing introduces one hazard that the widget's two modes dramatise. When documents A and B share a packed sequence, naïve concatenation lets attention from tokens in A read tokens in B, an <em>attention bleed</em> that leaks information across document boundaries and silently degrades the model (it learns spurious cross-document correlations that never exist at inference, where each prompt is one document). The fix reuses the §05 attention-mask mechanism at the data level: reset position IDs at every document boundary and apply a block-diagonal causal mask so each document attends only to itself. The "Correct Mask Reset" mode shows the block-diagonal mask; the "Attention Bleed" mode shows the un-reset case where the mask is a single causal triangle spanning the whole packed sequence. The cost of the fix is a slightly more complex mask construction; the benefit is the $2\times$ throughput <em>and</em> the guarantee that packed training is information-equivalent to single-document training.</p>
+  <p>打包会引入一种风险，组件的两种模式直观展示了这一点。当文档 A 和 B 共用一个打包序列时，朴素拼接会让 A 中的词元读取 B 中的词元，造成跨文档的<em>注意力渗漏</em>，从而悄然降低模型质量（模型会学习虚假的跨文档相关性，而推理时每个提示仅为一篇文档，这种相关性并不存在）。修复方法是在数据层复用 §05 的注意力掩码机制：在每个文档边界重置位置 ID，并应用分块对角因果掩码，使每篇文档只能关注自身。“正确重置掩码”模式显示分块对角掩码；“注意力渗漏”模式则显示未重置的情况，此时掩码是跨越整个打包序列的单一因果三角。修复的代价是掩码构造略为复杂；收益则是 $2\times$ 吞吐量，<em>以及</em>打包训练在信息上等价于单文档训练的保证。</p>
 
   <!-- Model-in-the-Loop Synthesis Table -->
-  <h3>Verifier-guided model-in-the-loop synthesis</h3>
-  <p>The defining innovation of Qwen3's data pipeline is <strong>automated verifier-guided synthesis</strong>: strong models generate missing capability distributions (such as multi-step Olympiad proofs and complex agentic refactors), but synthetic tokens are admitted to training shards <em>only if validated by a deterministic oracle</em>:</p>
+  <h3>验证器引导的模型在环合成</h3>
+  <p>Qwen3 数据流水线的核心创新是<strong>自动化验证器引导合成</strong>：强模型生成缺失能力分布（如多步奥赛证明和复杂智能体重构），但合成词元<em>只有通过确定性预言机验证</em>才能进入训练分片：</p>
 
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 8 — Verifier-guided model-in-the-loop synthesis matrix:</strong> domain, artifact type, generator model, verification oracle, and synthetic shard volume per capability axis.</caption>
+      <caption><strong>表 8 — 验证器引导的模型在环合成矩阵：</strong>各能力轴的领域、产物类型、生成模型、验证预言机及合成分片量。</caption>
       <thead>
         <tr>
-          <th scope="col">Domain</th>
-          <th scope="col">Synthesized Artifact Type</th>
-          <th scope="col">Generator Model</th>
-          <th scope="col">Verification Oracle</th>
-          <th scope="col" class="r">Synthetic Shard Volume</th>
+          <th scope="col">领域</th><th scope="col">合成产物类型</th><th scope="col">生成模型</th><th scope="col">验证预言机</th><th scope="col" class="r">合成分片量</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Formal Mathematics</strong></td>
-          <td>Step-by-step textbook derivations, Olympiad algebra, geometry lemmas</td>
+          <td><strong>形式数学</strong></td>
+          <td>逐步教材推导、奥赛代数、几何引理</td>
           <td>Qwen2.5-Math-72B</td>
-          <td>SymPy Computer Algebra System &amp; Lean 4 formal prover</td>
-          <td class="r good">~4.8 Trillion Tokens</td>
+          <td>SymPy 计算机代数系统与 Lean 4 形式证明器</td>
+          <td class="r good">约 4.8 万亿词元</td>
         </tr>
         <tr>
-          <td><strong>Systems &amp; Code</strong></td>
-          <td>Repository-level bug fixes, unit tests, docstring implementations</td>
+          <td><strong>系统与代码</strong></td>
+          <td>仓库级缺陷修复、单元测试、文档字符串实现</td>
           <td>Qwen2.5-Coder-32B</td>
-          <td>Docker sandbox unit test execution &amp; AST validation</td>
-          <td class="r good">~5.6 Trillion Tokens</td>
+          <td>Docker 沙箱单元测试执行与 AST 验证</td>
+          <td class="r good">约 5.6 万亿词元</td>
         </tr>
         <tr>
-          <td><strong>Agentic Tool Calling</strong></td>
-          <td>Multi-turn bash terminal interactions, error recovery trajectories</td>
-          <td>Qwen3 Teacher Fleet</td>
-          <td>Environment state delta verification &amp; exit-code assertion</td>
-          <td class="r good">~2.2 Trillion Tokens</td>
+          <td><strong>智能体工具调用</strong></td>
+          <td>多轮 bash 终端交互、错误恢复轨迹</td>
+          <td>Qwen3 教师模型集群</td>
+          <td>环境状态增量验证与退出码断言</td>
+          <td class="r good">约 2.2 万亿词元</td>
         </tr>
         <tr>
-          <td><strong>Multimodal OCR</strong></td>
-          <td>STEM paper OCR, multi-column tables, inline LaTeX formulas</td>
+          <td><strong>多模态 OCR</strong></td>
+          <td>STEM 论文 OCR、多栏表格、行内 LaTeX 公式</td>
           <td>Qwen2.5-VL-72B</td>
-          <td>Layout bounding-box alignment &amp; text perceptual hashing</td>
-          <td class="r">~1.4 Trillion Tokens</td>
+          <td>版面边界框对齐与文本感知哈希</td>
+          <td class="r">约 1.4 万亿词元</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>The verifier is the load-bearing column of Table 8, not the generator. Strong models generate candidate synthetic tokens cheaply and at arbitrary scale, but ungated synthetic data is model-flavoured noise: it amplifies the generator's own errors and, trained on at volume, causes the "model collapse" failure where the trained model drifts toward the generator's blind spots. The pipeline admits a synthetic token <em>only</em> if a deterministic oracle independently verifies it, and the oracle is deliberately not a language model: SymPy and Lean 4 check a math derivation by symbolic simplification and formal proof, not by judging whether the steps "look right"; Docker unit tests check code by execution pass/fail; agentic trajectories are checked by environment state-delta and exit-code assertion; OCR by bounding-box alignment and perceptual hashing. A deterministic oracle cannot be reward-hacked the way a model-judging-model verifier can, because there is no soft score to optimise against: the token either satisfies the oracle or it does not. The $14$ T synthetic can therefore be mixed with the $22$ T organic without degrading the base model: every synthetic token has passed a ground-truth check the organic data was never given.</p>
-  <p>The four capability axes in the table are exactly the distributions the organic $22$ T under-covers. Olympiad proofs, repository-level refactors, and multi-turn agentic error-recovery trajectories are rare in web crawl. A web corpus has millions of blog posts but vanishingly few verified step-by-step geometry lemmas. Synthesis closes those gaps: the generator produces the missing distribution, the verifier certifies which examples are correct, and only certified examples enter the shards. The $4.8$ T math, $5.6$ T code, $2.2$ T agentic, and $1.4$ T multimodal-OCR volumes sum to $14$ T, the synthetic term in the funnel equation above.</p>
+  <p>表 8 中真正承重的一列是验证器，而非生成器。强模型可以廉价且以任意规模生成候选合成词元，但未经把关的合成数据只是带有模型风格的噪声：它会放大生成器自身的错误，而当大规模用于训练时，会引发训练模型向生成器盲点漂移的“模型崩溃”。流水线<em>只有</em>在确定性预言机独立验证后才接纳合成词元，而且预言机被刻意设计为非语言模型：SymPy 和 Lean 4 通过符号化简与形式证明检查数学推导，而不是判断步骤是否“看起来正确”；Docker 单元测试通过执行的通过或失败来检查代码；智能体采样轨迹通过环境状态增量和退出码断言检查；OCR 则通过边界框对齐和感知哈希检查。确定性预言机无法像由模型评判模型的验证器那样被奖励黑客利用，因为不存在可供针对性优化的软评分：词元要么满足预言机，要么不满足。因此，$14$ T 个合成词元可以与 $22$ T 个有机词元混合，而不会降低基础模型质量：每个合成词元都通过了有机数据从未接受过的真实依据检查。</p>
+  <p>表中的四个能力轴恰好是 $22$ T 有机数据覆盖不足的分布。奥赛证明、仓库级重构和多轮智能体错误恢复采样轨迹在网页抓取中很罕见。网页语料可能包含数百万篇博客文章，却几乎没有经过验证的逐步几何引理。合成弥补了这些缺口：生成器产生缺失的分布，验证器认证哪些样本正确，只有认证样本才能进入分片。$4.8$ T 数学、$5.6$ T 代码、$2.2$ T 智能体和 $1.4$ T 多模态 OCR 的数量合计为 $14$ T，正是上方漏斗方程中的合成项。</p>
 
   <!-- Decontamination & Quality Rigor -->
   <div class="callout note">
-    <div class="co-title">Decontamination protocol</div>
-    <p>To eliminate test-set memorization, all pretraining shards undergo continuous 13-gram exact match filtering and semantic embedding cosine similarity checks ($>0.85$ threshold) against 40+ public evaluation benchmarks (GSM8K, MATH-500, HumanEval, SWE-bench, LiveCodeBench, etc.). Any training document sharing overlapping spans with evaluation sets is permanently purged from pretraining shards.</p>
+    <div class="co-title">去污染协议</div>
+    <p>为消除测试集记忆，所有预训练分片持续与 40 多个公开评测基准（GSM8K、MATH-500、HumanEval、SWE-bench、LiveCodeBench 等）进行 13-gram 精确匹配过滤和语义嵌入余弦相似度检查（阈值 $>0.85$）。与评测集共享重叠片段的训练文档会从预训练分片永久清除。</p>
   </div>
 
-  <p>The two decontamination filters catch different failure modes, which is why both are required. The $13$-gram exact match catches <em>verbatim</em> leakage, a training document that reproduces a benchmark problem word-for-word, which the model would memorise into the §06 FFN slots and then "solve" by retrieval rather than reasoning at evaluation time. The cosine-similarity check catches <em>paraphrase</em> leakage, the same problem reworded, which a 13-gram match would miss but a semantic embedding would flag as near-identical. The $>0.85$ threshold is a precision-recall balance: too low and legitimately useful math content that merely resembles a benchmark problem gets purged (false positives starve the curriculum); too high and contaminated rewordings slip through (false negatives inflate the benchmark numbers the §13 results depend on). Purging is permanent and continuous. Every new shard is checked against the benchmark set before it reaches a training run, so contamination discovered late in a curriculum cannot have already been learned.</p>
-  <p>With the funnel distilled, the duplicates removed, the curriculum scheduled, the sequences packed, the synthetic gaps verified-closed, and the benchmarks decontaminated, the pipeline has produced $36$ T of training-ready tokens. The §10 pretraining stage now turns those tokens into the $27.58$ B trained weights: the loss schedule, the optimizer, and the compute that fills the architecture's memory slots with what the data contains.</p>
+  <p>两种去污染过滤器捕获不同的故障模式，因此缺一不可。$13$-gram 精确匹配捕获<em>逐字</em>泄漏，也就是训练文档逐字复现基准题目的情况；否则模型会将其记入 §06 FFN 槽，并在评测时靠检索而非推理来“解题”。余弦相似度检查捕获<em>释义</em>泄漏，也就是同一道题经过改写的情况；13-gram 匹配会漏掉它，而语义嵌入会将其标记为近乎相同。$>0.85$ 的阈值是在精确率与召回率之间权衡：阈值过低，会清除只是与基准题相似但合理有用的数学内容（假阳性会使课程数据不足）；阈值过高，则会让受污染的改写内容漏过（假阴性会夸大 §13 结果所依赖的基准分数）。清除是永久且持续的。每个新分片都会在进入训练运行之前与基准集比对，因此课程后期才发现的污染不可能已经被模型学到。</p>
+  <p>经过漏斗蒸馏、重复项移除、课程调度、序列打包、合成缺口验证闭环和基准去污染，流水线最终产出 $36$ T 个训练就绪词元。§10 的预训练阶段接下来会将这些词元转化为 $27.58$ B 个训练后权重：损失调度、优化器和计算共同把数据所含的信息填入架构的记忆槽。</p>
 </section>

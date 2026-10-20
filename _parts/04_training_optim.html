@@ -1,123 +1,123 @@
 <!-- ============================================================ 10 PRETRAINING -->
 <section id="pretraining">
-  <div class="sec-tag">10 · Pretraining &amp; scaling curriculum</div>
-  <h2>Three stages, 36 trillion tokens, and 6.0 YottaFLOPs</h2>
-  <p class="lead">Pretraining a 27.6B-parameter hybrid architecture is a staged three-phase curriculum spanning 36 trillion tokens, not unstructured brute-force gradient descent. Each stage changes the corpus composition, context length, learning rate schedule, and associative memory dynamics.</p>
+  <div class="sec-tag">10 · 预训练与规模扩展课程</div>
+  <h2>三个阶段、36 万亿词元与 6.0 YottaFLOPs</h2>
+  <p class="lead">对一个 276 亿参数的混合架构进行预训练，是横跨 36 万亿词元、分阶段实施的三阶段课程，而非无组织的暴力梯度下降。每个阶段都会改变语料组成、上下文长度、学习率调度和联想记忆动态。</p>
 
-  <h3>Three stages, three optimization regimes, not one long run</h3>
-  <p>The curriculum is best read as three distinct optimization problems concatenated, not a single run with cosmetic phase labels. Each stage changes four knobs simultaneously: <em>corpus mix</em> (the §09 schedule), <em>context length</em> (which sub-system of the architecture is stressed: the FFN slots at 4k, the formal-reasoning circuits at 4k-STEM, the §03 DeltaNet recurrent state at 262k), <em>learning-rate schedule</em> (a fresh cosine decay per stage, restarted from an annealed peak), and <em>associative-memory dynamics</em> (the gradient noise profile that hits the 48 DeltaNet state matrices $S_t$). Stage 1 is broad-coverage language acquisition; Stage 2 is a STEM-and-code specialist that must not forget Stage 1; Stage 3 is a long-context extrapolation exercise that ladders the model from the 4k length it was trained on to the $262{,}144$ length it will be served at.</p>
-  <p>The transitions are deliberate <em>shocks</em>, and managing them is half the engineering. Stage 1→2 restarts the cosine LR from $1.2\times10^{-4}$ (down from Stage 1's $3.0\times10^{-4}$ peak), a warmup-and-decay that lets the model re-fit on the shifted STEM-heavy distribution without a catastrophic loss spike. Stage 2→3 ladders context $4\text{k} \to 32\text{k} \to 128\text{k} \to 262{,}144$ in steps, each rung engaging YaRN's RoPE base expansion ($\theta_{\text{base}} = 10^7$, the §05 extrapolation lever) at the new length, and drops LR to $3.0\times10^{-5}$ so the long-context fine-tuning does not perturb the dense knowledge already stored. The context ladder is itself a sub-curriculum: jumping straight to 262k would waste compute relearning what the 32k rung already teaches about position extrapolation.</p>
+  <h3>三个阶段、三种优化机制，而非一次漫长训练</h3>
+  <p>最好把这套课程理解为三个串联的独立优化问题，而不是仅用阶段标签装饰的一次训练。每个阶段同时调节四个旋钮：<em>语料配比</em>（§09 的调度）、<em>上下文长度</em>（决定架构中受压的子系统：4k 时为 FFN 槽位，4k-STEM 时为形式推理回路，262k 时为 §03 的 DeltaNet 循环状态）、<em>学习率调度</em>（每阶段采用新的余弦衰减，并从退火后的峰值重启），以及<em>联想记忆动态</em>（作用于 48 个 DeltaNet 状态矩阵 $S_t$ 的梯度噪声分布）。阶段 1 进行广覆盖语言习得；阶段 2 专攻 STEM 与代码，但不能遗忘阶段 1；阶段 3 则进行长上下文外推，将模型从训练时的 4k 长度逐级提升到部署时的 $262{,}144$ 长度。</p>
+  <p>阶段切换是有意施加的<em>冲击</em>，而管理这些冲击占了工程工作的一半。阶段 1→2 从 $1.2\times10^{-4}$ 重启余弦学习率（低于阶段 1 的峰值 $3.0\times10^{-4}$）；这一预热与衰减过程让模型能重新拟合转向 STEM 的分布，同时避免灾难性的损失尖峰。阶段 2→3 将上下文按 $4\text{k} \to 32\text{k} \to 128\text{k} \to 262{,}144$ 逐级提升，每一级都在新长度启用 YaRN 的 RoPE 基数扩展（$\theta_{\text{base}} = 10^7$，即 §05 的外推杠杆），并将学习率降至 $3.0\times10^{-5}$，避免长上下文微调扰动已存储的密集知识。上下文阶梯本身也是一套子课程：直接跳到 262k，会浪费算力去重新学习 32k 一级已经教授的位置外推知识。</p>
 
   <!-- Interactive 3-Stage Pretraining Curriculum -->
   <div class="curriculum" id="pretrainCurriculum">
     <div class="cur-item active" data-stage="1">
       <div class="cur-head">
-        <span class="cur-title">Stage 1 · General Foundation</span>
-        <span class="cur-badge">30T+ tokens · Context 4,096 · LR 3.0×10⁻⁴</span>
+        <span class="cur-title">阶段 1 · 通用基础</span>
+        <span class="cur-badge">30 万亿+词元 · 上下文 4,096 · 学习率 3.0×10⁻⁴</span>
       </div>
-      <p>The core bedrock: high-coverage web crawl, published books, academic papers, permissive code, and 119 natural languages. Objective is standard next-token cross-entropy over packed 4k sequences. Establishes syntactic parsing, multilingual grounding, and broad world knowledge.</p>
-      <div class="math" style="margin-top:8px">L_{\text{CE}} = -\sum_{t=1}^T \log P(x_{t+1} \mid x_{\le t}) \quad ; \quad \text{AdamW}(\beta_1 = 0.9, \beta_2 = 0.95, \epsilon = 10^{-8}) \to 10\% \text{ floor}</div>
+      <p>核心基石：高覆盖率网页抓取、出版书籍、学术论文、宽松许可代码及 119 种自然语言。目标是在打包的 4k 序列上计算标准的下一词元交叉熵。由此建立句法解析、多语言语义落地与广博的世界知识。</p>
+      <div class="math" style="margin-top:8px">L_{\text{CE}} = -\sum_{t=1}^T \log P(x_{t+1} \mid x_{\le t}) \quad ; \quad \text{AdamW}(\beta_1 = 0.9, \beta_2 = 0.95, \epsilon = 10^{-8}) \to 10\% \text{ 下限}</div>
     </div>
     
     <div class="cur-item" data-stage="2">
       <div class="cur-head">
-        <span class="cur-title">Stage 2 · Reasoning &amp; Knowledge-Dense STEM</span>
-        <span class="cur-badge">+5T tokens · Context 4,096 · LR 1.2×10⁻⁴</span>
+        <span class="cur-title">阶段 2 · 推理与知识密集型 STEM</span>
+        <span class="cur-badge">+5 万亿词元 · 上下文 4,096 · 学习率 1.2×10⁻⁴</span>
       </div>
-      <p>Data distribution heavily pivots toward formal mathematics, algorithmic code, and synthetic textbook derivations. A fresh cosine decay schedule restarts from an annealed learning rate, accelerating loss reduction on STEM and formal logic benchmarks without catastrophic forgetting of S1 world knowledge.</p>
+      <p>数据分布大幅转向形式数学、算法代码和合成教材推导。新的余弦衰减调度从退火后的学习率重启，在不灾难性遗忘阶段 1 世界知识的前提下，加快 STEM 与形式逻辑基准上的损失下降。</p>
     </div>
     
     <div class="cur-item" data-stage="3">
       <div class="cur-head">
-        <span class="cur-title">Stage 3 · Long-Context 262k Annealing</span>
-        <span class="cur-badge">~1T tokens · Context 262,144 · LR 3.0×10⁻⁵</span>
+        <span class="cur-title">阶段 3 · 262k 长上下文退火</span>
+        <span class="cur-badge">约 1 万亿词元 · 上下文 262,144 · 学习率 3.0×10⁻⁵</span>
       </div>
-      <p>Sequence length progressively laddered from 4k → 32k → 128k → 262,144 tokens using chunked WY-scan kernels and YaRN RoPE base expansion ($\theta_{\text{base}} = 10^7$). Training focuses on repository-level codebases, multi-document synthesis, and synthetic needle-in-a-haystack tasks.</p>
+      <p>利用分块 WY 扫描内核和 YaRN RoPE 基数扩展（$\theta_{\text{base}} = 10^7$），将序列长度从 4k → 32k → 128k → 262,144 词元逐级提升。训练聚焦于仓库级代码库、多文档综合和合成的“大海捞针”任务。</p>
     </div>
   </div>
 
-  <h3>The loss curve, read as three regimes</h3>
-  <p>The four tracks in the trajectory widget below correspond to the four loss terms active during the curriculum, and each one maps to a stage. The <em>general-language</em> track dominates Stage 1: it descends smoothly as the model acquires syntax, multilingual grounding, and world knowledge, packing the §06 FFN slots with the long tail of facts. At the Stage 1→2 boundary the <em>STEM/code</em> track steepens (the cosine LR restart and the corpus pivot to formal reasoning accelerate reasoning-loss reduction) while the general track <em>plateaus</em> rather than rising, which is the empirical signature that the STEM specialist did not catastrophically forget Stage 1 (a plateau, not a spike, is the design goal). The <em>long-context</em> track only activates in Stage 3, descending as the 262k ladder teaches position extrapolation. The <em>MTP auxiliary</em> track (§08) runs throughout and descends independently, a regulariser that never spikes because it shares the backbone's hidden state.</p>
-  <p>The caption's "no late-stage divergence" is the payoff of the β₂ choice and the schedule discipline covered below, not luck. A hybrid model with 48 recurrent state matrices is numerically fragile to gradient noise, and a single stage transition that spikes the loss can leave $v_t$ inflated for hundreds of steps if the optimizer carries a long memory. The smooth descent across all four tracks at $36$ T tokens is the visible evidence that the fast-forgetting optimizer and the staged cosine schedule are doing their jobs.</p>
+  <h3>将损失曲线解读为三种机制</h3>
+  <p>下方轨迹组件中的四条曲线对应课程期间启用的四个损失项，并分别映射到相应阶段。<em>通用语言</em>曲线主导阶段 1：随着模型习得句法、多语言语义落地和世界知识，它平滑下降，并用长尾事实填充 §06 的 FFN 槽位。在阶段 1→2 的边界，<em>STEM/代码</em>曲线变陡（余弦学习率重启与语料向形式推理转移，加快了推理损失的下降），而通用曲线是<em>进入平台期</em>而非上升；这正是 STEM 专项模型没有灾难性遗忘阶段 1 的实证特征（设计目标是平台而非尖峰）。<em>长上下文</em>曲线仅在阶段 3 激活，并随 262k 阶梯教授位置外推而下降。<em>MTP 辅助</em>曲线（§08）贯穿全程且独立下降；由于它与骨干网络共享隐藏状态，因此是一个从不产生尖峰的正则项。</p>
+  <p>图注中的“后期无发散”并非运气，而是下文所述 β₂ 选择与严格调度的回报。带有 48 个循环状态矩阵的混合模型在数值上对梯度噪声十分敏感；若优化器保留长记忆，一次令损失激增的阶段切换就可能使 $v_t$ 在数百步内持续膨胀。四条曲线在 $36$ 万亿词元处仍平滑下降，直观证明了快速遗忘优化器和分阶段余弦调度正在发挥作用。</p>
 
   <!-- Widget 1: Interactive Loss Trajectory & Mix Transition Simulator (#w-pretrain-loss) -->
   <div class="widget" id="w-pretrain-loss">
-    <div class="w-head"><span class="w-title">Pretraining loss trajectory &amp; milestone explorer</span><span class="w-tag">loss trajectory</span></div>
-    <div class="w-desc">Empirical loss curves across the 36T token curriculum: Stage 1 establishes foundational language entropy, Stage 2 steepens reasoning capability, and Stage 3 expands associative memory to 262k context. Scrub the training timeline to follow each transition.</div>
+    <div class="w-head"><span class="w-title">预训练损失轨迹与里程碑探索器</span><span class="w-tag">损失轨迹</span></div>
+    <div class="w-desc">36 万亿词元课程中的实证损失曲线：阶段 1 建立基础语言熵，阶段 2 强化推理能力，阶段 3 将联想记忆扩展至 262k 上下文。拖动训练时间线，查看每次阶段切换。</div>
     
     <div class="loss-ctl">
       <div class="w-ctl" style="flex:2">
-        <label for="lossTokenSlider">curriculum progress timeline (0 → 36 Trillion Tokens)</label>
+        <label for="lossTokenSlider">课程进度时间线（0 → 36 万亿词元）</label>
         <input type="range" id="lossTokenSlider" min="0" max="36" step="0.5" value="30">
       </div>
       <div class="w-ctl">
-        <label for="lossCurveToggle">visible metric track</label>
+        <label for="lossCurveToggle">可见指标曲线</label>
         <select id="lossCurveToggle">
-          <option value="all" selected>All Tracks (General, STEM, Long, MTP)</option>
-          <option value="general">General Language Loss</option>
-          <option value="stem">STEM &amp; Code Loss</option>
-          <option value="mtp">MTP Aux Loss</option>
+          <option value="all" selected>全部曲线（通用、STEM、长上下文、MTP）</option>
+          <option value="general">通用语言损失</option>
+          <option value="stem">STEM 与代码损失</option>
+          <option value="mtp">MTP 辅助损失</option>
         </select>
       </div>
     </div>
 
     <div class="loss-display">
       <div class="loss-plot-wrap">
-        <svg id="lossSvg" viewBox="0 0 640 260" role="img" aria-label="Pretraining loss curves across 36 trillion tokens"></svg>
+        <svg id="lossSvg" viewBox="0 0 640 260" role="img" aria-label="36 万亿词元预训练过程中的损失曲线"></svg>
       </div>
-      <div class="fig-cap"><b>Fig. 6</b> — Pretraining loss trajectories across 36T tokens: general-language, STEM/code, long-context, and MTP auxiliary loss tracks; all descend smoothly with no late-stage divergence.</div>
+      <div class="fig-cap"><b>图 6</b> — 36 万亿词元的预训练损失轨迹：通用语言、STEM/代码、长上下文和 MTP 辅助损失曲线均平滑下降，后期没有发散。</div>
       <div class="loss-stats" id="lossStats" aria-live="polite"></div>
     </div>
   </div>
 
-  <h3>The Chinchilla equation and the over-training decision</h3>
-  <p>The total compute budget falls out of one multiplication. A forward pass costs $\approx 2ND$ matmul FLOPs ($N$ tokens each touching $\approx D$ parameters through the two projections of every layer), the backward pass roughly doubles it for the parameter and input gradients, and the MTP and optimiser overhead adds a small factor. The canonical approximation is $C \approx 6ND$. Plugging Qwen 3.8's numbers:</p>
-  <div class="math" aria-label="Chinchilla compute: C = 6ND = 6 x 36 trillion tokens x 27.6 billion parameters = 5.96e24 = 6.0 YottaFLOPs. The token-to-parameter ratio is 1300:1, far above the 20:1 Chinchilla optimum — a deliberate over-train for inference efficiency.">
+  <h3>Chinchilla 方程与过度训练决策</h3>
+  <p>总算力预算由一次乘法得出。前向传播需要 $\approx 2ND$ 次矩阵乘法 FLOPs（$N$ 个词元各自通过每层的两个投影接触 $\approx D$ 个参数），反向传播为计算参数和输入梯度，大约再将其翻倍，而 MTP 与优化器开销又增加一个小因子。经典近似为 $C \approx 6ND$。代入 Qwen 3.8 的数值：</p>
+  <div class="math" aria-label="Chinchilla 算力：C = 6ND = 6 × 36 万亿词元 × 276 亿参数 = 5.96e24 = 6.0 YottaFLOPs。词元与参数之比为 1300:1，远高于 Chinchilla 最优值 20:1——这是为了提高推理效率而有意进行的过度训练。">
     C \approx 6ND = 6 \times \underbrace{36\text{T}}_{N} \times \underbrace{27.6\text{B}}_{D} = 5.96 \times 10^{24} \;\text{FLOPs} \approx 6.0\;\text{YottaFLOPs}, \qquad \tfrac{N}{D} = \tfrac{36\text{T}}{27.6\text{B}} \approx 1300\text{:}1
   </div>
-  <p>That $1300{:}1$ tokens-to-parameter ratio is the most consequential number in this section, and it is deliberately far above the $20{:}1$ that the Chinchilla scaling laws identify as compute-optimal. A model trained to Chinchilla-optimal on $27.6$ B parameters would stop at $\sim 0.55$ T tokens and gain the most capability per training FLOP, but it would also be the most capable model <em>per training FLOP</em>, not per <em>inference</em> FLOP. Qwen 3.8 instead over-trains a smaller dense model on far more tokens, trading extra one-time training compute for a permanently cheaper-to-serve model: at inference, a $27.6$ B model costs roughly a third the tokens/sec of an $80$ B Chinchilla-optimal equivalent while reaching comparable quality, which is the Llama-era "train a smaller model longer" insight. The $36$ T budget is the point where the over-training curve flattens enough that further tokens yield diminishing returns, and the calculator below lets you sweep it against $15$ T, $30$ T, and $50$ T to see where that knee sits.</p>
-  <p>The wall-clock version of the same arithmetic is what the calculator reports. Divide the $5.96\times10^{24}$ FLOPs by the cluster's sustained throughput (accelerator count $\times$ peak BF16 TFLOPs $\times$ model FLOPs utilisation (MFU), to get training seconds. For the default $4{,}096$ H100 SXM5 cluster at $42\%$ MFU, that is $5.96\times10^{24} / (4096 \times 989\times10^{12} \times 0.42) \approx 3.5\times10^{6}\text{ s} \approx 40\text{ days}$, and the widget recomputes this live for each hardware tier, GPU count, and MFU.</p>
+  <p>$1300{:}1$ 的词元参数比是本节影响最深远的数字，并且被有意设得远高于 Chinchilla 扩展定律认定的算力最优值 $20{:}1$。一个按 Chinchilla 最优方式训练的 $27.6$ B 参数模型，会在 $\sim 0.55$ 万亿词元处停止，并让每单位训练 FLOP 获得最多能力；但它优化的是<em>每训练 FLOP</em> 的能力，而非每<em>推理</em> FLOP 的能力。Qwen 3.8 则在更多词元上过度训练较小的稠密模型，以额外的一次性训练算力换取永久更低的服务成本：推理时，一个 $27.6$ B 模型的每秒词元成本约为质量相当的 $80$ B Chinchilla 最优模型的三分之一，这正是 Llama 时代“让小模型训练得更久”的洞见。$36$ 万亿预算正处在过度训练曲线已足够平缓、继续增加词元只会带来递减收益的位置；下方计算器可将它与 $15$、$30$、$50$ 万亿进行比较，以观察拐点所在。</p>
+  <p>计算器报告的是同一算术的实际耗时版本。用 $5.96\times10^{24}$ FLOPs 除以集群的持续吞吐量（加速器数量 $\times$ BF16 峰值 TFLOPs $\times$ 模型 FLOPs 利用率（MFU）），即可得到训练秒数。默认配置为 $4{,}096$ 张 H100 SXM5、MFU 为 $42\%$，结果是 $5.96\times10^{24} / (4096 \times 989\times10^{12} \times 0.42) \approx 3.5\times10^{6}\text{ 秒} \approx 40\text{ 天}$；组件会针对每种硬件档位、GPU 数量和 MFU 实时重新计算。</p>
 
   <!-- Widget 2: Cluster Compute & Supercomputing Budget Calculator (#w-pretrain-calc) -->
   <div class="widget" id="w-pretrain-calc">
-    <div class="w-head"><span class="w-title">Supercomputer cluster compute &amp; budget calculator</span><span class="w-tag">compute arithmetic</span></div>
-    <div class="w-desc">Physical compute volume, wall-clock training duration, and power consumption for pretraining 27.6B dense parameters across modern accelerator clusters under the Chinchilla compute equation $C \approx 6ND$.</div>
+    <div class="w-head"><span class="w-title">超级计算机集群算力与预算计算器</span><span class="w-tag">算力计算</span></div>
+    <div class="w-desc">依据 Chinchilla 算力方程 $C \approx 6ND$，计算在现代加速器集群上预训练 276 亿稠密参数所需的物理计算量、实际训练时长和功耗。</div>
     
     <div class="calc-ctl">
       <div class="w-ctl">
-        <label for="calcTokens">total training tokens</label>
+        <label for="calcTokens">训练词元总数</label>
         <select id="calcTokens">
-          <option value="15">15 Trillion Tokens (Standard)</option>
-          <option value="30">30 Trillion Tokens (Deep Foundation)</option>
-          <option value="36" selected>36 Trillion Tokens (Qwen 3.8 Curriculum)</option>
-          <option value="50">50 Trillion Tokens (Over-trained Frontier)</option>
+          <option value="15">15 万亿词元（标准）</option>
+          <option value="30">30 万亿词元（深厚基础）</option>
+          <option value="36" selected>36 万亿词元（Qwen 3.8 课程）</option>
+          <option value="50">50 万亿词元（过度训练前沿）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="calcGpuType">accelerator hardware tier</label>
+        <label for="calcGpuType">加速器硬件档位</label>
         <select id="calcGpuType">
-          <option value="h100" selected>NVIDIA H100 SXM5 (989 TFLOPs dense BF16)</option>
-          <option value="b200">NVIDIA B200 NVL (2,250 TFLOPs dense BF16)</option>
-          <option value="h200">NVIDIA H200 SXM5 (989 TFLOPs · 141 GB HBM3e)</option>
-          <option value="a100">NVIDIA A100 SXM4 (312 TFLOPs BF16)</option>
+          <option value="h100" selected>NVIDIA H100 SXM5（989 TFLOPs 稠密 BF16）</option>
+          <option value="b200">NVIDIA B200 NVL（2,250 TFLOPs 稠密 BF16）</option>
+          <option value="h200">NVIDIA H200 SXM5（989 TFLOPs · 141 GB HBM3e）</option>
+          <option value="a100">NVIDIA A100 SXM4（312 TFLOPs BF16）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="calcGpuCount">cluster accelerator count</label>
+        <label for="calcGpuCount">集群加速器数量</label>
         <select id="calcGpuCount">
-          <option value="1024">1,024 GPUs</option>
-          <option value="2048">2,048 GPUs</option>
-          <option value="4096" selected>4,096 GPUs (Tier-1 Cluster)</option>
-          <option value="8192">8,192 GPUs (Hyperscaler Superpod)</option>
-          <option value="16384">16,384 GPUs (Frontier Fleet)</option>
+          <option value="1024">1,024 张 GPU</option>
+          <option value="2048">2,048 张 GPU</option>
+          <option value="4096" selected>4,096 张 GPU（一级集群）</option>
+          <option value="8192">8,192 张 GPU（超大规模超级节点）</option>
+          <option value="16384">16,384 张 GPU（前沿集群）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="calcMfu">sustained MFU efficiency</label>
+        <label for="calcMfu">持续 MFU 效率</label>
         <select id="calcMfu">
-          <option value="0.35">35% MFU (Conservative / High Comm)</option>
-          <option value="0.42" selected>42% MFU (Optimized Megatron/DeepSpeed)</option>
-          <option value="0.50">50% MFU (Peak Kernel &amp; Overlap Fusion)</option>
+          <option value="0.35">35% MFU（保守 / 高通信开销）</option>
+          <option value="0.42" selected>42% MFU（优化的 Megatron/DeepSpeed）</option>
+          <option value="0.50">50% MFU（峰值内核与重叠融合）</option>
         </select>
       </div>
     </div>
@@ -126,269 +126,269 @@
   </div>
 
   <!-- Optimizer Mathematics & Fast Forgetting -->
-  <h3>Optimizer dynamics &amp; fast-forgetting gradient stability</h3>
+  <h3>优化器动态与快速遗忘梯度稳定性</h3>
   <div class="math">
-    \theta_{t+1} = \theta_t - \eta_t \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} - \eta_t \lambda \theta_t \quad \text{(Decoupled Weight Decay AdamW)}&nbsp;&nbsp;<span class="eq-no">(14)</span><br>
-    m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t \quad ; \quad v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \quad \text{where } \beta_1 = 0.9, \; \beta_2 = 0.95
+    \theta_{t+1} = \theta_t - \eta_t \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} - \eta_t \lambda \theta_t \quad \text{（解耦权重衰减 AdamW）}&nbsp;&nbsp;<span class="eq-no">(14)</span><br>
+    m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t \quad ; \quad v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2 \quad \text{其中 } \beta_1 = 0.9, \; \beta_2 = 0.95
   </div>
 
-  <p>The choice of $\beta_2 = 0.95$ (instead of the standard 0.999) is required in 64-layer hybrid models: In standard Transformers, $\beta_2 = 0.999$ carries a gradient second-moment memory half-life of $\approx 693$ steps. In a hybrid architecture where 48 layers carry recurrent associative state matrices $S_t$, a single noisy batch or localized loss spike can corrupt $v_t$ for nearly 700 steps, causing suppressed updates and numerical stalling. Setting $\beta_2 = 0.95$ drops the half-life to just $\approx 14$ steps, allowing the optimizer to rapidly flush stale gradient magnitudes and recover instantly from stage transition shocks.</p>
+  <p>在 64 层混合模型中，必须选择 $\beta_2 = 0.95$（而非常见的 0.999）：在标准 Transformer 中，$\beta_2 = 0.999$ 使梯度二阶矩记忆的半衰期达到 $\approx 693$ 步。在有 48 层携带循环联想状态矩阵 $S_t$ 的混合架构中，一个带噪批次或局部损失尖峰就可能污染 $v_t$ 近 700 步，导致更新受抑和数值停滞。将 $\beta_2$ 设为 $0.95$，会把半衰期缩短到仅 $\approx 14$ 步，使优化器快速清除过时的梯度幅值，并从阶段切换冲击中迅速恢复。</p>
 
-  <p>The half-life figures are not heuristic: they fall out of the EMA structure. The second moment $v_t = \beta_2 v_{t-1} + (1-\beta_2)g_t^2$ is an exponential moving average, so a single gradient shock decays as $\beta_2^{\,k}$ after $k$ steps. The number of steps for it to fall to half is the EMA half-life:</p>
-  <div class="math" aria-label="EMA half-life: a gradient shock decays as beta_2^k, so the half-life is -ln(2)/ln(beta_2). For beta_2=0.999 that is 693 steps; for the tuned 0.95 it is 13.5 ~ 14 steps — the optimizer flushes a spike 50x faster.">
-    t_{1/2} = \frac{-\ln 2}{\ln \beta_2} \;\;\Rightarrow\;\; \beta_2 = 0.999 : t_{1/2} \approx 693 \text{ steps}, \qquad \beta_2 = 0.95 : t_{1/2} \approx 13.5 \approx 14 \text{ steps} \;\;(\sim 50\times \text{ faster flush})
+  <p>这些半衰期数字并非启发式估计，而是由 EMA 结构直接推导得出。二阶矩 $v_t = \beta_2 v_{t-1} + (1-\beta_2)g_t^2$ 是指数移动平均，因此一次梯度冲击在 $k$ 步后会按 $\beta_2^{\,k}$ 衰减。降至一半所需的步数就是 EMA 半衰期：</p>
+  <div class="math" aria-label="EMA 半衰期：梯度冲击按 beta_2^k 衰减，因此半衰期为 -ln(2)/ln(beta_2)。beta_2=0.999 时为 693 步；调优后的 0.95 则为 13.5，约 14 步——优化器清除尖峰的速度提高 50 倍。">
+    t_{1/2} = \frac{-\ln 2}{\ln \beta_2} \;\;\Rightarrow\;\; \beta_2 = 0.999 : t_{1/2} \approx 693 \text{ 步}, \qquad \beta_2 = 0.95 : t_{1/2} \approx 13.5 \approx 14 \text{ 步} \;\;(\text{清除速度约快 } 50\times)
   </div>
-  <p>Why this matters <em>more</em> for a hybrid than for a pure Transformer is in the recurrent state. The AdamW update is $\eta \cdot \hat{m}_t / (\sqrt{\hat{v}_t} + \epsilon)$, so an inflated $v_t$ directly <em>suppresses</em> the effective learning rate: the denominator grows and the step shrinks. In a dense attention-only model a stale $v_t$ merely slows convergence; in the 48 DeltaNet layers, the state matrices $S_t$ accumulate across the sequence, so a gradient spike from one bad batch propagates into the state's gradient for many downstream positions, and a $\beta_2 = 0.999$ optimizer then suppresses exactly the corrective updates needed to flush that corruption, a self-reinforcing stall. The $0.95$ setting cuts the recovery to $14$ steps, which is fast enough that a stage-transition shock (the §10 schedule's intentional LR restarts) clears before the next checkpoint, keeping the loss curves in Fig. 6 smooth.</p>
+  <p>这对混合架构比纯 Transformer <em>更</em>重要，原因在于循环状态。AdamW 更新为 $\eta \cdot \hat{m}_t / (\sqrt{\hat{v}_t} + \epsilon)$，因此膨胀的 $v_t$ 会直接<em>抑制</em>有效学习率：分母增大、步长缩小。在仅含稠密注意力的模型中，过时的 $v_t$ 只会减慢收敛；而在 48 个 DeltaNet 层中，状态矩阵 $S_t$ 沿序列累积，因此一个异常批次造成的梯度尖峰会传播到众多后续位置的状态梯度中，而 $\beta_2 = 0.999$ 的优化器恰好会抑制清除此污染所需的纠正更新，形成自我强化的停滞。$0.95$ 的设置将恢复时间缩短至 $14$ 步，足以让阶段切换冲击（§10 调度中有意进行的学习率重启）在下一个检查点前消退，从而保持图 6 中损失曲线的平滑。</p>
 
   <!-- Widget 3: Optimizer Dynamics & Beta2 Half-Life Inspector (#w-optim-dyn) -->
   <div class="widget" id="w-optim-dyn">
-    <div class="w-head"><span class="w-title">AdamW β₂ variance memory &amp; loss spike recovery simulator</span><span class="w-tag">optimizer dynamics</span></div>
-    <div class="w-desc">Gradient-shock recovery under standard AdamW ($\beta_2 = 0.999$) versus Qwen's tuned setting ($\beta_2 = 0.95$): fast-forgetting variance estimation prevents gradient staleness in linear recurrent layers.</div>
+    <div class="w-head"><span class="w-title">AdamW β₂ 方差记忆与损失尖峰恢复模拟器</span><span class="w-tag">优化器动态</span></div>
+    <div class="w-desc">对比标准 AdamW（$\beta_2 = 0.999$）与 Qwen 调优设置（$\beta_2 = 0.95$）下的梯度冲击恢复：快速遗忘方差估计可防止线性循环层中的梯度陈旧。</div>
     
     <div class="optim-ctl">
-      <div class="seg" id="optimBetaSeg" role="group" aria-label="AdamW Beta2 selector">
-        <button data-beta="0.95" class="on" aria-pressed="true">Tuned β₂ = 0.95 (14-step half-life · Fast Recovery)</button>
-        <button data-beta="0.999" aria-pressed="false">Standard β₂ = 0.999 (693-step half-life · Slow Flush)</button>
+      <div class="seg" id="optimBetaSeg" role="group" aria-label="AdamW Beta2 选择器">
+        <button data-beta="0.95" class="on" aria-pressed="true">调优 β₂ = 0.95（14 步半衰期 · 快速恢复）</button>
+        <button data-beta="0.999" aria-pressed="false">标准 β₂ = 0.999（693 步半衰期 · 缓慢清除）</button>
       </div>
     </div>
 
     <div class="optim-display">
       <div class="optim-plot-wrap">
-        <svg id="optimSvg" viewBox="0 0 560 220" role="img" aria-label="Gradient spike recovery curve comparison"></svg>
+        <svg id="optimSvg" viewBox="0 0 560 220" role="img" aria-label="梯度尖峰恢复曲线对比"></svg>
       </div>
-      <div class="fig-cap"><b>Fig. 7</b> — β₂ variance-memory recovery: tuned β₂ = 0.95 (14-step half-life) flushes a gradient shock within ~30 steps; standard β₂ = 0.999 (693-step half-life) leaves stale variance for hundreds of steps.</div>
+      <div class="fig-cap"><b>图 7</b> — β₂ 方差记忆恢复：调优后的 β₂ = 0.95（14 步半衰期）可在约 30 步内清除梯度冲击；标准 β₂ = 0.999（693 步半衰期）会让陈旧方差持续数百步。</div>
       <div class="optim-stats" id="optimStats" aria-live="polite"></div>
     </div>
   </div>
 
   <!-- Distributed 3D Parallelism Topology Matrix -->
-  <h3>Distributed training &amp; 3D parallelism topology</h3>
+  <h3>分布式训练与 3D 并行拓扑</h3>
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 9 — Distributed 3D parallelism topology:</strong> TP, PP, SP, ZeRO-DP axes with their configuration, kernel mechanism, and interconnect bandwidth bound.</caption>
+      <caption><strong>表 9 — 分布式 3D 并行拓扑：</strong>TP、PP、SP、ZeRO-DP 各轴的配置、内核机制及互连带宽约束。</caption>
       <thead>
         <tr>
-          <th scope="col">Parallelism Axis</th>
-          <th scope="col" class="r">Configuration</th>
-          <th scope="col">Mechanism &amp; Kernel Specialization</th>
-          <th scope="col">Interconnect Bound</th>
+          <th scope="col">并行轴</th>
+          <th scope="col" class="r">配置</th>
+          <th scope="col">机制与专用内核</th>
+          <th scope="col">互连约束</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Tensor Parallelism (TP)</strong></td>
+          <td><strong>张量并行（TP）</strong></td>
           <td class="r">TP = 2 / 4</td>
-          <td>Column/Row parallel linear projections across SwiGLU FFN and Attention Q/K/V heads within single NVLink node.</td>
-          <td>Intra-node NVLink (900 GB/s)</td>
+          <td>在单个 NVLink 节点内，对 SwiGLU FFN 和注意力 Q/K/V 头的线性投影进行列/行并行。</td>
+          <td>节点内 NVLink（900 GB/s）</td>
         </tr>
         <tr>
-          <td><strong>Pipeline Parallelism (PP)</strong></td>
+          <td><strong>流水线并行（PP）</strong></td>
           <td class="r">PP = 4 / 8</td>
-          <td>16 super-blocks $[3\times\Delta + 1\times A]$ mapped cleanly across pipeline stages with 1F1B schedule.</td>
-          <td>Inter-node InfiniBand (400 Gbps)</td>
+          <td>通过 1F1B 调度，将 16 个超级块 $[3\times\Delta + 1\times A]$ 整齐映射到各流水线阶段。</td>
+          <td>节点间 InfiniBand（400 Gbps）</td>
         </tr>
         <tr>
-          <td><strong>Sequence Parallelism (SP)</strong></td>
-          <td class="r">SP = 8 (Stage 3)</td>
-          <td>Ring-attention &amp; chunked WY-scan state handover across GPUs during 262k long-context pretraining.</td>
-          <td>High-bandwidth All-to-All</td>
+          <td><strong>序列并行（SP）</strong></td>
+          <td class="r">SP = 8（阶段 3）</td>
+          <td>在 262k 长上下文预训练期间，跨 GPU 交接环形注意力与分块 WY 扫描状态。</td>
+          <td>高带宽全互连（All-to-All）</td>
         </tr>
         <tr>
-          <td><strong>Data Parallelism (DP/ZeRO)</strong></td>
+          <td><strong>数据并行（DP/ZeRO）</strong></td>
           <td class="r">DP = 128–512</td>
-          <td>ZeRO-1/ZeRO-2 optimizer state partitioning; overlaps gradient communication with forward pass.</td>
-          <td>InfiniBand AllReduce</td>
+          <td>ZeRO-1/ZeRO-2 优化器状态分片；让梯度通信与前向传播重叠。</td>
+          <td>InfiniBand 全归约（AllReduce）</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>The 3D topology in Table 9 is not arbitrary: each axis maps onto a structural feature of the architecture and a physical feature of the cluster. <em>Tensor parallelism</em> splits the SwiGLU FFN's three projections and the attention Q/K/V heads inside one NVLink node, where the column/row-parallel all-gathers fit the $900$ GB/s intra-node bandwidth. <em>Pipeline parallelism</em> maps cleanly onto the §03 super-block structure: the $16 \times [3\Delta + 1\text{A}]$ periodic tiling gives $16$ natural pipeline units, so PP $= 4$ or $8$ places a super-block boundary at each stage cut, minimising the inter-stage activation traffic that crosses the slower InfiniBand links. <em>Sequence parallelism</em> only activates in Stage 3, where the $262$k context exceeds one GPU's memory: ring-attention shards the attention computation and the chunked WY-scan hands the DeltaNet recurrent state across GPUs, so the §04 training-parallelism trick now operates across an SP group rather than within one GPU's chunk grid. <em>ZeRO data parallelism</em> absorbs the rest of the GPUs by sharding the optimiser state, the $27.6$ B parameters' AdamW moments, so that the $\beta_2 = 0.95$ fast-forgetting state from the previous subsection is itself partitioned across the DP group. The four axes compose because they cut along independent dimensions (tensor, layer, sequence, data), and the super-block periodicity is what makes the layer cut clean.</p>
-  <p>Pretraining produces a base model that is knowledgeable but not yet useful, since it predicts the next token fluently but has not been taught to follow instructions, to reason step-by-step, or to refuse harmful requests. The §11 post-training stage takes that base model and aligns it, with GRPO reinforcement learning over verifier-scored reasoning traces.</p>
+  <p>表 9 中的 3D 拓扑并非任意设计：每个轴都映射到架构的一项结构特征和集群的一项物理特征。<em>张量并行</em>在单个 NVLink 节点内拆分 SwiGLU FFN 的三个投影和注意力 Q/K/V 头，其中列/行并行的全收集通信适配 $900$ GB/s 的节点内带宽。<em>流水线并行</em>与 §03 的超级块结构自然对应：$16 \times [3\Delta + 1\text{A}]$ 的周期平铺产生 $16$ 个天然流水线单元，因此 PP $= 4$ 或 $8$ 可在每个阶段切分处落到超级块边界，从而尽量减少跨越较慢 InfiniBand 链路的阶段间激活流量。<em>序列并行</em>仅在阶段 3 激活，此时 $262$k 上下文超过单张 GPU 的显存：环形注意力对注意力计算分片，分块 WY 扫描则跨 GPU 交接 DeltaNet 循环状态，因此 §04 的训练并行技巧改为在 SP 组内运行，而非在单张 GPU 的分块网格内运行。<em>ZeRO 数据并行</em>通过切分优化器状态（即 $27.6$ B 参数的 AdamW 矩）利用其余 GPU，使上一小节中 $\beta_2 = 0.95$ 的快速遗忘状态本身也在 DP 组内分片。四个轴能够组合，是因为它们沿相互独立的维度（张量、层、序列、数据）切分，而超级块的周期性使层切分干净利落。</p>
+  <p>预训练得到的基础模型知识丰富，却尚不可直接使用：它能流畅预测下一词元，但尚未学会遵循指令、逐步推理或拒绝有害请求。§11 的后训练阶段会在由验证器评分的推理轨迹上进行 GRPO 强化学习，从而对齐这一基础模型。</p>
 </section>
 
 <!-- ============================================================ 11 POST-TRAINING -->
 <section id="posttraining">
-  <div class="sec-tag">11 · Post-training &amp; reasoning alignment</div>
-  <h2>From raw predictor to autonomous thinking agent</h2>
-  <p class="lead">The post-training curriculum transforms a 27.6B foundation model into an autonomous, self-correcting reasoner across four synchronized phases: curated long chain-of-thought cold start, critic-free reasoning RL via Group Relative Policy Optimization (GRPO), thinking-mode fusion SFT, and general agentic alignment with explicit thinking-budget controls.</p>
+  <div class="sec-tag">11 · 后训练与推理对齐</div>
+  <h2>从原始预测器到自主思考智能体</h2>
+  <p class="lead">后训练课程通过四个相互协调的阶段，将一个 276 亿参数的基础模型转变为自主、能自我纠正的推理器：精选长思维链冷启动、通过组相对策略优化（Group Relative Policy Optimization，GRPO）进行无评论家推理强化学习、思考模式融合 SFT，以及带显式思考预算控制的通用智能体对齐。</p>
 
-  <h3>What post-training changes, and what it cannot</h3>
-  <p>The §10 base model predicts the next token fluently but is not yet usable: it does not follow instructions, does not reason inside a delimited scratchpad, does not refuse harmful requests, and does not call tools. Post-training installs exactly these four behavioral surfaces across the four stages below. But there is a hard ceiling on what post-training can do, and it is set entirely by pretraining. Post-training <em>shapes and reveals</em> the knowledge already in the model; it cannot <em>add</em> knowledge the base model never acquired. The §06 FFN key–value slots were filled during the $36$ T-token curriculum of §§09–10, and RL only changes which slots fire and how the model expresses their contents; a verifier-scored GRPO step cannot teach a fact the FFN never stored.</p>
-  <p>The binding constraints on final quality are the §09 data funnel and the §10 compute budget, not the RL recipe. A perfectly aligned model on a weak base is a fluent liar; a poorly aligned model on a strong base is a capable but unruly predictor. The four stages below assume a strong base and convert it into a controllable, reasoning, tool-using agent, and each stage addresses a distinct gap that the previous one cannot.</p>
+  <h3>后训练能改变什么，又不能改变什么</h3>
+  <p>§10 的基础模型能流畅预测下一词元，但尚不可用：它不会遵循指令，不会在有界定符的草稿区内推理，不会拒绝有害请求，也不会调用工具。下面四个阶段正是为其安装这四种行为能力。但后训练的能力存在硬上限，而这个上限完全由预训练决定。后训练会<em>塑造并揭示</em>模型已有的知识，却不能<em>添加</em>基础模型从未习得的知识。§06 的 FFN 键值槽位是在 §§09–10 的 $36$ 万亿词元课程中填充的；强化学习只会改变哪些槽位被激活，以及模型如何表达其内容。由验证器评分的 GRPO 步骤无法教授 FFN 从未存储的事实。</p>
+  <p>最终质量的约束来自 §09 的数据漏斗和 §10 的算力预算，而非强化学习配方。在薄弱基础上完美对齐的模型是一个能言善辩的骗子；在强大基础上对齐不佳的模型，则是能力出众却难以驾驭的预测器。下面四个阶段以强大的基础模型为前提，将其转变为可控、会推理、能使用工具的智能体；每个阶段都解决上一个阶段无法解决的独特缺口。</p>
 
   <!-- Interactive 4-Stage Post-Training Pipeline -->
   <div class="pipe" id="postTrainPipe">
     <div class="stage active" data-stage="1">
-      <div class="st-num">STAGE 1</div>
-      <div class="st-name">Long-CoT Cold Start</div>
-      <div class="st-desc">Curated SFT on ~50k verified chain-of-thought traces; installs <code>&lt;think&gt;</code> structure &amp; self-reflection habits.</div>
+      <div class="st-num">阶段 1</div>
+      <div class="st-name">长思维链冷启动</div>
+      <div class="st-desc">在约 5 万条经验证的思维链轨迹上进行精选 SFT；建立 <code>&lt;think&gt;</code> 结构与自我反思习惯。</div>
     </div>
     <div class="stage" data-stage="2">
-      <div class="st-num">STAGE 2</div>
-      <div class="st-name">Reasoning RL (GRPO)</div>
-      <div class="st-desc">Critic-free group-relative policy optimization on exact unit tests &amp; math verifiers; strengthens valid reasoning paths.</div>
+      <div class="st-num">阶段 2</div>
+      <div class="st-name">推理强化学习（GRPO）</div>
+      <div class="st-desc">基于精确单元测试和数学验证器进行无评论家的组相对策略优化；强化有效推理路径。</div>
     </div>
     <div class="stage" data-stage="3">
-      <div class="st-num">STAGE 3</div>
-      <div class="st-name">Thinking-Mode Fusion</div>
-      <div class="st-desc">Chat-template distillation merging deliberate reasoning and low-latency direct-answer modes into a unified checkpoint.</div>
+      <div class="st-num">阶段 3</div>
+      <div class="st-name">思考模式融合</div>
+      <div class="st-desc">通过聊天模板蒸馏，将审慎推理与低延迟直接回答模式合并到统一检查点中。</div>
     </div>
     <div class="stage" data-stage="4">
-      <div class="st-num">STAGE 4</div>
-      <div class="st-name">General Agentic RL</div>
-      <div class="st-desc">Multi-reward stack aligning tool calling, agentic loops (<code>preserve_thinking</code>), refusal calibration, and safety.</div>
+      <div class="st-num">阶段 4</div>
+      <div class="st-name">通用智能体强化学习</div>
+      <div class="st-desc">通过多重奖励栈，对齐工具调用、智能体循环（<code>preserve_thinking</code>）、拒绝校准与安全性。</div>
     </div>
   </div>
 
   <!-- Stage 1 & 2 Detailed Breakdown -->
-  <h3>Stage 1: Long-CoT cold start &amp; reasoning scaffolds</h3>
-  <p>A foundation model does not spontaneously produce disciplined, multi-thousand-token reasoning chains without prompt engineering. Stage 1 executes supervised fine-tuning (SFT) on a curated corpus of ~50,000 high-verification exemplars spanning Olympiad math, complex systems debugging, and algorithmic synthesis. This phase installs three critical behavioral priors:</p>
+  <h3>阶段 1：长思维链冷启动与推理脚手架</h3>
+  <p>如果没有提示工程，基础模型不会自发产生严谨、长达数千词元的推理链。阶段 1 在约 50,000 个经过严格验证的精选样例上执行监督微调（SFT），涵盖奥林匹克数学、复杂系统调试和算法综合。此阶段建立三项关键行为先验：</p>
   <ul>
-    <li><strong>Delimited scratchpads:</strong> Encapsulates reasoning tokens inside <code>&lt;think&gt; ... &lt;/think&gt;</code> blocks, allowing clean separation between raw deliberation and user-facing output.</li>
-    <li><strong>Subgoal decomposition:</strong> Enforces explicit problem restatement, edge-case identification, and branch planning before code generation.</li>
-    <li><strong>Hypothesis verification &amp; backtracking:</strong> Installs linguistic patterns of self-critique (<em>"Let me double check this edge case..."</em>, <em>"This branch fails for negative inputs, resetting to..."</em>).</li>
+    <li><strong>有界定符的草稿区：</strong>将推理词元封装在 <code>&lt;think&gt; ... &lt;/think&gt;</code> 块中，使原始思考与面向用户的输出清晰分离。</li>
+    <li><strong>子目标分解：</strong>要求在生成代码前明确重述问题、识别边界情况并规划分支。</li>
+    <li><strong>假设验证与回溯：</strong>建立自我批判的语言模式（<em>“让我再次检查这个边界情况……”</em>、<em>“这个分支对负数输入无效，重置为……”</em>）。</li>
   </ul>
-  <p>Cold-starting <em>before</em> RL is not optional, and the reason is the same one that made teacher forcing essential to the §08 MTP heads: RL explores, and it can only explore productively if its rollouts land in a region where rewards are reachable. A raw base model sampled at the temperatures Stage 2 needs would produce unstructured prose, and its $G$ rollouts would almost never hit a math verifier or pass a unit test, so the group-relative advantage signal would be pure noise, and the policy would drift toward whatever random phrasing happened to score once. The $50$k SFT traces install the $\langle\text{think}\rangle / \langle/\text{think}\rangle$ scaffold so that when Stage 2 samples $G$ rollouts, they are already <em>structured reasoning attempts</em> in the verifier's expected format, making the advantage signal meaningful. Cold start is the behavioural prior that makes RL's credit assignment tractable.</p>
+  <p>在强化学习<em>之前</em>进行冷启动并非可选项，其原因与教师强制对 §08 MTP 头至关重要的原因相同：强化学习负责探索，但只有当其采样轨迹落在奖励可达的区域时，探索才富有成效。若以阶段 2 所需的温度对原始基础模型采样，它会生成无结构的散文，而其 $G$ 条采样轨迹几乎不可能通过数学验证器或单元测试；这样，组相对优势信号就会成为纯噪声，策略则会漂向某个偶然得分的随机措辞。$50$k 条 SFT 轨迹建立了 $\langle\text{think}\rangle / \langle/\text{think}\rangle$ 脚手架，因此当阶段 2 采样 $G$ 条轨迹时，它们已是符合验证器预期格式的<em>结构化推理尝试</em>，使优势信号具有意义。冷启动正是让强化学习信用分配变得可处理的行为先验。</p>
 
-  <h3>Stage 2: Group Relative Policy Optimization (GRPO)</h3>
-  <p>Standard PPO requires training a separate Value Network (Critic) $V_\phi(s)$ of equivalent parameter volume to the policy network $\pi_\theta$, demanding an extra ~55 GB of VRAM during 27.6B training. <strong>GRPO (Group Relative Policy Optimization)</strong> completely eliminates the critic network. Instead, it generates a group of $G$ independent completions $\{y_1, y_2, \dots, y_G\}$ for each prompt $x$, evaluates their outcomes against deterministic verifiers, and normalizes their rewards across the group to construct the advantage baseline:</p>
+  <h3>阶段 2：组相对策略优化（GRPO）</h3>
+  <p>标准 PPO 需要训练一个与策略网络 $\pi_\theta$ 参数规模相当的独立价值网络（评论家）$V_\phi(s)$，在 276 亿参数训练中额外占用约 55 GB 显存。<strong>GRPO（组相对策略优化，Group Relative Policy Optimization）</strong>彻底移除了评论家网络。它为每个提示 $x$ 生成一组 $G$ 个独立补全 $\{y_1, y_2, \dots, y_G\}$，用确定性验证器评估结果，再在组内归一化奖励以构造优势基线：</p>
 
   <div class="math">
-    A_i = \frac{r_i - \text{mean}(r_1, \dots, r_G)}{\text{std}(r_1, \dots, r_G) + \epsilon} \quad \text{where } r_i \in [0, 1] \text{ from exact verifiers}&nbsp;&nbsp;<span class="eq-no">(15)</span><br>
+    A_i = \frac{r_i - \text{mean}(r_1, \dots, r_G)}{\text{std}(r_1, \dots, r_G) + \epsilon} \quad \text{其中 } r_i \in [0, 1] \text{ 来自精确验证器}&nbsp;&nbsp;<span class="eq-no">(15)</span><br>
     J_{\text{GRPO}}(\theta) = \mathbb{E}_{\substack{x \sim \mathcal{D} \\ \{y_i\} \sim \pi_{\text{old}}}} \left[ \frac{1}{G} \sum_{i=1}^G \min\left( \frac{\pi_\theta(y_i|x)}{\pi_{\text{old}}(y_i|x)} A_i, \; \text{clip}\left(\frac{\pi_\theta(y_i|x)}{\pi_{\text{old}}(y_i|x)}, 1-\epsilon, 1+\epsilon\right) A_i \right) - \beta D_{\text{KL}}\left(\pi_\theta \parallel \pi_{\text{ref}}\right) \right]&nbsp;&nbsp;<span class="eq-no">(16)</span>
   </div>
 
-  <p>Eq.(15) and eq.(16) each do one job, and reading them as a control problem is the clearest path through the algebra. In classical PPO the advantage is $A = R - V_\phi(s)$, where $V_\phi$ is a learned value network the same size as the policy: the $+55.2$ GB critic GRPO deletes. Eq.(15) replaces that learned baseline with the <em>empirical group mean</em>: because all $G$ completions are sampled from the same policy on the same prompt $x$, their rewards $r_1 \dots r_G$ are samples of the same distribution, and $\text{mean}(r_1 \dots r_G)$ is a zero-shot, unbiased estimate of the prompt's intrinsic difficulty. Subtracting it cancels every confounding factor the completions share (problem hardness, vocabulary rarity, prompt idiosyncrasies), isolating the pure relative question "was $y_i$ better than its siblings?" The $\text{std}$ normalisation makes the advantage scale-invariant, so a hard prompt where every rollout fails (low rewards) and an easy prompt where every rollout succeeds (high rewards) produce the same advantage magnitude, preventing the optimiser from up-weighting easy prompts just because their absolute rewards are higher.</p>
-  <p>Eq.(16) is the PPO clipped surrogate with one structural addition. The ratio $r = \pi_\theta(y_i|x)/\pi_{\text{old}}(y_i|x)$ measures how much the policy has moved since the rollouts were collected; the $\min(r A_i, \text{clip}(r, 1-\epsilon, 1+\epsilon) A_i)$ caps the per-step update at $[1-\epsilon, 1+\epsilon]$ so a single lucky rollout cannot drag the policy into a destructive regime, the same trust-region principle as PPO. The $\beta D_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}})$ term is the addition that does a different job: it anchors the policy to $\pi_{\text{ref}}$ (the pre-RL checkpoint) across the whole training run, preventing the cumulative drift that would otherwise push the model off the pretraining manifold and degrade its general English fluency (the "Distribution Drift" row of Table 10). The clip prevents per-step overshoot; the KL prevents cumulative drift. Each term is the fix for the failure mode its own omission would cause.</p>
-  <p>The $r_i \in [0,1]$ "from exact verifiers" clause is the same §09 principle. GRPO's advantage signal stays low-variance in a way reward-model RL cannot reach: the rewards come from deterministic oracles (a math answer check, a unit-test execution, an exit-code assertion), not a learned reward model. A learned reward model has blind spots the policy can exploit (the "Reward Hacking" row of Table 10); a unit test does not, because the policy cannot generate "tricky" code that passes a deterministic execution without actually being correct. The failure-mode mitigations in Table 10 are therefore verifier ensembles and sandboxing rather than reward-model retraining: the verifier side of the loop is deliberately kept non-neural.</p>
+  <p>式 (15) 和式 (16) 各司其职，把它们当作一个控制问题来读，是理解这些代数最清晰的方式。在经典 PPO 中，优势为 $A = R - V_\phi(s)$，其中 $V_\phi$ 是一个与策略同等大小的学习型价值网络，也就是 GRPO 所省去的 $+55.2$ GB 评论家。式 (15) 用<em>经验组均值</em>替代这一学习型基线：由于全部 $G$ 个补全均来自同一策略对同一提示 $x$ 的采样，它们的奖励 $r_1 \dots r_G$ 是同一分布的样本，而 $\text{mean}(r_1 \dots r_G)$ 是对提示内在难度的零样本无偏估计。减去该值可以抵消所有补全共享的混杂因素（问题难度、词汇稀有度、提示特性），只留下纯粹的相对问题：“$y_i$ 是否优于同组的其他尝试？”$\text{std}$ 归一化使优势与尺度无关，因此所有采样轨迹都失败的困难提示（低奖励）和全部成功的简单提示（高奖励）会产生相同量级的优势，防止优化器仅因绝对奖励更高就过度加权简单提示。</p>
+  <p>式 (16) 是 PPO 的裁剪替代目标，并增加了一项结构。比率 $r = \pi_\theta(y_i|x)/\pi_{\text{old}}(y_i|x)$ 衡量自收集采样轨迹以来策略移动了多少；$\min(r A_i, \text{clip}(r, 1-\epsilon, 1+\epsilon) A_i)$ 将每步更新限制在 $[1-\epsilon, 1+\epsilon]$，使单条侥幸得分的轨迹无法把策略拖入破坏性区域，这与 PPO 采用相同的信赖域原则。新增的 $\beta D_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}})$ 项承担另一项任务：在整个训练过程中，将策略锚定到 $\pi_{\text{ref}}$（强化学习前的检查点），防止累积漂移将模型推离预训练流形并损害其通用英语流畅度（表 10 的“分布漂移”行）。裁剪防止单步过冲；KL 防止累积漂移。每一项都针对缺少自身时会出现的故障模式。</p>
+  <p>$r_i \in [0,1]$“来自精确验证器”这一条件遵循与 §09 相同的原则。GRPO 的优势信号能保持奖励模型强化学习无法达到的低方差：奖励来自确定性判定器（数学答案核验、单元测试执行、退出码断言），而非学习型奖励模型。学习型奖励模型存在可被策略利用的盲点（表 10 的“奖励黑客”行）；单元测试则没有，因为策略不可能在代码并不正确时，生成“取巧”代码通过确定性执行。因此，表 10 的故障缓解措施是验证器集成与沙箱，而非重新训练奖励模型：循环中的验证器端被有意保持为非神经系统。</p>
 
   <!-- Widget 1: Interactive GRPO Group Advantage & Policy Step Simulator (#w-grpo-sim) -->
   <div class="widget" id="w-grpo-sim">
-    <div class="w-head"><span class="w-title">Live GRPO group rollout &amp; policy gradient simulator</span><span class="w-tag">RL simulator</span></div>
-    <div class="w-desc">GRPO computes group-relative advantages without a critic network: positive advantages boost correct reasoning paths while negative advantages penalize invalid or hallucinated logic. Select a prompt domain and adjust group size $G$ and temperature $\tau$.</div>
+    <div class="w-head"><span class="w-title">实时 GRPO 组采样轨迹与策略梯度模拟器</span><span class="w-tag">强化学习模拟器</span></div>
+    <div class="w-desc">GRPO 无需评论家网络即可计算组相对优势：正优势强化正确推理路径，负优势惩罚无效或幻觉逻辑。请选择提示领域，并调整组大小 $G$ 和温度 $\tau$。</div>
     
     <div class="grpo-ctl">
       <div class="w-ctl">
-        <label for="grpoPromptSel">benchmark task prompt</label>
+        <label for="grpoPromptSel">基准任务提示</label>
         <select id="grpoPromptSel">
-          <option value="math" selected>Math: Modular Inverse in Olympiad Diophantine Equation</option>
-          <option value="code">Code: Memory-Leak Fix in Concurrency Thread-Pool</option>
-          <option value="agent">Agent: 3-Step Tool-Calling with Retry Fallback</option>
+          <option value="math" selected>数学：奥林匹克丢番图方程中的模逆</option>
+          <option value="code">代码：并发线程池中的内存泄漏修复</option>
+          <option value="agent">智能体：带重试回退的三步工具调用</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="grpoGroupSize">group rollout size (G)</label>
+        <label for="grpoGroupSize">组采样轨迹数量（G）</label>
         <select id="grpoGroupSize">
-          <option value="4">G = 4 rollouts / prompt</option>
-          <option value="8" selected>G = 8 rollouts / prompt (Standard)</option>
-          <option value="16">G = 16 rollouts / prompt (High-variance)</option>
+          <option value="4">G = 4 条采样轨迹 / 提示</option>
+          <option value="8" selected>G = 8 条采样轨迹 / 提示（标准）</option>
+          <option value="16">G = 16 条采样轨迹 / 提示（高方差）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="grpoTemp">sampling temperature (τ)</label>
+        <label for="grpoTemp">采样温度（τ）</label>
         <select id="grpoTemp">
-          <option value="0.4">τ = 0.4 (Low exploration)</option>
-          <option value="0.7" selected>τ = 0.7 (Standard reasoning)</option>
-          <option value="1.0">τ = 1.0 (Diverse search)</option>
+          <option value="0.4">τ = 0.4（低探索）</option>
+          <option value="0.7" selected>τ = 0.7（标准推理）</option>
+          <option value="1.0">τ = 1.0（多样化搜索）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="grpoKlBeta">KL penalty weight (β)</label>
+        <label for="grpoKlBeta">KL 惩罚权重（β）</label>
         <select id="grpoKlBeta">
-          <option value="0.01">β = 0.01 (Aggressive update)</option>
-          <option value="0.04" selected>β = 0.04 (Balanced anchor)</option>
-          <option value="0.10">β = 0.10 (Conservative anchor)</option>
+          <option value="0.01">β = 0.01（激进更新）</option>
+          <option value="0.04" selected>β = 0.04（平衡锚定）</option>
+          <option value="0.10">β = 0.10（保守锚定）</option>
         </select>
       </div>
     </div>
 
     <div class="grpo-rollouts-wrap">
       <div class="grpo-rollouts-header">
-        <span>Sampled Rollout Group ({y₁ ... y_G})</span>
-        <span id="grpoGroupStats" aria-live="polite" style="font-family:var(--mono);font-size:12px;color:var(--mint)">Mean: 0.00 · Std: 0.00 · Loss J_GRPO: 0.000</span>
+        <span>采样轨迹组（{y₁ ... y_G}）</span>
+        <span id="grpoGroupStats" aria-live="polite" style="font-family:var(--mono);font-size:12px;color:var(--mint)">均值：0.00 · 标准差：0.00 · 损失 J_GRPO：0.000</span>
       </div>
       <div class="grpo-rollouts-list" id="grpoRolloutsList" aria-live="polite"></div>
     </div>
   </div>
 
   <!-- Why Group-Relative Baselines Work -->
-  <h3>Why group-relative baselines outperform monolithic critics</h3>
-  <p>The group advantage in eq.(15) executes fundamental variance reduction: because all $G$ completions are sampled from the <em>same policy state on the exact same input</em>, they share all confounding factors (problem difficulty, vocabulary rarity, prompt idiosyncrasies). Subtracting the group mean $\mu_r$ cancels out the prompt baseline entirely, isolating the pure relative advantage: <em>"Was completion $y_i$ superior to its contemporary sibling attempts?"</em></p>
-  <div class="math" aria-label="GRPO advantage as a control-variate estimator: the group mean is a zero-shot Monte-Carlo baseline replacing the learned value function, reducing variance without a critic network.">
-    \underbrace{A_i = r_i - \mu_r}_{\text{control-variate baseline}} \quad \text{with } \mu_r = \tfrac{1}{G}\sum_j r_j \;\;\Rightarrow\;\; \text{Var}(A_i) = \text{Var}(r_i) \cdot (1 - \rho_{i,\mu}) \;<\; \text{Var}(r_i)
+  <h3>为何组相对基线优于单体评论家</h3>
+  <p>式 (15) 中的组优势实现了基本的方差缩减：因为全部 $G$ 个补全均取样自<em>完全相同输入上的同一策略状态</em>，它们共享所有混杂因素（问题难度、词汇稀有度、提示特性）。减去组均值 $\mu_r$ 会完全抵消提示基线，只留下纯粹的相对优势：<em>“补全 $y_i$ 是否优于同批的其他尝试？”</em></p>
+  <div class="math" aria-label="作为控制变量估计器的 GRPO 优势：组均值是替代学习型价值函数的零样本蒙特卡洛基线，无需评论家网络即可降低方差。">
+    \underbrace{A_i = r_i - \mu_r}_{\text{控制变量基线}} \quad \text{其中 } \mu_r = \tfrac{1}{G}\sum_j r_j \;\;\Rightarrow\;\; \text{Var}(A_i) = \text{Var}(r_i) \cdot (1 - \rho_{i,\mu}) \;<\; \text{Var}(r_i)
   </div>
-  <p>In Monte-Carlo terms, $\mu_r$ is a control variate highly correlated with $r_i$ (they share the prompt), so subtracting it reduces the variance of the gradient estimator without the bias a misspecified value network would introduce. This is the mathematical content of the "no critic drift" claim in the compare below. The cost is compute, not parameters: GRPO pays $G$ forward passes per prompt instead of one, trading the $+55.2$ GB critic VRAM for $G\times$ rollout throughput, which is why the rollout group parallelises across thousands of asynchronous inference workers rather than sitting in the trainer's memory.</p>
+  <p>用蒙特卡洛术语来说，$\mu_r$ 是与 $r_i$ 高度相关的控制变量（两者共享提示），因此减去它可以降低梯度估计器的方差，而不会引入错误设定价值网络所造成的偏差。这就是下方比较中“无评论家漂移”这一说法的数学含义。代价是算力，而非参数：GRPO 为每个提示执行 $G$ 次而非一次前向传播，用 $G\times$ 的采样轨迹吞吐量换掉占用 $+55.2$ GB 显存的评论家。因此，采样轨迹组会分布在数千个异步推理工作进程上并行运行，而不是驻留在训练器内存中。</p>
 
   <div class="compare">
     <div class="col before">
-      <div class="h">Classical PPO with Value Critic</div>
+      <div class="h">带价值评论家的经典 PPO</div>
       <ul>
-        <li>Requires full 27.6B Value Network $V_\phi$ ($+55.2\text{ GB}$ VRAM allocation)</li>
-        <li>Value network introduces non-stationary estimation noise &amp; critic drift</li>
-        <li>High synchronization latency across multi-node training clusters</li>
+        <li>需要完整的 276 亿参数价值网络 $V_\phi$（额外分配 $+55.2\text{ GB}$ 显存）</li>
+        <li>价值网络会引入非平稳估计噪声与评论家漂移</li>
+        <li>多节点训练集群间的同步延迟高</li>
       </ul>
     </div>
     <div class="col after">
-      <div class="h">Critic-Free GRPO Architecture</div>
+      <div class="h">无评论家的 GRPO 架构</div>
       <ul>
-        <li><strong>0 bytes extra critic VRAM</strong>; entire GPU budget dedicated to policy rollouts</li>
-        <li>Exact group normalization cancels shared prompt difficulty bias</li>
-        <li>Rollouts parallelize trivially across thousands of asynchronous inference workers</li>
+        <li><strong>评论家额外显存为 0 字节</strong>；全部 GPU 预算用于策略采样轨迹</li>
+        <li>精确的组归一化抵消共享的提示难度偏差</li>
+        <li>采样轨迹可轻松地在数千个异步推理工作进程间并行</li>
       </ul>
     </div>
   </div>
 
   <!-- Widget 2: Upgraded Thinking-Budget Explorer (#w-effort) -->
-  <h3>Stage 3 &amp; 4: thinking fusion &amp; runtime effort control</h3>
-  <p>To serve production environments requiring both deep multi-minute analytical reasoning and sub-100ms instant chat, Stage 3 merges both modes into a single checkpoint. Stage 4 applies a multi-reward stack (Helpfulness, Safety, Tool Calling, and Turn Persistence) parameterized by runtime effort knobs:</p>
+  <h3>阶段 3 与 4：思考融合与运行时投入控制</h3>
+  <p>为了服务既需要持续数分钟的深度分析推理、又需要低于 100 毫秒即时聊天的生产环境，阶段 3 将两种模式合并到单一检查点中。阶段 4 应用由运行时投入旋钮参数化的多重奖励栈（有用性、安全性、工具调用和多轮持续性）：</p>
 
-  <p>The thinking-budget explorer below makes a claim worth pinning down: that accuracy rises with reasoning effort <em>up to a saturation knee</em>, and that harder problems push the knee further out. The mechanism is retrieval. Each thinking token the model generates is a chance to surface a relevant §06 FFN memory slot or to retrieve a stored fact from the §04 DeltaNet recurrent state; harder problems need more such retrieval steps to assemble the solution, so more tokens convert into more accuracy until the relevant memory has been found. Past that point extra tokens add nothing (the saturation knee) and only cost compute. Trivial prompts reach the knee almost immediately (the answer is in the first retrieval), which is why the <code>reasoning_effort</code> knob exposes a runtime dial rather than a fixed schedule: the model does not pick it, the caller does, paying exactly for the retrieval depth a given prompt deserves. This is the inference-side analogue of §10's over-training decision (spend more compute <em>at inference</em> for better results without retraining), and <code>preserve_thinking</code> carries the scratchpad across agentic turns so that retrieval already done is not redone.</p>
+  <p>下方思考预算探索器提出了一个值得明确的结论：准确率会随推理投入增加，<em>直到饱和拐点</em>，而问题越难，拐点越靠后。其机制是检索。模型生成的每个思考词元，都是激活相关 §06 FFN 记忆槽位或从 §04 DeltaNet 循环状态中检索已存事实的一次机会；更难的问题需要更多这类检索步骤才能拼装出解答，因此在找到相关记忆之前，更多词元会转化为更高准确率。越过该点后，额外词元不再带来收益（即饱和拐点），只会消耗算力。简单提示几乎立刻到达拐点（首次检索便得到答案），因此 <code>reasoning_effort</code> 旋钮提供的是运行时调节项，而非固定调度：它不由模型选择，而由调用方选择，只为特定提示应得的检索深度付费。这与 §10 的过度训练决策在推理侧相呼应（无需重新训练，通过<em>推理时</em>投入更多算力获得更好结果）；<code>preserve_thinking</code> 则跨智能体轮次保留草稿区，避免重复已完成的检索。</p>
 
   <div class="widget" id="w-effort">
-    <div class="w-head"><span class="w-title">Thinking-budget &amp; test-time compute explorer</span><span class="w-tag">interactive</span></div>
-    <div class="w-desc">Test-time compute scaling: harder problems convert additional thinking tokens into accuracy gains, while trivial prompts saturate immediately. Adjust problem difficulty, effort level, and agent context to compare accuracy and token costs.</div>
+    <div class="w-head"><span class="w-title">思考预算与测试时算力探索器</span><span class="w-tag">交互式</span></div>
+    <div class="w-desc">测试时算力扩展：更难的问题能将额外思考词元转化为准确率提升，而简单提示会立即饱和。调整问题难度、投入级别和智能体上下文，以比较准确率与词元成本。</div>
     
     <div class="w-controls">
       <div class="w-ctl">
-        <label for="effortSel">reasoning_effort level</label>
+        <label for="effortSel">reasoning_effort 级别</label>
         <select id="effortSel">
-          <option value="0">off (0 tok · Direct instant answer)</option>
-          <option value="1" selected>low (~1,024 thinking tokens)</option>
-          <option value="2">medium (~4,096 thinking tokens)</option>
-          <option value="3">xhigh (~16,384 thinking tokens)</option>
+          <option value="0">关闭（0 词元 · 即时直接回答）</option>
+          <option value="1" selected>低（约 1,024 个思考词元）</option>
+          <option value="2">中（约 4,096 个思考词元）</option>
+          <option value="3">极高（约 16,384 个思考词元）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="effortDiff">task difficulty rating</label>
+        <label for="effortDiff">任务难度评分</label>
         <input type="range" id="effortDiff" min="0" max="100" step="1" value="75">
       </div>
       <div class="w-ctl">
-        <label for="effortPreserve">preserve_thinking in agent loop</label>
+        <label for="effortPreserve">智能体循环中的 preserve_thinking</label>
         <select id="effortPreserve">
-          <option value="true" selected>true (Retain prior turn reasoning)</option>
-          <option value="false">false (Strip prior turn scratchpad)</option>
+          <option value="true" selected>是（保留上一轮推理）</option>
+          <option value="false">否（移除上一轮草稿区）</option>
         </select>
       </div>
     </div>
 
     <div class="widget-visual">
-      <svg id="effortSvg" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two curves over reasoning effort: expected accuracy (rising, saturating) and thinking-token cost; a marker tracks the selected effort"></svg>
+      <svg id="effortSvg" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="关于推理投入的两条曲线：预期准确率（上升后饱和）和思考词元成本；标记会跟随所选投入级别"></svg>
     </div>
-    <div class="fig-cap"><b>Fig. 8</b> — Test-time compute scaling: accuracy rises with reasoning effort then saturates; thinking-token cost grows near-linearly past the saturation knee.</div>
+    <div class="fig-cap"><b>图 8</b> — 测试时算力扩展：准确率随推理投入增加后趋于饱和；越过饱和拐点后，思考词元成本近似线性增长。</div>
     <div class="w-out" id="effortOut" aria-live="polite"></div>
   </div>
 
   <!-- Widget 3: Chain-of-Thought & Agentic Trace Visualizer (#w-cot-trace) -->
   <div class="widget" id="w-cot-trace">
-    <div class="w-head"><span class="w-title">Agentic reasoning &amp; self-correction trace inspector</span><span class="w-tag">trace visualizer</span></div>
-    <div class="w-desc">Multi-turn tool-calling execution with embedded <code>&lt;think&gt;</code> reflection: the model detects errors in real time, backtracks, and produces verified solutions.</div>
+    <div class="w-head"><span class="w-title">智能体推理与自我纠正轨迹检查器</span><span class="w-tag">轨迹可视化器</span></div>
+    <div class="w-desc">嵌入 <code>&lt;think&gt;</code> 反思的多轮工具调用执行：模型实时发现错误、回溯并生成经过验证的解答。</div>
     
     <div class="trace-tabs-bar">
-      <div class="seg" id="traceScenarioSeg" role="group" aria-label="Trace scenario selector">
-        <button data-scen="math_backtrack" class="on" aria-pressed="true">Math Self-Correction</button>
-        <button data-scen="agent_swe" aria-pressed="false">SWE-Bench Multi-Turn Fix</button>
-        <button data-scen="direct_bypass" aria-pressed="false">Instant Answer (Thinking Off)</button>
+      <div class="seg" id="traceScenarioSeg" role="group" aria-label="轨迹场景选择器">
+        <button data-scen="math_backtrack" class="on" aria-pressed="true">数学自我纠正</button>
+        <button data-scen="agent_swe" aria-pressed="false">SWE-Bench 多轮修复</button>
+        <button data-scen="direct_bypass" aria-pressed="false">即时回答（关闭思考）</button>
       </div>
     </div>
 
@@ -396,110 +396,110 @@
   </div>
 
   <!-- RL Failure Modes & Mitigation Matrix -->
-  <h3>Post-training failure modes &amp; stabilization matrix</h3>
+  <h3>后训练故障模式与稳定化矩阵</h3>
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 10 — Post-training failure modes:</strong> reward hacking, KL collapse, format drift, mode collapse — symptom, root cause, and stabilization mitigation per mode.</caption>
+      <caption><strong>表 10 — 后训练故障模式：</strong>奖励黑客、KL 坍缩、格式漂移、模式坍缩——各模式的症状、根本原因与稳定化缓解措施。</caption>
       <thead>
         <tr>
-          <th scope="col">Failure Mode</th>
-          <th scope="col">Observed Symptom</th>
-          <th scope="col">Mathematical Root Cause</th>
-          <th scope="col">Mitigation Strategy</th>
+          <th scope="col">故障模式</th>
+          <th scope="col">观察到的症状</th>
+          <th scope="col">数学根因</th>
+          <th scope="col">缓解策略</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Reward Hacking</strong></td>
-          <td>Generates degenerate formatting tricks or endless filler tokens</td>
-          <td>Policy exploits blind spots in the reward model / parser</td>
-          <td>Multi-verifier ensembles, strict AST sandboxes, length-penalty regularization</td>
+          <td><strong>奖励黑客</strong></td>
+          <td>生成退化的格式取巧内容或无穷无尽的填充词元</td>
+          <td>策略利用奖励模型 / 解析器的盲点</td>
+          <td>多验证器集成、严格的 AST 沙箱、长度惩罚正则化</td>
         </tr>
         <tr>
-          <td><strong>Entropy Collapse</strong></td>
-          <td>Sampling outputs become identical; exploration terminates ($G$ identical rollouts)</td>
-          <td>Logit temperature drops; $\text{std}(r_1..r_G) \to 0$, causing numerical overflow in $A_i$</td>
-          <td>Entropy bonus regularization $+ \gamma H(\pi_\theta)$, strictly enforce $\epsilon = 10^{-6}$ denominator floor</td>
+          <td><strong>熵坍缩</strong></td>
+          <td>采样输出变得完全相同；探索终止（$G$ 条相同的采样轨迹）</td>
+          <td>logit 温度下降；$\text{std}(r_1..r_G) \to 0$，导致 $A_i$ 数值溢出</td>
+          <td>熵奖励正则化 $+ \gamma H(\pi_\theta)$，严格实施 $\epsilon = 10^{-6}$ 的分母下限</td>
         </tr>
         <tr>
-          <td><strong>Distribution Drift</strong></td>
-          <td>Degrades general English grammar and multilingual fluency while math benchmarks rise</td>
-          <td>Unconstrained policy update moves too far from pretrained base manifold</td>
-          <td>KL divergence anchoring $-\beta D_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}})$ with adaptive $\beta$ scheduling</td>
+          <td><strong>分布漂移</strong></td>
+          <td>数学基准上升的同时，通用英语语法和多语言流畅度下降</td>
+          <td>无约束策略更新偏离预训练基础流形过远</td>
+          <td>使用自适应 $\beta$ 调度进行 KL 散度锚定 $-\beta D_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}})$</td>
         </tr>
         <tr>
-          <td><strong>Length Inflation</strong></td>
-          <td>Thinking chains expand to maximum context limit without increasing accuracy</td>
-          <td>Longer rollouts increase random chance of stumbling upon reward triggers</td>
-          <td>Length-normalized reward scaling $r_i' = r_i - \lambda \cdot \log(\text{len}(y_i))$</td>
+          <td><strong>长度膨胀</strong></td>
+          <td>思维链扩展到最大上下文限制，但准确率没有提升</td>
+          <td>更长的采样轨迹会增加随机碰到奖励触发条件的概率</td>
+          <td>长度归一化奖励缩放 $r_i' = r_i - \lambda \cdot \log(\text{len}(y_i))$</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>Each row of Table 10 is a failure of one term in eq.(16), and the mitigation is the corresponding fix. <em>Reward hacking</em> is a failure of the reward source $r_i$ (the policy exploits a learned reward model's blind spots), fixed by replacing the model with deterministic verifier ensembles (the §09 principle). <em>Entropy collapse</em> is a failure of the eq.(15) denominator (when all $G$ rollouts converge to the same text, $\text{std}(r_1..r_G) \to 0$ and $A_i$ numerically explodes), fixed by the $\epsilon = 10^{-6}$ floor plus an entropy bonus $+\gamma H(\pi_\theta)$ that keeps the rollouts diverse. <em>Distribution drift</em> is a failure of the eq.(16) KL term (too small a $\beta$ lets the policy walk off the pretraining manifold and lose general fluency), fixed by adaptive $\beta$ scheduling that tightens the anchor as drift is detected. <em>Length inflation</em> is a failure of the reward's length-invariance (longer rollouts randomly stumble on reward triggers), fixed by subtracting $\lambda \log(\text{len})$ so raw length stops being rewarded.</p>
-  <p>Post-training yields an aligned model that reasons, refuses, and uses tools, and it still has to be <em>served</em>. A $27.6$ B model carrying a $262$k context window does not fit on a single consumer GPU at BF16, and the §12 optimizations are the engineering that closes that gap: quantization, paged KV management, chunked prefill, and the kernel fusions that make the architecture built in §§03–06 run at interactive latency.</p>
+  <p>表 10 的每一行都对应式 (16) 中某一项的失效，而缓解措施正是相应的修复。<em>奖励黑客</em>是奖励源 $r_i$ 的失效（策略利用学习型奖励模型的盲点），可通过用确定性验证器集成替代该模型来修复（§09 的原则）。<em>熵坍缩</em>是式 (15) 分母的失效（当全部 $G$ 条采样轨迹收敛到相同文本时，$\text{std}(r_1..r_G) \to 0$，$A_i$ 会发生数值爆炸），可通过 $\epsilon = 10^{-6}$ 下限以及保持采样轨迹多样性的熵奖励 $+\gamma H(\pi_\theta)$ 来修复。<em>分布漂移</em>是式 (16) 中 KL 项的失效（过小的 $\beta$ 会让策略偏离预训练流形，失去通用流畅度），可通过自适应 $\beta$ 调度，在检测到漂移时加强锚定来修复。<em>长度膨胀</em>是奖励长度不变性的失效（更长的采样轨迹会随机碰到奖励触发条件），可通过减去 $\lambda \log(\text{len})$，使原始长度不再获得奖励来修复。</p>
+  <p>后训练得到的对齐模型能够推理、拒绝并使用工具，但仍需被<em>部署服务</em>。在 BF16 下，带有 $262$k 上下文窗口的 $27.6$ B 模型无法装入单张消费级 GPU；§12 的优化正是弥合这一差距的工程手段：量化、分页 KV 管理、分块预填充，以及让 §§03–06 中构建的架构以交互式延迟运行的内核融合。</p>
 </section>
 
 <!-- ============================================================ 12 OPTIMIZATIONS -->
 <section id="optimizations">
-  <div class="sec-tag">12 · Inference &amp; training optimizations</div>
-  <h2>The engineering that makes 262k context servable</h2>
-  <p class="lead">Everything above establishes the architectural ceiling; this section details the deployment engineering that makes a 27.6B-parameter hybrid model servable on consumer GPUs: hardware roofline limits, quantization microscaling, paged KV management, chunked prefill scheduling, and kernel-level fusions.</p>
+  <div class="sec-tag">12 · 推理与训练优化</div>
+  <h2>让 262k 上下文可部署服务的工程</h2>
+  <p class="lead">以上内容确立了架构上限；本节详述让 276 亿参数混合模型可在消费级 GPU 上部署服务的工程技术：硬件屋顶线限制、量化微缩放、分页 KV 管理、分块预填充调度和内核级融合。</p>
 
-  <h3>Why serving is a memory problem, not a compute problem</h3>
-  <p>At BF16 precision the 27.6B-parameter model weighs $55.2$ GB, more than any single consumer GPU holds, so the first reading of the serving problem is "the weights don't fit." That framing is correct but shallow: it treats VRAM as a bucket to be filled. The binding constraint at inference is subtler and lives on the memory bus, not in the silicon's FLOP budget. Single-stream autoregressive decode generates <em>one token at a time</em>, and to produce that one token the GPU must read <em>every parameter exactly once</em> from HBM across the bus. The work done per byte read, the arithmetic intensity, is what fixes whether the GPU is compute-bound or memory-bound, and for decode it is tiny.</p>
-  <p>Each parameter contributes roughly $2$ FLOP (a fused multiply-accumulate) to one token's forward pass, so the operational intensity of decode is the ratio of that work to the bytes that carry it:</p>
-  <div class="math" aria-label="Decode operational intensity: 2 FLOP per parameter divided by bytes per parameter in the serving format. BF16 gives 1 FLOP/byte, FP8 gives 2, NVFP4 gives 4 — all far below any GPU's ridge point.">
-    I_{\text{decode}} = \frac{2 \cdot N_{\text{params}}}{\text{bytes}(W)} \quad\Rightarrow\quad \text{BF16}: \tfrac{2}{2}=1.0 \;,\; \text{FP8}: \tfrac{2}{1}=2.0 \;,\; \text{NVFP4}: \tfrac{2}{0.5}=4.0 \;\text{FLOP/byte}
+  <h3>为何部署服务是内存问题，而非计算问题</h3>
+  <p>在 BF16 精度下，276 亿参数模型占用 $55.2$ GB，超过任何单张消费级 GPU 的容量，因此最直观的服务问题是“权重装不下”。这种表述虽正确，却过于浅显：它把显存视为一个待填满的桶。推理时真正的约束更为微妙，位于内存总线上，而非芯片的 FLOP 预算中。单流自回归解码<em>每次生成一个词元</em>；为生成这一个词元，GPU 必须经由总线从 HBM 中<em>恰好读取每个参数一次</em>。每读取一字节完成的工作量，即算术强度，决定 GPU 受计算还是内存限制，而解码的算术强度很低。</p>
+  <p>每个参数为单个词元的前向传播贡献约 $2$ FLOP（一次融合乘加），因此解码的运行强度就是该工作量与承载它的字节数之比：</p>
+  <div class="math" aria-label="解码运行强度：每个参数 2 FLOP 除以服务格式中每个参数的字节数。BF16 为 1 FLOP/字节，FP8 为 2，NVFP4 为 4——均远低于任何 GPU 的脊点。">
+    I_{\text{decode}} = \frac{2 \cdot N_{\text{params}}}{\text{字节}(W)} \quad\Rightarrow\quad \text{BF16}: \tfrac{2}{2}=1.0 \;,\; \text{FP8}: \tfrac{2}{1}=2.0 \;,\; \text{NVFP4}: \tfrac{2}{0.5}=4.0 \;\text{FLOP/字节}
   </div>
-  <p>The memory-bound and compute-bound regimes meet at the <em>ridge point</em>, $I^{\ast} = \text{peak FLOP/s} \,/\, \text{peak byte/s}$. For an RTX 5090 that is $1800$ TFLOP/s $\div$ $1792$ GB/s $\approx 1004$ FLOP/byte. Decode at $I_{\text{decode}} \approx 4$ FLOP/byte sits two and a half orders of magnitude <em>left</em> of the ridge, flat on the memory-bound ceiling. A $2\times$ faster Tensor Core does <em>nothing</em> for single-stream decode, because the compute units are already starved, waiting on the bus. Only three levers move the needle, and §12 is their engineering: <strong>(1)</strong> shrink the bytes read per token (quantization, the VRAM planner in Widget 1); <strong>(2)</strong> read the weights fewer times per emitted token (Multi-Token Prediction, the roofline simulator in Widget 2); <strong>(3)</strong> share one weight read across many concurrent requests (continuous batching and chunked prefill, the scheduler in Widget 3). All three work the same memory-bus bottleneck.</p>
+  <p>内存受限与计算受限机制在<em>脊点</em>相交，即 $I^{\ast} = \text{峰值 FLOP/s} \,/\, \text{峰值 byte/s}$。对 RTX 5090 而言，该值为 $1800$ TFLOP/s $\div$ $1792$ GB/s $\approx 1004$ FLOP/字节。$I_{\text{decode}} \approx 4$ FLOP/字节的解码位于脊点<em>左侧</em>约两个半数量级，平落在内存受限上限上。速度快 $2\times$ 的 Tensor Core 对单流解码<em>毫无帮助</em>，因为计算单元已处于饥饿状态，只能等待总线。只有三种杠杆能够改善性能，而 §12 正是它们的工程实现：<strong>(1)</strong> 减少每词元读取的字节数（量化，即组件 1 的显存规划器）；<strong>(2)</strong> 减少每个输出词元读取权重的次数（多词元预测，即组件 2 的屋顶线模拟器）；<strong>(3)</strong> 让多个并发请求共享一次权重读取（连续批处理和分块预填充，即组件 3 的调度器）。三者针对的是同一个内存总线瓶颈。</p>
 
   <!-- Widget 1: Interactive VRAM Allocation & Hardware Budget Planner (#w-quant) -->
   <div class="widget" id="w-quant">
-    <div class="w-head"><span class="w-title">Live VRAM allocation &amp; hardware budget planner</span><span class="w-tag">memory planner</span></div>
-    <div class="w-desc">Exact byte footprint across model weights, KV cache, DeltaNet recurrent states, and runtime activation buffers; adjust context length, concurrency, and quantization precision to check the total against a target GPU VRAM budget.</div>
+    <div class="w-head"><span class="w-title">实时显存分配与硬件预算规划器</span><span class="w-tag">内存规划器</span></div>
+    <div class="w-desc">精确计算模型权重、KV 缓存、DeltaNet 循环状态和运行时激活缓冲区的字节占用；调整上下文长度、并发量和量化精度，将总量与目标 GPU 显存预算比较。</div>
     
     <div class="w-controls">
       <div class="w-ctl">
-        <label for="quantPrec">weights precision</label>
+        <label for="quantPrec">权重精度</label>
         <select id="quantPrec">
-          <option value="55.2">BF16 (55.2 GB): Native Uncompressed</option>
-          <option value="27.6">FP8 (27.6 GB): Near-lossless E4M3</option>
-          <option value="13.8" selected>NVFP4 (13.8 GB): Blackwell/Ada Microscaled</option>
-          <option value="16.0">GGUF Q4_K_M (16.0 GB): CPU/Mac k-quant</option>
+          <option value="55.2">BF16（55.2 GB）：原生未压缩</option>
+          <option value="27.6">FP8（27.6 GB）：近乎无损 E4M3</option>
+          <option value="13.8" selected>NVFP4（13.8 GB）：Blackwell/Ada 微缩放</option>
+          <option value="16.0">GGUF Q4_K_M（16.0 GB）：CPU/Mac k-quant</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="quantKv">kv cache dtype</label>
+        <label for="quantKv">KV 缓存数据类型</label>
         <select id="quantKv">
-          <option value="2">BF16 (2 bytes / elem)</option>
-          <option value="1" selected>FP8 (1 byte / elem)</option>
-          <option value="0.5">NVFP4 (0.5 bytes / elem)</option>
+          <option value="2">BF16（2 字节 / 元素）</option>
+          <option value="1" selected>FP8（1 字节 / 元素）</option>
+          <option value="0.5">NVFP4（0.5 字节 / 元素）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="quantCtx">context window (T)</label>
+        <label for="quantCtx">上下文窗口（T）</label>
         <select id="quantCtx">
-          <option value="8192">8,192 (Short query)</option>
-          <option value="32768">32,768 (Code file context)</option>
-          <option value="131072" selected>131,072 (Half window)</option>
-          <option value="262144">262,144 (Full native context)</option>
-          <option value="1000000">1,000,000 (YaRN extended 1M)</option>
+          <option value="8192">8,192（短查询）</option>
+          <option value="32768">32,768（代码文件上下文）</option>
+          <option value="131072" selected>131,072（半窗口）</option>
+          <option value="262144">262,144（完整原生上下文）</option>
+          <option value="1000000">1,000,000（YaRN 扩展至 1M）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="quantBatch">concurrency (B)</label>
+        <label for="quantBatch">并发量（B）</label>
         <input type="number" id="quantBatch" min="1" max="64" value="1">
       </div>
       <div class="w-ctl">
-        <label for="quantGpu">gpu target budget</label>
+        <label for="quantGpu">GPU 目标预算</label>
         <select id="quantGpu">
-          <option value="24" selected>24 GB (RTX 4090 / 5090)</option>
-          <option value="32">32 GB (Workstation / Mac 32G)</option>
-          <option value="48">48 GB (RTX 6000 / Dual 24G)</option>
-          <option value="80">80 GB (H100 / A100 SXM)</option>
-          <option value="128">128 GB (Mac Studio M4 Max)</option>
+          <option value="24" selected>24 GB（RTX 4090 / 5090）</option>
+          <option value="32">32 GB（工作站 / Mac 32G）</option>
+          <option value="48">48 GB（RTX 6000 / 双 24G）</option>
+          <option value="80">80 GB（H100 / A100 SXM）</option>
+          <option value="128">128 GB（Mac Studio M4 Max）</option>
         </select>
       </div>
     </div>
@@ -507,216 +507,216 @@
     <!-- Visual Stacked Memory Bar -->
     <div class="vram-stacked-wrap">
       <div class="vram-bar-label">
-        <span>Allocated VRAM vs GPU Capacity</span>
+        <span>已分配显存与 GPU 容量对比</span>
         <span id="vramTotalLabel" style="font-family:var(--mono);font-weight:700;color:var(--fg)">0.0 / 24.0 GB</span>
       </div>
       <div class="vram-stacked-bar" id="vramStackedBar">
-        <div class="vsb-seg weights" id="vsbWeights" title="Model Weights"></div>
-        <div class="vsb-seg kv" id="vsbKv" title="GQA KV Cache"></div>
-        <div class="vsb-seg deltanet" id="vsbDeltanet" title="DeltaNet Recurrent States"></div>
-        <div class="vsb-seg overhead" id="vsbOverhead" title="CUDA & Activation Overhead"></div>
+        <div class="vsb-seg weights" id="vsbWeights" title="模型权重"></div>
+        <div class="vsb-seg kv" id="vsbKv" title="GQA KV 缓存"></div>
+        <div class="vsb-seg deltanet" id="vsbDeltanet" title="DeltaNet 循环状态"></div>
+        <div class="vsb-seg overhead" id="vsbOverhead" title="CUDA 与激活开销"></div>
       </div>
       <div class="vram-legend">
-        <div class="vl-item"><span class="vl-sw" style="background:var(--amber)"></span>Weights</div>
-        <div class="vl-item"><span class="vl-sw" style="background:var(--mint)"></span>GQA KV Cache (16 layers)</div>
-        <div class="vl-item"><span class="vl-sw" style="background:var(--sky)"></span>DeltaNet Recurrent State (48 layers)</div>
-        <div class="vl-item"><span class="vl-sw" style="background:var(--iris)"></span>CUDA &amp; Activation Overhead</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--amber)"></span>权重</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--mint)"></span>GQA KV 缓存（16 层）</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--sky)"></span>DeltaNet 循环状态（48 层）</div>
+        <div class="vl-item"><span class="vl-sw" style="background:var(--iris)"></span>CUDA 与激活开销</div>
       </div>
     </div>
 
     <div class="w-out" id="quantOut" aria-live="polite"></div>
   </div>
 
-  <h3>The VRAM budget, line by line</h3>
-  <p>The planner above sums four terms. Each falls out of the architecture built in §§03–06, and reading them in order shows why quantization is a line-by-line decision rather than one global dial.</p>
-  <p><strong>1. Model weights.</strong> The dominant fixed term. With $27.6$B parameters the footprint is exactly $\text{bytes}(W) \cdot N_{\text{params}}$, so the precision ladder is a clean $4\times$ descent:</p>
-  <div class="math" aria-label="Weight footprint ladder: 27.6B params times bytes-per-param. BF16 2 bytes = 55.2 GB, FP8 1 byte = 27.6 GB, NVFP4 0.5 byte = 13.8 GB, GGUF Q4 with super-block scales = 16.0 GB. A 4x cut from 55.2 to 13.8.">
-    \underbrace{55.2}_{\text{BF16}\,(2\text{B})} \;\to\; \underbrace{27.6}_{\text{FP8}\,(1\text{B})} \;\to\; \underbrace{13.8}_{\text{NVFP4}\,(0.5\text{B})} \;\to\; \underbrace{16.0}_{\text{Q4\_K\_M}}\;\text{GB} \qquad (4\times\text{ cut, BF16}\to\text{NVFP4})
+  <h3>逐项拆解显存预算</h3>
+  <p>上方规划器对四项求和。每一项都源自 §§03–06 构建的架构；依次阅读即可理解，为何量化是逐项决策，而非一个全局旋钮。</p>
+  <p><strong>1. 模型权重。</strong>这是占主导地位的固定项。对于 $27.6$B 参数，显存占用恰为 $\text{字节}(W) \cdot N_{\text{params}}$，因此精度阶梯呈清晰的 $4\times$ 下降：</p>
+  <div class="math" aria-label="权重占用阶梯：276 亿参数乘以每参数字节数。BF16 2 字节 = 55.2 GB，FP8 1 字节 = 27.6 GB，NVFP4 0.5 字节 = 13.8 GB，带超级块缩放的 GGUF Q4 = 16.0 GB。从 55.2 降至 13.8，缩小 4 倍。">
+    \underbrace{55.2}_{\text{BF16}\,(2\text{B})} \;\to\; \underbrace{27.6}_{\text{FP8}\,(1\text{B})} \;\to\; \underbrace{13.8}_{\text{NVFP4}\,(0.5\text{B})} \;\to\; \underbrace{16.0}_{\text{Q4\_K\_M}}\;\text{GB} \qquad (4\times\text{ 缩减，BF16}\to\text{NVFP4})
   </div>
-  <p>The Q4 rung sits slightly <em>above</em> the naive $27.6 \times 0.5 = 13.8$ GB because the k-quant scheme carries a $6$-bit super-block scale per $256$ elements, the tax that keeps uniform $4$-bit from clipping outlier weights. This is the same dynamic the format cards below make explicit.</p>
-  <p><strong>2. The GQA KV cache (the term that grows with context).</strong> Only the $16$ gated-attention layers accumulate a KV cache; the $48$ DeltaNet layers do not (they carry a fixed recurrent matrix, term 3). This is the §03 economics made concrete: bytes per attention layer scale with the context window $T$,</p>
-  <div class="math" aria-label="KV cache per attention layer: 2 for K and V, times 4 GQA KV heads, times 256 head dim, times T tokens, times bytes-per-element. At T=262144 BF16 that is 1.074 GB per layer, times 16 layers = 17.18 GB — matching section 3. At 262k BF16 the 17.18 GB cache exceeds the 13.8 GB NVFP4 weights, so the cache, not the weights, is the binding term at long context.">
-    \text{KV}_{\text{layer}} = \underbrace{2}_{K\text{+}V}\;\underbrace{n_{\text{kv}}}_{=4}\;\underbrace{d_h}_{=256}\;T\;\text{bp} \;\Rightarrow\; T\!=\!262144,\,\text{BF16}: 1.074\;\text{GB/layer} \;\times\;16 = 17.18\;\text{GB}
+  <p>Q4 一级略<em>高于</em>朴素计算的 $27.6 \times 0.5 = 13.8$ GB，因为 k-quant 方案每 $256$ 个元素携带一个 $6$ 位超级块缩放因子；这项开销使均匀 $4$ 位量化不会裁剪离群权重。下方格式卡片会明确展示同一机制。</p>
+  <p><strong>2. GQA KV 缓存（随上下文增长的项）。</strong>只有 $16$ 个门控注意力层会积累 KV 缓存；$48$ 个 DeltaNet 层不会（它们携带固定的循环矩阵，即第 3 项）。这具体体现了 §03 的经济性：每个注意力层的字节数随上下文窗口 $T$ 增长，</p>
+  <div class="math" aria-label="每个注意力层的 KV 缓存：K 和 V 对应 2，乘以 4 个 GQA KV 头、256 头维度、T 个词元以及每元素字节数。T=262144、BF16 时每层为 1.074 GB，乘以 16 层等于 17.18 GB，与第 3 节一致。在 262k BF16 下，17.18 GB 缓存超过 13.8 GB NVFP4 权重，因此长上下文中的约束项是缓存，而非权重。">
+    \text{KV}_{\text{层}} = \underbrace{2}_{K\text{+}V}\;\underbrace{n_{\text{kv}}}_{=4}\;\underbrace{d_h}_{=256}\;T\;\text{bp} \;\Rightarrow\; T\!=\!262144,\,\text{BF16}: 1.074\;\text{GB/层} \;\times\;16 = 17.18\;\text{GB}
   </div>
-  <p>At $262$k and BF16 the cache ($17.18$ GB) <em>exceeds</em> the NVFP4 weights ($13.8$ GB). At long context the cache, not the weights, is the binding term, which is why the KV-cache dtype selector exists independently of the weights selector. Cutting the cache from BF16 to FP8 to NVFP4 halves, then quarters, this term directly: $17.18 \to 8.59 \to 4.29$ GB. This is the §03 KV-cache derivation driving the §12 quantization decision: the attention layers' cache is the one term that grows without bound as $T \to 262$k and beyond, so it is the one term where precision choice has a context-dependent payoff.</p>
-  <p><strong>3. The DeltaNet recurrent state (fixed and tiny).</strong> The $48$ DeltaNet layers each hold a recurrent matrix $S$ of $48$ V-heads $\times$ $128 \times 128$, kept in BF16 regardless of the weights format (the never-quantize callout below). Its footprint is</p>
-  <div class="math" aria-label="DeltaNet recurrent state: 48 layers times 48 V-heads times 128 times 128 times 2 bytes (BF16) = 75.5 MB, fixed and independent of context length T.">
-    48\;\text{layers}\times 48\;\text{heads}\times 128\times 128\times 2\text{B} = 75.5\;\text{MB} \quad\text{(fixed, independent of }T\text{)}
+  <p>在 $262$k 与 BF16 下，缓存（$17.18$ GB）<em>超过</em> NVFP4 权重（$13.8$ GB）。在长上下文中，约束项是缓存而非权重，因此 KV 缓存数据类型选择器独立于权重选择器存在。将缓存从 BF16 降至 FP8 再降至 NVFP4，会直接把这一项减半、再减至四分之一：$17.18 \to 8.59 \to 4.29$ GB。这正是 §03 的 KV 缓存推导如何驱动 §12 的量化决策：随着 $T \to 262$k 及更长，注意力层缓存是唯一无界增长的项，因此它也是精度选择会随上下文产生不同收益的项。</p>
+  <p><strong>3. DeltaNet 循环状态（固定且很小）。</strong>$48$ 个 DeltaNet 层各持有一个循环矩阵 $S$，大小为 $48$ 个 V 头 $\times$ $128 \times 128$；无论权重格式为何，它都保持 BF16（见下方“绝不量化”提示）。其占用为</p>
+  <div class="math" aria-label="DeltaNet 循环状态：48 层乘以 48 个 V 头、128、128 和 2 字节（BF16）= 75.5 MB，固定且与上下文长度 T 无关。">
+    48\;\text{层}\times 48\;\text{头}\times 128\times 128\times 2\text{B} = 75.5\;\text{MB} \quad\text{（固定且与 }T\text{ 无关）}
   </div>
-  <p>This single number is the architectural payoff of §04. Forty-eight of the sixty-four layers, three quarters of the depth, consume $75.5$ MB of state <em>no matter how long the context</em>, against the attention layers' $17$ GB at $262$k. The hybrid's servability on a $24$ GB GPU comes from this $226\times$ ratio between the linear-attention state and the full-attention cache, built into the layer recipe in §03, not from a quantization trick.</p>
-  <p><strong>4. Runtime overhead.</strong> The CUDA context plus activation buffers, modelled as $1.5 + 0.1\,B$ GB, a near-constant tax that scales only mildly with concurrency $B$. It sets the floor below which no precision choice helps.</p>
-  <p>Stacking the default configuration (NVFP4 weights, FP8 KV, $T\!=\!131$k, $B\!=\!1$, $24$ GB target) gives the planner's headline verdict, derived rather than asserted:</p>
-  <div class="math" aria-label="Default VRAM total: 13.8 weights + 4.29 KV + 0.075 DeltaNet + 1.6 overhead = 19.77 GB, under the 24 GB budget with 4.2 GB headroom — the widget's fits-comfortably verdict.">
-    13.8\;(\text{weights}) + 4.29\;(\text{KV}) + 0.075\;(\Delta\text{state}) + 1.6\;(\text{overhead}) = 19.77\;\text{GB} \;<\;24\;\text{GB}\quad(\text{4.2 GB headroom})
+  <p>这一数字正是 §04 的架构回报。64 层中的 48 层，即四分之三的深度，<em>无论上下文多长</em>都只消耗 $75.5$ MB 状态；相比之下，注意力层在 $262$k 时要消耗 $17$ GB。混合模型能在 $24$ GB GPU 上部署服务，源自线性注意力状态与全注意力缓存之间的 $226\times$ 比率；这一比率内建于 §03 的层配方中，而非来自量化技巧。</p>
+  <p><strong>4. 运行时开销。</strong>CUDA 上下文加激活缓冲区建模为 $1.5 + 0.1\,B$ GB，这是一项近似固定、仅随并发量 $B$ 小幅增长的开销。它设定了任何精度选择都无法突破的下限。</p>
+  <p>将默认配置（NVFP4 权重、FP8 KV、$T\!=\!131$k、$B\!=\!1$、$24$ GB 目标）叠加后，可推导出而非凭空断言规划器的核心结论：</p>
+  <div class="math" aria-label="默认显存总量：13.8 权重 + 4.29 KV + 0.075 DeltaNet + 1.6 开销 = 19.77 GB，低于 24 GB 预算，尚余 4.2 GB——即组件给出的“轻松容纳”结论。">
+    13.8\;(\text{权重}) + 4.29\;(\text{KV}) + 0.075\;(\Delta\text{状态}) + 1.6\;(\text{开销}) = 19.77\;\text{GB} \;<\;24\;\text{GB}\quad(\text{余量 4.2 GB})
   </div>
-  <p>Why NVFP4 rather than uniform INT4 is the rung the production config stops at: microscaling attaches an FP8 scale factor to every block of $16$ elements, so a weight outlier is carried by its own local scale rather than clipping the whole tensor. Uniform $4$-bit has one global dynamic range and loses the outlier, and the §06 FFN key–value memory is precisely where outlier weights encode the rare, high-magnitude records the model retrieves at inference. The two-level block format runs natively on the 5th-generation Tensor Cores (Blackwell/Ada), so the $4\times$ footprint cut costs no kernel dispatch overhead. The format cards below unpack the bit layouts that make this work.</p>
+  <p>生产配置为何停在 NVFP4 而非均匀 INT4：微缩放为每个 $16$ 元素块附加一个 FP8 缩放因子，因此权重离群值由自身的局部尺度承载，而不会裁剪整个张量。均匀 $4$ 位量化只有一个全局动态范围，会丢失离群值；而 §06 的 FFN 键值记忆恰恰以离群权重编码模型在推理时检索的稀有、高幅值记录。两级块格式可在第五代 Tensor Core（Blackwell/Ada）上原生运行，因此 $4\times$ 的占用缩减不会产生内核调度开销。下方格式卡片会拆解实现这一点的位布局。</p>
 
   <!-- Widget 2: Hardware Roofline & Decode Throughput Simulator (#w-roofline) -->
   <div class="widget" id="w-roofline">
-    <div class="w-head"><span class="w-title">Hardware roofline &amp; throughput simulator</span><span class="w-tag">speed simulator</span></div>
-    <div class="w-desc">Single-stream autoregressive token generation is strictly memory-bandwidth-bound (every token streams all weights across the GPU bus), so hardware memory bandwidth and Multi-Token Prediction (MTP) speculation govern generation speed.</div>
+    <div class="w-head"><span class="w-title">硬件屋顶线与吞吐量模拟器</span><span class="w-tag">速度模拟器</span></div>
+    <div class="w-desc">单流自回归词元生成严格受内存带宽限制（每个词元都要让全部权重流经 GPU 总线），因此硬件内存带宽与多词元预测（MTP）推测共同决定生成速度。</div>
     
     <div class="roofline-ctl">
       <div class="w-ctl">
-        <label for="rfHardware">target hardware</label>
+        <label for="rfHardware">目标硬件</label>
         <select id="rfHardware">
-          <option value="5090" selected>NVIDIA RTX 5090 (32 GB · 1,792 GB/s)</option>
-          <option value="4090">NVIDIA RTX 4090 (24 GB · 1,008 GB/s)</option>
-          <option value="m4max">Apple M4 Max Unified (128 GB · 546 GB/s)</option>
-          <option value="a6000">NVIDIA RTX 6000 Ada (48 GB · 960 GB/s)</option>
-          <option value="h100">NVIDIA H100 SXM5 (80 GB · 3,350 GB/s)</option>
-          <option value="b200">NVIDIA B200 NVL (192 GB · 8,000 GB/s)</option>
+          <option value="5090" selected>NVIDIA RTX 5090（32 GB · 1,792 GB/s）</option>
+          <option value="4090">NVIDIA RTX 4090（24 GB · 1,008 GB/s）</option>
+          <option value="m4max">Apple M4 Max 统一内存（128 GB · 546 GB/s）</option>
+          <option value="a6000">NVIDIA RTX 6000 Ada（48 GB · 960 GB/s）</option>
+          <option value="h100">NVIDIA H100 SXM5（80 GB · 3,350 GB/s）</option>
+          <option value="b200">NVIDIA B200 NVL（192 GB · 8,000 GB/s）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="rfQuant">serving format</label>
+        <label for="rfQuant">服务格式</label>
         <select id="rfQuant">
-          <option value="27.6">FP8 (27.6 GB footprint)</option>
-          <option value="13.8" selected>NVFP4 (13.8 GB footprint)</option>
-          <option value="16.0">GGUF Q4_K_M (16.0 GB footprint)</option>
+          <option value="27.6">FP8（占用 27.6 GB）</option>
+          <option value="13.8" selected>NVFP4（占用 13.8 GB）</option>
+          <option value="16.0">GGUF Q4_K_M（占用 16.0 GB）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="rfMtp">MTP draft acceptance rate (β)</label>
+        <label for="rfMtp">MTP 草稿接受率（β）</label>
         <select id="rfMtp">
-          <option value="0.0">Off (β = 0.0 · 1.0 tok/step)</option>
-          <option value="0.6">Conservative (β = 0.6 · ~1.6 tok/step)</option>
-          <option value="0.8" selected>Standard Code/Text (β = 0.8 · ~1.8 tok/step)</option>
-          <option value="0.95">High Structured JSON (β = 0.95 · ~2.3 tok/step)</option>
+          <option value="0.0">关闭（β = 0.0 · 1.0 词元/步）</option>
+          <option value="0.6">保守（β = 0.6 · 约 1.6 词元/步）</option>
+          <option value="0.8" selected>标准代码/文本（β = 0.8 · 约 1.8 词元/步）</option>
+          <option value="0.95">高度结构化 JSON（β = 0.95 · 约 2.3 词元/步）</option>
         </select>
       </div>
     </div>
 
     <div class="roofline-display">
       <div class="roofline-plot-wrap">
-        <svg id="rooflineSvg" viewBox="0 0 560 300" role="img" aria-label="Hardware roofline model diagram comparing memory bandwidth vs compute bound ceilings"></svg>
+        <svg id="rooflineSvg" viewBox="0 0 560 300" role="img" aria-label="比较内存带宽上限与计算受限上限的硬件屋顶线模型图"></svg>
       </div>
-      <div class="fig-cap"><b>Fig. 9</b> — Hardware roofline: arithmetic intensity (FLOP/byte) places prefill/decode/MoE/matmul on either the memory-bound (left) or compute-bound (right) ceiling, fixing which upgrade helps.</div>
+      <div class="fig-cap"><b>图 9</b> — 硬件屋顶线：算术强度（FLOP/字节）将预填充/解码/MoE/矩阵乘法置于内存受限（左侧）或计算受限（右侧）上限，从而决定哪种升级有效。</div>
       <div class="roofline-stats" id="rooflineStats" aria-live="polite"></div>
     </div>
   </div>
 
-  <h3>The roofline, read as two regimes</h3>
-  <p>The plot above is a single diagram with two ceilings and one ridge; decoding which side a workload falls on tells you exactly which upgrade buys throughput. On the left, the memory-bound ceiling is the flat line at $\text{peak byte/s}$. Performance rises linearly with arithmetic intensity until it hits the compute-bound ceiling, the flat line at $\text{peak FLOP/s}$, on the right. The ridge point $I^{\ast}$ where they meet is the operational intensity at which the GPU saturates both buses at once.</p>
-  <p><strong>Decode lives on the memory-bound ceiling.</strong> As derived above, single-stream decode at NVFP4 runs at $I_{\text{decode}} \approx 4$ FLOP/byte, two and a half orders of magnitude left of the $5090$'s $I^{\ast} \approx 1004$. On the memory-bound ceiling, throughput is the bandwidth divided by the footprint, the simulator's baseline rate:</p>
-  <div class="math" aria-label="Baseline decode throughput: bandwidth divided by weight footprint. RTX 5090 at 1792 GB/s reading 13.8 GB NVFP4 weights = 130 tokens/second. Doubling bandwidth or halving footprint both double this rate; doubling TFLOPs does nothing.">
-    \text{tok/s}_{\text{base}} = \frac{\text{peak BW}}{\text{footprint}} \;=\; \frac{1792\;\text{GB/s}}{13.8\;\text{GB}} \;\approx\; 130\;\text{tok/s} \quad(\text{5090, NVFP4})
+  <h3>将屋顶线解读为两种机制</h3>
+  <p>上图由两个上限和一个脊点组成；判断工作负载落在哪一侧，就能准确知道哪种升级可以提高吞吐量。左侧的内存受限上限是位于 $\text{峰值 byte/s}$ 的水平线。性能随算术强度线性上升，直到触及右侧位于 $\text{峰值 FLOP/s}$ 的计算受限水平上限。两者相交的脊点 $I^{\ast}$，是 GPU 同时饱和两条通路时的运行强度。</p>
+  <p><strong>解码位于内存受限上限。</strong>如上文推导，NVFP4 下的单流解码运行于 $I_{\text{decode}} \approx 4$ FLOP/字节，位于 5090 的 $I^{\ast} \approx 1004$ 左侧约两个半数量级。在内存受限上限上，吞吐量等于带宽除以占用量，即模拟器的基准速率：</p>
+  <div class="math" aria-label="基准解码吞吐量：带宽除以权重占用。RTX 5090 以 1792 GB/s 读取 13.8 GB NVFP4 权重，得到每秒 130 个词元。带宽翻倍或占用减半都会让速率翻倍；TFLOPs 翻倍则毫无作用。">
+    \text{词元/秒}_{\text{基准}} = \frac{\text{峰值带宽}}{\text{占用量}} \;=\; \frac{1792\;\text{GB/s}}{13.8\;\text{GB}} \;\approx\; 130\;\text{词元/秒} \quad(\text{5090, NVFP4})
   </div>
-  <p>On this ceiling the lever is unambiguous: halve the footprint (NVFP4 vs FP8) and the rate doubles; double the bandwidth (H100's $3350$ GB/s) and the rate doubles; double the Tensor Core FLOP/s and the rate does not move. The §08 LM-head bandwidth point bites here for exactly this reason. The $248{,}320$-vocabulary output projection is a $1.27$B-parameter matrix ($248320 \times 5120$), and at single-batch decode it is read in full every token to produce one distribution. That one matmul is pure HBM traffic, the largest single weight read in the forward pass, paid once per token.</p>
-  <p><strong>Prefill lives on the compute-bound ceiling.</strong> During prefill the same weights are reused across all $T$ prompt tokens at once, so the arithmetic intensity scales as $\sim T \cdot I_{\text{decode}}$ and moves <em>right</em> of the ridge. Prefill is limited by peak FLOP/s, which is why its optimization is FlashAttention-3 and fused kernels (Table 11's right column), not quantization. The two columns of Table 11 (prefill complexity vs decode complexity) are the two regimes of this one roofline: prefill wants TFLOPs, decode wants GB/s.</p>
-  <p><strong>MTP is a roofline move, not a compute speedup.</strong> Multi-Token Prediction does not make any single matmul faster; it changes how many tokens one weight read buys. The draft–verify–accept cycle from §08 reads the $1.27$B LM head (and the rest of the weights) once and produces $K+1$ candidate tokens, so the effective per-token cost of that bandwidth-bound read is divided by the expected tokens accepted per pass:</p>
-  <div class="math" aria-label="MTP acceptance from section 8: E = (1 - beta^(K+1))/(1-beta). With beta=0.8, K=2 that is 2.44 tokens per pass; net speedup S = E/(1+gamma_verify) with gamma=0.15 gives 2.12x. Effective throughput 130 x 2.12 = 276 tok/s. MTP pushes the LM-head read right on the roofline by reusing each weight read.">
-    E[\text{tok/pass}] = \frac{1-\beta^{K+1}}{1-\beta} \;\xrightarrow{\beta=0.8,K=2}\; 2.44 \;\;;\;\; S = \frac{E}{1+\gamma_{\text{verify}}} = \frac{2.44}{1.15} \approx 2.12\times
+  <p>在这一上限上，可用杠杆十分明确：将占用减半（NVFP4 相比 FP8），速率便翻倍；将带宽翻倍（如 H100 的 $3350$ GB/s），速率也翻倍；将 Tensor Core FLOP/s 翻倍，速率却不变。§08 的 LM 头带宽问题正因如此在这里产生影响。$248{,}320$ 词表的输出投影是一个 $1.27$B 参数矩阵（$248320 \times 5120$）；在单批次解码中，每生成一个分布，都要为每个词元完整读取一次该矩阵。这一次矩阵乘法完全是 HBM 流量，是前向传播中最大的单次权重读取，每词元都要付出一次成本。</p>
+  <p><strong>预填充位于计算受限上限。</strong>预填充期间，同一组权重会同时被全部 $T$ 个提示词元复用，因此算术强度按 $\sim T \cdot I_{\text{decode}}$ 扩展，并移动到脊点<em>右侧</em>。预填充受峰值 FLOP/s 限制，因此它要优化的是 FlashAttention-3 和融合内核（表 11 右栏），而非量化。表 11 的两列（预填充复杂度与解码复杂度）就是同一屋顶线上的两种机制：预填充需要 TFLOPs，解码需要 GB/s。</p>
+  <p><strong>MTP 改变屋顶线位置，而非提高计算速度。</strong>多词元预测不会让任何单次矩阵乘法更快；它改变的是一次权重读取能换来多少词元。§08 的草稿—验证—接受循环只读取一次 $1.27$B 参数的 LM 头（及其余权重），便生成 $K+1$ 个候选词元，因此这次带宽受限读取的有效单词元成本，会除以每轮预期接受的词元数：</p>
+  <div class="math" aria-label="第 8 节中的 MTP 接受量：E = (1 - beta^(K+1))/(1-beta)。beta=0.8、K=2 时，每轮为 2.44 个词元；gamma=0.15 时，净加速比 S = E/(1+gamma_verify) 为 2.12 倍。有效吞吐量为 130 × 2.12 = 276 词元/秒。MTP 通过复用每次权重读取，使 LM 头读取在屋顶线上向右移动。">
+    E[\text{词元/轮}] = \frac{1-\beta^{K+1}}{1-\beta} \;\xrightarrow{\beta=0.8,K=2}\; 2.44 \;\;;\;\; S = \frac{E}{1+\gamma_{\text{verify}}} = \frac{2.44}{1.15} \approx 2.12\times
   </div>
-  <p>The simulator multiplies the baseline by this speedup: $130 \times 2.12 \approx 276$ tok/s. Read it as "MTP pushed the LM-head matmul from $I \approx 4$ toward $I \approx 8.5$ FLOP/byte on the roofline," reusing each weight read across the accepted tokens, not as "MTP made the GPU $2.12\times$ faster," since the silicon is unchanged. It is a bandwidth optimization that only works because decode is memory-bound; on the compute-bound ceiling it would buy nothing. MTP also helps decode and only decode: it amortizes the per-token weight read. It does nothing for the moment a long prompt first arrives, which is prefill, and prefill is scheduled, not speculated.</p>
+  <p>模拟器将基准速率乘以这一加速比：$130 \times 2.12 \approx 276$ 词元/秒。应将其理解为“MTP 通过在已接受词元间复用每次权重读取，把 LM 头矩阵乘法在屋顶线上从 $I \approx 4$ 推向 $I \approx 8.5$ FLOP/字节”，而非“MTP 让 GPU 快了 $2.12\times$”，因为芯片本身并未改变。这是一项带宽优化，只因解码受内存限制才有效；在计算受限上限上，它不会带来任何收益。MTP 只帮助解码：它摊薄每词元的权重读取。长提示刚到达时属于预填充，MTP 对此无能为力；预填充依靠调度，而非推测。</p>
 
   <!-- Widget 3: Chunked Prefill & Continuous Batching Pipeline (#w-batch-sim) -->
   <div class="widget" id="w-batch-sim">
-    <div class="w-head"><span class="w-title">Chunked prefill &amp; continuous batching timeline</span><span class="w-tag">scheduler pipeline</span></div>
-    <div class="w-desc">Serving long sequences without starving short conversational queries requires chunked prefill scheduling. Long prompts are chunked into 8k–16k slices, interleaving single-token decode passes with chunk prefill passes to eliminate latency spikes.</div>
+    <div class="w-head"><span class="w-title">分块预填充与连续批处理时间线</span><span class="w-tag">调度器流水线</span></div>
+    <div class="w-desc">若要服务长序列而不让短对话查询挨饿，就必须使用分块预填充调度。长提示被切分为 8k–16k 的块，并将单词元解码轮次与分块预填充轮次交错执行，以消除延迟尖峰。</div>
     
     <div class="sched-ctl">
-      <div class="seg" id="schedModeSeg" role="group" aria-label="Scheduling engine mode">
-        <button data-mode="continuous" class="on" aria-pressed="true">Continuous Batching + Chunked Prefill</button>
-        <button data-mode="naive" aria-pressed="false">Naive Batching (Pipeline Bubble)</button>
+      <div class="seg" id="schedModeSeg" role="group" aria-label="调度引擎模式">
+        <button data-mode="continuous" class="on" aria-pressed="true">连续批处理 + 分块预填充</button>
+        <button data-mode="naive" aria-pressed="false">朴素批处理（流水线气泡）</button>
       </div>
     </div>
 
     <div class="sched-pipeline" id="schedPipeline" aria-live="polite"></div>
   </div>
 
-  <h3>Chunked prefill: why a long prompt can't arrive all at once</h3>
-  <p>MTP accelerates decode; it does nothing for the moment a $131$k-token prompt is submitted. That moment is <em>prefill</em>, the forward pass that ingests the whole prompt, computes attention across it, and materializes its KV cache before the first token can be generated. Prefill has the opposite profile from decode: it is compute-bound (each weight reused $T$ times) and it is also the pass that must lay down the entire KV cache at once. Naively, a $131$k prompt arriving into an idle GPU does two damaging things: it spikes the $O(T^2)$ attention compute of the $16$ full-attention layers across the whole prompt in one burst, and it blocks the GPU for that whole burst, so a short conversational decode request queued behind it waits $T_{\text{prefill}}$ milliseconds before its first token. That head-of-line blocking is the latency spike the scheduler exists to remove.</p>
-  <p>Chunked prefill splits the prompt into $8$k–$16$k token chunks and runs one partial prefill per chunk (each chunk extends the KV cache by its own length and attends to the already-cached prefix) interleaved with single-token decode passes for live requests. Two things change. First, the KV cache grows incrementally ($8$k at a time) rather than materializing in one shot, so the peak working set is bounded by the chunk size, not the prompt length. Second, the scheduler gives decode passes priority between chunks, so a short query is never made to wait behind a long prefill. The total prefill FLOPs are <em>not</em> reduced. The $O(T^2)$ attention over the prompt is invariant to how it is sliced, and FlashAttention-3 already keeps prefill memory at $O(T)$, so chunking is fairly characterized as a <em>scheduling</em> and <em>working-set bounding</em> optimization, not a FLOP reduction. Its win is latency fairness: the naive mode in the widget above shows the pipeline bubble where prefill monopolises the GPU; the continuous mode shows the interleaved timeline where decode slips through the gaps.</p>
-  <p>The third leg of the scheduler is <em>paged KV allocation</em>. The cache is laid out in fixed $16$-token pages rather than one contiguous buffer per sequence, so allocation grows in small bounded increments and fragmentation stays below one page. Because identical prefixes produce identical KV blocks, a radix tree over the token stream lets a shared system prompt's KV be stored once and referenced by every request that uses it. The §03 KV-cache economics applied <em>across requests</em> rather than across layers. Where GQA in §05 deduplicated KV <em>heads</em> within a layer, paged prefix-sharing deduplicates KV <em>blocks</em> across a batch. Both are the same principle applied at two different scales: the cache holds reusable state, not private state. Together, chunked prefill and paged KV are what let a $27.6$B model with a $262$k window serve a mix of long documents and short chats on one GPU without the long documents starving the chats.</p>
+  <h3>分块预填充：为何长提示不能一次性到达</h3>
+  <p>MTP 能加速解码，却无法改善一个 $131$k 词元提示刚提交的时刻。这个时刻属于<em>预填充</em>：在生成第一个词元前，前向传播要摄入整个提示、计算其中的注意力，并实体化其 KV 缓存。预填充与解码的特征相反：它受计算限制（每个权重被复用 $T$ 次），同时又必须一次性铺设整个 KV 缓存。若采用朴素方式，一个 $131$k 提示到达空闲 GPU 时会造成两种损害：其一，$16$ 个全注意力层针对整个提示的 $O(T^2)$ 注意力计算会集中爆发；其二，GPU 在整个爆发期间都被阻塞，因此排在后面的短对话解码请求必须等待 $T_{\text{prefill}}$ 毫秒才能得到首个词元。这种队首阻塞正是调度器要消除的延迟尖峰。</p>
+  <p>分块预填充将提示拆成 $8$k–$16$k 词元块，并为每个块运行一次局部预填充（每个块按自身长度扩展 KV 缓存，并关注已缓存的前缀），同时与实时请求的单词元解码轮次交错执行。由此产生两项变化。第一，KV 缓存逐步增长（每次 $8$k），而非一次性实体化，因此峰值工作集受块大小而非提示长度约束。第二，调度器在块之间优先执行解码，使短查询永远不必等待漫长的预填充。预填充 FLOPs 总量<em>并未</em>减少。无论如何切片，提示上的 $O(T^2)$ 注意力都保持不变，而 FlashAttention-3 已将预填充内存维持在 $O(T)$，因此应准确地将分块描述为<em>调度</em>与<em>工作集约束</em>优化，而非 FLOP 缩减。它的收益是延迟公平性：上方组件的朴素模式展示了预填充独占 GPU 时的流水线气泡；连续模式则展示解码从间隙穿过的交错时间线。</p>
+  <p>调度器的第三条支柱是<em>分页 KV 分配</em>。缓存按固定的 $16$ 词元页布局，而非为每个序列分配一个连续缓冲区，因此分配以有界小步增长，碎片不超过一页。由于相同前缀会产生相同 KV 块，基于词元流的基数树可让共享系统提示的 KV 只存储一次，并由每个使用它的请求引用。这是将 §03 的 KV 缓存经济性应用于<em>请求之间</em>，而非层之间。§05 的 GQA 在层内对 KV <em>头</em>去重，而分页前缀共享则在批次内对 KV <em>块</em>去重。两者是在不同尺度应用同一原则：缓存保存的是可复用状态，而非私有状态。分块预填充与分页 KV 共同让带 $262$k 窗口的 $27.6$B 模型能在单张 GPU 上同时服务长文档和短对话，而不让长文档饿死短对话。</p>
 
   <!-- Quantization Microscaling & Formats -->
-  <h3>Quantization microscaling &amp; numerical precision</h3>
-  <p>The ladder above conceals an essential numerical insight: why does FP8 and NVFP4 cost negligible benchmark accuracy, whereas naive uniform 4-bit integer quantization degrades reasoning? The difference lies in microscaling block structures and floating-point exponent budgets:</p>
+  <h3>量化微缩放与数值精度</h3>
+  <p>上方阶梯隐藏着一个关键的数值洞见：为何 FP8 和 NVFP4 几乎不损失基准准确率，而朴素的均匀 4 位整数量化却会损害推理？差异在于微缩放块结构与浮点指数预算：</p>
 
   <div class="quant-cards-grid">
     <div class="quant-format-card">
       <div class="qfc-head">
-        <span class="qfc-title">NVFP4 (W4A4 Microscaled)</span>
-        <span class="qfc-tag" style="color:var(--amber)">Native Blackwell / Ada</span>
+        <span class="qfc-title">NVFP4（W4A4 微缩放）</span>
+        <span class="qfc-tag" style="color:var(--amber)">Blackwell / Ada 原生支持</span>
       </div>
       <div class="qfc-bits">
-        <span class="bit s" title="Sign (1 bit)">S</span>
-        <span class="bit e" title="Exponent (2 bits)">E</span>
-        <span class="bit e" title="Exponent (2 bits)">E</span>
-        <span class="bit m" title="Mantissa (1 bit)">M</span>
-        <span class="bit scale" title="FP8 Microscale factor per 16 elements">+ FP8 Scale</span>
+        <span class="bit s" title="符号（1 位）">S</span>
+        <span class="bit e" title="指数（2 位）">E</span>
+        <span class="bit e" title="指数（2 位）">E</span>
+        <span class="bit m" title="尾数（1 位）">M</span>
+        <span class="bit scale" title="每 16 个元素一个 FP8 微缩放因子">+ FP8 缩放</span>
       </div>
-      <p class="qfc-desc">Two-level microscaling block format (16 elements share an 8-bit scale factor). Keeps outlier representations localized without clipping dynamic range. Runs natively on 5th-gen Tensor Cores.</p>
+      <p class="qfc-desc">两级微缩放块格式（16 个元素共享一个 8 位缩放因子）。将离群值表示限制在局部，同时不裁剪动态范围。可在第五代 Tensor Core 上原生运行。</p>
     </div>
 
     <div class="quant-format-card">
       <div class="qfc-head">
         <span class="qfc-title">FP8 (E4M3)</span>
-        <span class="qfc-tag" style="color:var(--mint)">Near-Lossless Standard</span>
+        <span class="qfc-tag" style="color:var(--mint)">近乎无损的标准</span>
       </div>
       <div class="qfc-bits">
         <span class="bit s">S</span>
         <span class="bit e">E</span><span class="bit e">E</span><span class="bit e">E</span><span class="bit e">E</span>
         <span class="bit m">M</span><span class="bit m">M</span><span class="bit m">M</span>
       </div>
-      <p class="qfc-desc">Matches the exponent dynamics of standard floating point with 3 mantissa bits (relative element error ~2⁻³). Matmul accumulations remain in FP32, maintaining &gt;99.5% reasoning benchmark parity.</p>
+      <p class="qfc-desc">以 3 个尾数位匹配标准浮点的指数动态（元素相对误差约 2⁻³）。矩阵乘法仍使用 FP32 累加，保持 &gt;99.5% 的推理基准一致性。</p>
     </div>
 
     <div class="quant-format-card">
       <div class="qfc-head">
         <span class="qfc-title">GGUF Q4_K_M</span>
-        <span class="qfc-tag" style="color:var(--sky)">Mac / Local CPU</span>
+        <span class="qfc-tag" style="color:var(--sky)">Mac / 本地 CPU</span>
       </div>
       <div class="qfc-bits">
-        <span class="bit s">4-bit Weights</span>
-        <span class="bit scale">6-bit Super-Block Scales (256 elem)</span>
+        <span class="bit s">4 位权重</span>
+        <span class="bit scale">6 位超级块缩放（256 个元素）</span>
       </div>
-      <p class="qfc-desc">k-quant block scheme designed for memory-bandwidth-bound inference in llama.cpp. Suited to unified memory MacBooks (M1–M4 Max) and RAM-constrained consumer rigs.</p>
+      <p class="qfc-desc">为 llama.cpp 中受内存带宽限制的推理而设计的 k-quant 块方案。适用于统一内存 MacBook（M1–M4 Max）和内存受限的消费级设备。</p>
     </div>
   </div>
 
   <div class="callout note">
-    <div class="co-title">Components never quantized below BF16</div>
-    <p>In all production serving configurations (including W4A4), three architectural components are strictly preserved in 16-bit precision: (1) <strong>The 248,320-vocabulary LM Head &amp; Embeddings</strong> (softmax distribution tails are hyper-sensitive to rounding errors), (2) <strong>DeltaNet recurrent state matrices $S$</strong> (accumulated quantization errors would cancel associative memory traces over long contexts), and (3) <strong>RMSNorm scale parameters</strong>.</p>
+    <div class="co-title">绝不量化至 BF16 以下的组件</div>
+    <p>在所有生产服务配置（包括 W4A4）中，三个架构组件都严格保持 16 位精度：(1) <strong>含 248,320 个词表项的 LM 头与嵌入</strong>（softmax 分布尾部对舍入误差极其敏感）；(2) <strong>DeltaNet 循环状态矩阵 $S$</strong>（累积量化误差会在长上下文中抵消联想记忆轨迹）；(3) <strong>RMSNorm 缩放参数</strong>。</p>
   </div>
 
-  <h3>Long-context computational scaling comparison</h3>
+  <h3>长上下文计算扩展对比</h3>
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 11 — Long-context computational scaling:</strong> prefill and decode complexity per subsystem (FFN, DeltaNet, full attention, MoE) with the serving optimization that exploits it.</caption>
+      <caption><strong>表 11 — 长上下文计算扩展：</strong>各子系统（FFN、DeltaNet、全注意力、MoE）的预填充与解码复杂度，以及利用其特性的服务优化。</caption>
       <thead>
         <tr>
-          <th scope="col">Subsystem Component</th>
-          <th scope="col" class="r">Prefill Complexity</th>
-          <th scope="col" class="r">Decode Complexity</th>
-          <th scope="col">Serving Optimization Strategy</th>
+          <th scope="col">子系统组件</th>
+          <th scope="col" class="r">预填充复杂度</th>
+          <th scope="col" class="r">解码复杂度</th>
+          <th scope="col">服务优化策略</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>SwiGLU FFN Projections (64 layers)</td>
-          <td class="r">O(T) Linear</td>
-          <td class="r">O(1) Constant</td>
-          <td>Grouped GEMM fusion + INT4/FP8 Tensor Core acceleration</td>
+          <td>SwiGLU FFN 投影（64 层）</td>
+          <td class="r">O(T) 线性</td>
+          <td class="r">O(1) 常数</td>
+          <td>分组 GEMM 融合 + INT4/FP8 Tensor Core 加速</td>
         </tr>
         <tr>
-          <td>Gated DeltaNet Recurrent Scan (48 layers)</td>
-          <td class="r good">O(T) Linear Chunked Scan</td>
-          <td class="r good">O(1) Constant Matrix Update</td>
-          <td>Fused WY scan kernel; copy-on-write state caching for prefix sharing</td>
+          <td>门控 DeltaNet 循环扫描（48 层）</td>
+          <td class="r good">O(T) 线性分块扫描</td>
+          <td class="r good">O(1) 常数矩阵更新</td>
+          <td>融合 WY 扫描内核；用于前缀共享的写时复制状态缓存</td>
         </tr>
         <tr>
-          <td>Gated Full Attention (16 layers)</td>
+          <td>门控全注意力（16 层）</td>
           <td class="r bad">O(T² · d_h · n_q)</td>
-          <td class="r bad">O(T) Linear Memory Access</td>
-          <td>GQA 6:1 compression + FlashAttention-3 + Paged KV Block Allocation</td>
+          <td class="r bad">O(T) 线性内存访问</td>
+          <td>GQA 6:1 压缩 + FlashAttention-3 + 分页 KV 块分配</td>
         </tr>
         <tr>
-          <td>KV-cache Memory Traffic</td>
-          <td class="r">O(T) Writes</td>
-          <td class="r bad">O(T) Reads per token</td>
-          <td>FP8 / NVFP4 KV cache quantization + Radix tree prefix deduplication</td>
+          <td>KV 缓存内存流量</td>
+          <td class="r">O(T) 写入</td>
+          <td class="r bad">每词元 O(T) 读取</td>
+          <td>FP8 / NVFP4 KV 缓存量化 + 基数树前缀去重</td>
         </tr>
       </tbody>
     </table>
@@ -724,27 +724,27 @@
 
   <div class="compare">
     <div class="col before">
-      <div class="h">Naive 64-Layer All-Attention Baseline</div>
+      <div class="h">朴素 64 层全注意力基线</div>
       <ul>
-        <li>KV Cache @ 262k: <strong>412 GB</strong> per sequence (24 KV heads × 64 layers)</li>
-        <li>Prefill FLOPs scale strictly as $O(T^2)$ across all 64 layers</li>
-        <li>Impossible to serve locally; requires an 8×H100 80 GB datacenter cluster</li>
+        <li>262k 时的 KV 缓存：每序列 <strong>412 GB</strong>（24 个 KV 头 × 64 层）</li>
+        <li>所有 64 层的预填充 FLOPs 均严格按 $O(T^2)$ 扩展</li>
+        <li>无法在本地部署服务；需要 8×H100 80 GB 数据中心集群</li>
       </ul>
     </div>
     <div class="col after">
-      <div class="h">Qwen 3.8-27B Hybrid Architecture</div>
+      <div class="h">Qwen 3.8-27B 混合架构</div>
       <ul>
-        <li>KV Cache @ 262k: <strong>17.2 GB (BF16) → 4.3 GB (NVFP4)</strong> per sequence</li>
-        <li>48 linear layers keep prefill execution near-linear in context length $T$</li>
-        <li>Runs on a single 24 GB consumer GPU (RTX 4090/5090) with MTP acceleration</li>
+        <li>262k 时的 KV 缓存：每序列 <strong>17.2 GB（BF16）→ 4.3 GB（NVFP4）</strong></li>
+        <li>48 个线性层使预填充执行相对于上下文长度 $T$ 保持近似线性</li>
+        <li>借助 MTP 加速，可在单张 24 GB 消费级 GPU（RTX 4090/5090）上运行</li>
       </ul>
     </div>
   </div>
 
-  <p>None of this changes what the model knows. The knowledge substrate is the $1.11$M FFN key–value records laid down in §06 and the recurrent state written in §04; the §10 compute budget fixed their content. The §12 engineering (quantization, roofline-aware scheduling, MTP amortization, chunked prefill) only changes how cheaply and how fast that fixed substrate can be read at inference. The one question it raises and cannot itself answer is whether the numerical compression that makes the model fit a $24$ GB GPU also preserves the accuracy the pretraining budget paid for. That is the question §13's benchmarks are run to settle.</p>
+  <p>这些技术都不会改变模型掌握的知识。知识基底是 §06 中写入的 $1.11$M 条 FFN 键值记录，以及 §04 中写入的循环状态；§10 的算力预算决定了它们的内容。§12 的工程技术（量化、屋顶线感知调度、MTP 摊销、分块预填充）只会改变推理时读取这一固定基底的成本与速度。它提出却无法自行回答的唯一问题是：让模型装入 $24$ GB GPU 的数值压缩，是否也保留了预训练预算换来的准确率。§13 的基准测试正是为了解答这个问题。</p>
 
   <div class="callout warn">
-    <div class="co-title">Static vs Dynamic YaRN context scaling</div>
-    <p>Most production inference engines default to static YaRN scaling, where the frequency compression factor is set globally at server boot. When short prompts (&lt;32k tokens) dominate traffic, static YaRN can induce slight attention degradation on localized queries. Recommendation: set <code>yarn_factor = 1.0</code> for standard workloads (&le;262k) and scale to <code>yarn_factor = 2.0</code> or <code>4.0</code> only for workloads extending towards 512k–1M tokens.</p>
+    <div class="co-title">静态与动态 YaRN 上下文扩展</div>
+    <p>多数生产推理引擎默认使用静态 YaRN 扩展，即在服务器启动时全局设置频率压缩因子。当短提示（&lt;32k 词元）占据主要流量时，静态 YaRN 可能让局部查询的注意力性能轻微下降。建议：对标准工作负载（&le;262k）设置 <code>yarn_factor = 1.0</code>；仅对扩展至 512k–1M 词元的工作负载使用 <code>yarn_factor = 2.0</code> 或 <code>4.0</code>。</p>
   </div>
 </section>

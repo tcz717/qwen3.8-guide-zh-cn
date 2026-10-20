@@ -20,15 +20,15 @@ if (!location.hash || location.hash === "#top") {
 
 /* ---------- figure inventory (running-head counter source-of-truth) ---------- */
 const FIGURES = [
-  "Dataflow",
-  "MRoPE dial",
-  "FFN activation curves",
-  "Residual bus variance",
-  "MTP forward+verify tree",
-  "Pretrain loss",
-  "β₂ recovery",
-  "Test-time compute scaling",
-  "Hardware roofline",
+  "数据流",
+  "MRoPE 表盘",
+  "FFN 激活曲线",
+  "残差总线方差",
+  "MTP 前向传播与验证树",
+  "预训练损失",
+  "β₂ 恢复",
+  "测试时计算扩展",
+  "硬件屋顶线",
 ];
 
 /* ---------- shared config + formatters ---------- */
@@ -111,7 +111,7 @@ function enableTabs(container, itemSel) {
 }
 
 /* slugify headings → ids used by .anchor links */
-const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64);
+const slug = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 64);
 
 /* stacked-bar segments: absolutely positioned at a running left offset and
    scaled on the compositor, so the transition never triggers layout */
@@ -247,7 +247,7 @@ function stackSegments(pairs) {
   document.querySelectorAll("section h2[id], section h3[id]").forEach(h => {
     const a = document.createElement("a");
     a.className = "anchor"; a.href = "#" + h.id;
-    a.setAttribute("aria-label", "Link to " + h.textContent.replace(/¶/g, "").trim());
+    a.setAttribute("aria-label", "链接到" + h.textContent.replace(/¶/g, "").trim());
     a.textContent = "¶";
     h.appendChild(a);
   });
@@ -257,14 +257,14 @@ function stackSegments(pairs) {
 (function () {
   document.querySelectorAll("pre.code").forEach(pre => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "code-copy"; b.textContent = "copy";
-    b.setAttribute("aria-label", "Copy code to clipboard");
+    b.type = "button"; b.className = "code-copy"; b.textContent = "复制";
+    b.setAttribute("aria-label", "复制代码到剪贴板");
     b.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(pre.innerText);
-        b.textContent = "copied ✓"; b.classList.add("ok");
-        setTimeout(() => { b.textContent = "copy"; b.classList.remove("ok"); }, 1400);
-      } catch { b.textContent = "copy failed"; setTimeout(() => b.textContent = "copy", 1600); }
+        b.textContent = "已复制 ✓"; b.classList.add("ok");
+        setTimeout(() => { b.textContent = "复制"; b.classList.remove("ok"); }, 1400);
+      } catch { b.textContent = "复制失败"; setTimeout(() => b.textContent = "复制", 1600); }
     });
     pre.appendChild(b);
   });
@@ -336,21 +336,21 @@ function stackSegments(pairs) {
   function render() {
     const c = compute();
     const rows = [
-      ["Token embedding (248,320 × 5120)", c.emb, ""],
-      ["Gated DeltaNet layers — 48 × in/out/gate proj", c.delta, "a"],
-      ["Gated Attention layers — 16 × q/k/v/gate/o proj", c.attn, "m"],
-      ["SwiGLU FFNs — 64 × 3·d·dff", c.ffn, "i"],
-      ["RMSNorm gains", c.norms, ""],
-      ["LM head (untied) — 5120 × 248,320", c.head, ""],
+      ["词元嵌入（248,320 × 5120）", c.emb, ""],
+      ["门控 DeltaNet 层 — 48 × 输入/输出/门控投影", c.delta, "a"],
+      ["门控注意力层 — 16 × q/k/v/门控/o 投影", c.attn, "m"],
+      ["SwiGLU FFN — 64 × 3·d·dff", c.ffn, "i"],
+      ["RMSNorm 增益", c.norms, ""],
+      ["LM 头（非共享权重）— 5120 × 248,320", c.head, ""],
     ];
-    if (withMtp) rows.push(["MTP module (draft layers + heads)", c.mtp, ""]);
-    if (withVision) rows.push(["Vision tower (SigLIP-style, est.)", c.vis, ""]);
+    if (withMtp) rows.push(["MTP 模块（草稿层 + 头）", c.mtp, ""]);
+    if (withVision) rows.push(["视觉塔（SigLIP 风格，估算）", c.vis, ""]);
     out.innerHTML =
       rows.map(([l, v, cls]) => `<div class="row"><span>${l}</span><span class="v ${cls}">${fmtP(v)}</span></div>`).join("") +
       `<div class="row" style="border-top:1px solid var(--line-strong);margin-top:6px;padding-top:10px">
-         <span><b>total (LM ${withMtp ? "+ MTP " : ""}${withVision ? "+ vision" : ""})</b></span>
+         <span><b>总计（LM ${withMtp ? "+ MTP " : ""}${withVision ? "+ 视觉" : ""}）</b></span>
          <span class="big">${fmtP(c.total)}</span></div>` +
-      `<div style="color:var(--faint);font-size:12px;margin-top:8px">checkpoint ≈ ${(c.total * 2 / 1e9).toFixed(1)} GB in BF16</div>`;
+      `<div style="color:var(--faint);font-size:12px;margin-top:8px">BF16 检查点 ≈ ${(c.total * 2 / 1e9).toFixed(1)} GB</div>`;
     // mirror the headline number to the hero stat card so they never disagree
     const heroEl = document.getElementById("statParams");
     if (heroEl) heroEl.textContent = fmtP(c.total);
@@ -373,7 +373,7 @@ function stackSegments(pairs) {
 
   const PRESETS = {
     "code": {
-      name: "Python Code: FlashAttention Kernel",
+      name: "Python 代码：FlashAttention 内核",
       raw: "def matmul_kernel(Q, K, V):\n    return flash_attn_func(Q, K, V, causal=True)",
       tokens: [
         { text: "def", id: 982 },
@@ -400,7 +400,7 @@ function stackSegments(pairs) {
       ]
     },
     "math": {
-      name: "Reasoning Channel Prompt",
+      name: "推理通道提示词",
       raw: "<think> Let S_t = α_t · (S_{t-1}(I - β_t k_t k_t^T) + β_t k_t v_t^T). </think>",
       tokens: [
         { text: "<think>", id: 248002 },
@@ -436,7 +436,7 @@ function stackSegments(pairs) {
       ]
     },
     "multilingual": {
-      name: "Multilingual Alignment",
+      name: "多语言对齐",
       raw: "Qwen 3.8 aligns English, 深度学习架构, गणितीय अनुकूलन, and الذكاء الاصطناعي.",
       tokens: [
         { text: "Qwen", id: 48201 },
@@ -462,7 +462,7 @@ function stackSegments(pairs) {
       ]
     },
     "agent": {
-      name: "Agentic Tool RPC Syntax",
+      name: "智能体工具 RPC 语法",
       raw: "<|im_start|>assistant\n<|tool_call_start|>{ \"name\": \"eval_expr\", \"args\": { \"x\": 42 } }<|tool_call_end|><|im_end|>",
       tokens: [
         { text: "<|im_start|>", id: 248004 },
@@ -486,7 +486,7 @@ function stackSegments(pairs) {
       ]
     },
     "lowresource": {
-      name: "Low-Resource Scripts (Thai / Khmer / Tamil)",
+      name: "低资源文字（泰语 / 高棉语 / 泰米尔语）",
       raw: "โมเดลไฮบริด (Thai) · மொழியியல் (Tamil) · ភាសាខ្មែរ (Khmer)",
       tokens: [
         { text: "โม", id: 12401 },
@@ -530,7 +530,7 @@ function stackSegments(pairs) {
       const isControl = t.text.startsWith("<|") || t.text.startsWith("<think") || t.text.startsWith("</think");
       // escape before injecting — token text can contain "<", "&" etc.
       const shown = esc(t.text).replace(/\n/g, "↵").replace(/ /g, "␣");
-      return `<span style="display:inline-block;background:${isControl ? "rgba(43,58,138,0.25)" : color};border:1px solid ${isControl ? "var(--iris)" : "var(--line)"};padding:2px 6px;margin:2px;border-radius:4px;font-family:var(--mono);font-size:12px;color:${isControl ? "var(--iris)" : "var(--fg)"}" title="Token ID: ${t.id}"><b>${shown}</b> <span style="color:var(--faint);font-size:12px">#${t.id}</span></span>`;
+      return `<span style="display:inline-block;background:${isControl ? "rgba(43,58,138,0.25)" : color};border:1px solid ${isControl ? "var(--iris)" : "var(--line)"};padding:2px 6px;margin:2px;border-radius:4px;font-family:var(--mono);font-size:12px;color:${isControl ? "var(--iris)" : "var(--fg)"}" title="词元 ID：${t.id}"><b>${shown}</b> <span style="color:var(--faint);font-size:12px">#${t.id}</span></span>`;
     }).join("");
 
     const idsPreview = data.tokens.map(t => t.id).join(", ");
@@ -538,30 +538,30 @@ function stackSegments(pairs) {
     tokLiveTokens.innerHTML = `
       <div class="calc-stat-grid">
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--mint)">${numTokens} Tokens</div>
-          <div class="cs-lbl">Emitted Tokens</div>
+          <div class="cs-num" style="color:var(--mint)">${numTokens} 个词元</div>
+          <div class="cs-lbl">输出词元</div>
         </div>
         <div class="cs-card">
-          <div class="cs-num">${numChars} Chars</div>
-          <div class="cs-lbl">Raw Character Length</div>
+          <div class="cs-num">${numChars} 个字符</div>
+          <div class="cs-lbl">原始字符长度</div>
         </div>
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--amber)">${fertility} Chars/Tok</div>
-          <div class="cs-lbl">Compression Fertility</div>
+          <div class="cs-num" style="color:var(--amber)">${fertility} 字符/词元</div>
+          <div class="cs-lbl">压缩生育率</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--sky)">${(vramBytes / 1024).toFixed(1)} KB</div>
-          <div class="cs-lbl">Embedding Activation Footprint</div>
+          <div class="cs-lbl">嵌入激活占用</div>
         </div>
       </div>
 
       <div style="background:var(--bg-2);padding:10px 14px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--line);margin-top:8px">
-        <div style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:6px">Segmented Token Stream (Click token for ID):</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:6px">分段词元流（点击词元查看 ID）：</div>
         <div style="line-height:1.8">${badgesHtml}</div>
       </div>
 
       <div style="font-family:var(--mono);font-size:12px;color:var(--faint);background:var(--bg-3,var(--bg-2));padding:6px 10px;border-radius:4px;margin-top:8px;overflow-x:auto;white-space:nowrap">
-        Token IDs: [ ${idsPreview} ]
+        词元 ID：[ ${idsPreview} ]
       </div>
     `;
   }
@@ -580,52 +580,52 @@ function stackSegments(pairs) {
 
   const FERTILITY_DATA = {
     "en": {
-      name: "English Prose & Technical Documents",
-      v32: "1.30 tokens/word",
-      v151: "1.15 tokens/word",
-      v248: "1.08 tokens/word",
-      gain: "16.9% sequence compression vs 32k",
-      desc: "English compression is mature; 248k vocabulary captures complex technical compound nouns and morphological suffixes as atomic tokens."
+      name: "英语散文与技术文档",
+      v32: "1.30 词元/单词",
+      v151: "1.15 词元/单词",
+      v248: "1.08 词元/单词",
+      gain: "相比 32k，序列压缩 16.9%",
+      desc: "英语压缩已很成熟；248k 词表可将复杂技术复合名词和形态后缀捕获为原子词元。"
     },
     "code": {
-      name: "Python / C++ / TypeScript Source Code",
-      v32: "1.50× char expansion",
-      v151: "1.20× char expansion",
-      v248: "1.05× char expansion",
-      gain: "30.0% sequence reduction vs 32k",
-      desc: "4-space and 8-space indentation runs, snake_case identifiers, and operator chains merge into single tokens, drastically accelerating coding reasoning."
+      name: "Python / C++ / TypeScript 源代码",
+      v32: "1.50× 字符扩展",
+      v151: "1.20× 字符扩展",
+      v248: "1.05× 字符扩展",
+      gain: "相比 32k，序列缩短 30.0%",
+      desc: "连续 4/8 个空格的缩进、snake_case 标识符和运算符链可合并为单个词元，大幅加速代码推理。"
     },
     "zh": {
-      name: "Mandarin Chinese (Simplified & Traditional)",
-      v32: "1.45 tokens/char",
-      v151: "0.72 tokens/char",
-      v248: "0.68 tokens/char",
-      gain: "53.1% sequence compression vs 32k",
-      desc: "Expanded multi-character Chinese dictionary maps idiomatic four-character idioms (成语) and common nouns into single token embeddings."
+      name: "中文（简体与繁体）",
+      v32: "1.45 词元/字符",
+      v151: "0.72 词元/字符",
+      v248: "0.68 词元/字符",
+      gain: "相比 32k，序列压缩 53.1%",
+      desc: "扩展的多字中文词典可将四字成语和常用名词映射为单个词元嵌入。"
     },
     "hi": {
-      name: "Hindi & Indic Devanagari Scripts",
-      v32: "2.80 tokens/word (byte-split)",
-      v151: "1.55 tokens/word",
-      v248: "1.22 tokens/word",
-      gain: "56.4% sequence compression vs 32k",
-      desc: "Completely resolves the classic 'byte-collapse' penalty where Indic conjuncts previously required 3 to 4 individual UTF-8 bytes."
+      name: "印地语与印度天城文字",
+      v32: "2.80 词元/单词（字节拆分）",
+      v151: "1.55 词元/单词",
+      v248: "1.22 词元/单词",
+      gain: "相比 32k，序列压缩 56.4%",
+      desc: "彻底解决经典的“字节退化”损失：过去印度文字连写需拆成 3 至 4 个独立 UTF-8 字节。"
     },
     "ar": {
-      name: "Arabic & Perso-Arabic Scripts",
-      v32: "2.40 tokens/word",
-      v151: "1.40 tokens/word",
-      v248: "1.15 tokens/word",
-      gain: "52.1% sequence compression vs 32k",
-      desc: "Native root-and-pattern morphology tokenization eliminates excessive subword fragmentation across Islamic jurisprudence and scientific literature."
+      name: "阿拉伯语与波斯—阿拉伯文字",
+      v32: "2.40 词元/单词",
+      v151: "1.40 词元/单词",
+      v248: "1.15 词元/单词",
+      gain: "相比 32k，序列压缩 52.1%",
+      desc: "原生词根—词型形态分词消除了伊斯兰法学和科学文献中过度的子词碎片化。"
     },
     "th": {
-      name: "Thai & Khmer Continuous Scripts",
-      v32: "3.90 tokens/word (byte-collapse)",
-      v151: "1.85 tokens/word",
-      v248: "1.40 tokens/word",
-      gain: "64.1% sequence compression vs 32k",
-      desc: "Scripts without explicit word boundaries see the largest relative throughput boost, converting unsegmented byte chains into coherent lexical tokens."
+      name: "泰语与高棉语连续文字",
+      v32: "3.90 词元/单词（字节退化）",
+      v151: "1.85 词元/单词",
+      v248: "1.40 词元/单词",
+      gain: "相比 32k，序列压缩 64.1%",
+      desc: "没有显式词界的文字获得最大相对吞吐提升，将未分段的字节链转换为连贯的词汇词元。"
     }
   };
 
@@ -642,15 +642,15 @@ function stackSegments(pairs) {
       <div class="calc-stat-grid">
         <div class="cs-card">
           <div class="cs-num" style="color:var(--rose)">${d.v32}</div>
-          <div class="cs-lbl">Legacy 32k Vocabulary</div>
+          <div class="cs-lbl">旧版 32k 词表</div>
         </div>
         <div class="cs-card">
           <div class="cs-num">${d.v151}</div>
-          <div class="cs-lbl">Qwen 2.5 (151k Vocab)</div>
+          <div class="cs-lbl">Qwen 2.5（151k 词表）</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--mint)">${d.v248}</div>
-          <div class="cs-lbl">Qwen 3.8 (248k Padded)</div>
+          <div class="cs-lbl">Qwen 3.8（填充至 248k）</div>
         </div>
       </div>
 
@@ -687,8 +687,8 @@ function stackSegments(pairs) {
       const cell = document.createElement("button");
       cell.type = "button";
       cell.className = "layer-cell" + (kind === "full" ? " fa" : "");
-      cell.title = `Layer ${i + 1}`;
-      cell.setAttribute("aria-label", `Layer ${i + 1}: ${kind === "full" ? "Gated Attention" : "Gated DeltaNet"}`);
+      cell.title = `第 ${i + 1} 层`;
+      cell.setAttribute("aria-label", `第 ${i + 1} 层：${kind === "full" ? "门控注意力" : "门控 DeltaNet"}`);
       cell.setAttribute("aria-pressed", "false");
       strip.appendChild(cell);
     });
@@ -719,26 +719,26 @@ function stackSegments(pairs) {
       info.innerHTML = `
           <div class="calc-stat-grid">
             <div class="cs-card">
-              <div class="cs-num" style="color:${isDelta ? "var(--amber)" : "var(--mint)"}">Layer ${i + 1} / 64</div>
-              <div class="cs-lbl">${isDelta ? "Gated DeltaNet (3Δ)" : "Gated Attention (1A)"}</div>
+              <div class="cs-num" style="color:${isDelta ? "var(--amber)" : "var(--mint)"}">第 ${i + 1} / 64 层</div>
+              <div class="cs-lbl">${isDelta ? "门控 DeltaNet（3Δ）" : "门控注意力（1A）"}</div>
             </div>
             <div class="cs-card">
-              <div class="cs-num">Block ${blockIndex} · Step ${motifIndex}/4</div>
-              <div class="cs-lbl">${isDelta ? "Recurrent Context Mixer" : "Global Exact Recall Anchor"}</div>
+              <div class="cs-num">块 ${blockIndex} · 步骤 ${motifIndex}/4</div>
+              <div class="cs-lbl">${isDelta ? "循环上下文混合器" : "全局精确召回锚点"}</div>
             </div>
             <div class="cs-card">
               <div class="cs-num" style="color:var(--mint)">${cumulativeKvGb.toFixed(2)} GB</div>
-              <div class="cs-lbl">Cumulative KV Cache @ ${ctx.toLocaleString()} tok</div>
+              <div class="cs-lbl">${ctx.toLocaleString()} 词元时的累计 KV 缓存</div>
             </div>
             <div class="cs-card">
               <div class="cs-num" style="color:var(--iris)">${cumParams.toFixed(2)}B</div>
-              <div class="cs-lbl">Cumulative Params (L1..L${i+1})</div>
+              <div class="cs-lbl">累计参数（L1..L${i+1}）</div>
             </div>
           </div>
           <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px">
             ${isDelta
-              ? `<b>Linear Attention:</b> 16 QK / 48 V heads × 128 dim · Fixed state $128 \\times 128$ per head (0 Bytes dynamic KV cache). Constant $\\mathcal{O}(1)$ decode FLOPs.`
-              : `<b>Full Softmax Attention:</b> 24 Q / 4 KV heads × 256 dim · GQA 6:1 · 3D MRoPE $[11, 11, 10]$ · $\\sigma$-output gate. Adds ${(kvBytesPerLayer/1e9).toFixed(2)} GB to cache.`}
+              ? `<b>线性注意力：</b>16 个 QK / 48 个 V 头 × 128 维 · 每个头使用固定的 $128 \\times 128$ 状态（动态 KV 缓存为 0 字节）。解码 FLOPs 恒为 $\\mathcal{O}(1)$。`
+              : `<b>完整 Softmax 注意力：</b>24 个 Q / 4 个 KV 头 × 256 维 · GQA 6:1 · 3D MRoPE $[11, 11, 10]$ · $\\sigma$ 输出门控。缓存增加 ${(kvBytesPerLayer/1e9).toFixed(2)} GB。`}
           </div>
         `;
       katexRender(info);                                          // footnote carries inline math
@@ -779,32 +779,32 @@ function stackSegments(pairs) {
 
   const MOTIF_STEPS = {
     "1": {
-      name: "Superblock Step 1 · DeltaNet Recurrent Compression",
-      type: "Linear Attention Mixer + SwiGLU FFN",
+      name: "超块步骤 1 · DeltaNet 循环压缩",
+      type: "线性注意力混合器 + SwiGLU FFN",
       state: "S_t ← α·(S_{t-1}(I - β k k^T) + β k v^T)",
-      desc: "First recurrent update of the 4-layer cycle. Ingests raw input tokens, applies causal 1D depthwise conv (kernel 4) for local token order, and writes associative key-value updates into fixed 128×128 memory matrices.",
-      benefit: "Pure $\\mathcal{O}(1)$ streaming state — 0 bytes KV cache."
+      desc: "四层循环中的第一次循环更新。摄取原始输入词元，应用因果一维深度卷积（核大小 4）提取局部词元顺序，并将关联键值更新写入固定的 128×128 记忆矩阵。",
+      benefit: "纯 $\\mathcal{O}(1)$ 流式状态——KV 缓存为 0 字节。"
     },
     "2": {
-      name: "Superblock Step 2 · DeltaNet Recurrent Refinement",
-      type: "Linear Attention Mixer + SwiGLU FFN",
+      name: "超块步骤 2 · DeltaNet 循环细化",
+      type: "线性注意力混合器 + SwiGLU FFN",
       state: "S_t ← α·(S_{t-1}(I - β k k^T) + β k v^T)",
-      desc: "Second recurrent pass. Multi-layer depth allows DeltaNet to compose associative memories, performing multi-step reasoning and semantic feature extraction on the compressed prefix state.",
-      benefit: "Filters transient syntactic noise via learned decay gate $\\alpha_t$."
+      desc: "第二次循环传递。多层深度使 DeltaNet 能够组合联想记忆，在压缩后的前缀状态上执行多步推理和语义特征提取。",
+      benefit: "通过学习到的衰减门控 $\\alpha_t$ 过滤瞬时语法噪声。"
     },
     "3": {
-      name: "Superblock Step 3 · DeltaNet Recurrent Fusion",
-      type: "Linear Attention Mixer + SwiGLU FFN",
+      name: "超块步骤 3 · DeltaNet 循环融合",
+      type: "线性注意力混合器 + SwiGLU FFN",
       state: "S_t ← α·(S_{t-1}(I - β k k^T) + β k v^T)",
-      desc: "Third recurrent pass. Fuses long-horizon context before encountering the full-attention anchor. Maximizes the amount of sequence history compressed per FLOP.",
-      benefit: "Highest FLOP efficiency across the 4-layer super-block."
+      desc: "第三次循环传递。在到达完整注意力锚点前融合长程上下文，最大化每 FLOP 所压缩的序列历史量。",
+      benefit: "在四层超块中实现最高的 FLOP 效率。"
     },
     "4": {
-      name: "Superblock Step 4 · Gated Attention Retrieval Anchor",
-      type: "Grouped-Query Attention (GQA 6:1) + SwiGLU FFN",
+      name: "超块步骤 4 · 门控注意力检索锚点",
+      type: "分组查询注意力（GQA 6:1）+ SwiGLU FFN",
       state: "Attn(Q, K, V) = Softmax((Q K^T / √d_k) + M) V",
-      desc: "The global synchronization anchor. Performs full causal softmax attention across the entire historical token sequence, re-reading raw tokens to correct any associative drift in the preceding 3 DeltaNet layers.",
-      benefit: "Guarantees 100% needle-in-a-haystack retrieval accuracy."
+      desc: "全局同步锚点。对整个历史词元序列执行完整的因果 Softmax 注意力，重新读取原始词元，以纠正前 3 个 DeltaNet 层中的关联漂移。",
+      benefit: "保证 100% 的大海捞针检索准确率。"
     }
   };
 
@@ -824,7 +824,7 @@ function stackSegments(pairs) {
         ${info.desc}
       </div>
       <div style="font-size:12px;color:var(--faint);font-family:var(--mono)">
-        <b>Motif Advantage:</b> ${info.benefit}
+        <b>模式优势：</b>${info.benefit}
       </div>
     `;
     katexRender(motifStepCard);
@@ -859,14 +859,14 @@ function stackSegments(pairs) {
     "beta":  { name: "Beta",  vec: [-0.8, 1.0, 0.5, 0.0], label: "[-0.8, +1.0, +0.5, 0.0]" },
     "gamma": { name: "Gamma", vec: [0.0, -0.7, 1.0, 0.8], label: "[0.0, -0.7, +1.0, +0.8]" },
     "delta": { name: "Delta", vec: [0.5, 0.8, -0.9, 0.3], label: "[+0.5, +0.8, -0.9, +0.3]" },
-    "zero":  { name: "Zero",  vec: [0.0, 0.0, 0.0, 0.0], label: "[0.0, 0.0, 0.0, 0.0]" }
+    "zero":  { name: "零向量",  vec: [0.0, 0.0, 0.0, 0.0], label: "[0.0, 0.0, 0.0, 0.0]" }
   };
 
   const SLOT_CONFIG = [
-    { label: "Slot 0 · User Intent", desc: "Represents conversational goal vector" },
-    { label: "Slot 1 · Document Context", desc: "Long-horizon document state" },
-    { label: "Slot 2 · Tool Execution", desc: "RPC state / environment response" },
-    { label: "Slot 3 · Working Variable", desc: "Active reasoning entity" }
+    { label: "槽位 0 · 用户意图", desc: "表示对话目标向量" },
+    { label: "槽位 1 · 文档上下文", desc: "长程文档状态" },
+    { label: "槽位 2 · 工具执行", desc: "RPC 状态 / 环境响应" },
+    { label: "槽位 3 · 工作变量", desc: "活跃推理实体" }
   ];
 
   // 4x4 Associative Matrix (4 key slots x 4 value feature dims)
@@ -929,7 +929,7 @@ function stackSegments(pairs) {
       }).join("");
 
       return `
-        <tr class="${isActive ? "active-row" : ""}" data-slot="${rIdx}" tabindex="0" role="button" aria-label="Select Slot ${rIdx}">
+        <tr class="${isActive ? "active-row" : ""}" data-slot="${rIdx}" tabindex="0" role="button" aria-label="选择槽位 ${rIdx}">
           <td style="font-weight:600;color:${isActive ? "var(--amber)" : "var(--fg)"}">
             <b>k_${rIdx}</b> <span style="font-size:12px;color:var(--faint)">(${slotName})</span>
           </td>
@@ -940,42 +940,42 @@ function stackSegments(pairs) {
 
     // Build vector readout string for query probe
     const retrievedFormatted = retrievedVec.map(v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`).join(", ");
-    const targetFormatted = hasTarget ? targetInfo.vec.map(v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`).join(", ") : "None written";
+    const targetFormatted = hasTarget ? targetInfo.vec.map(v => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`).join(", ") : "尚未写入";
 
     deltaLabReadout.innerHTML = `
       <div class="calc-stat-grid">
         <div class="cs-card">
           <div class="cs-num" style="color:var(--amber)">${fNorm.toFixed(2)}</div>
-          <div class="cs-lbl">Frobenius Norm ||S||_F</div>
+          <div class="cs-lbl">Frobenius 范数 ||S||_F</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:${mode === "deltanet" ? "var(--mint)" : "var(--rose)"}">
-            ${mode === "deltanet" ? "Delta Rule" : "Additive"}
+            ${mode === "deltanet" ? "Delta 规则" : "加法式"}
           </div>
-          <div class="cs-lbl">Active Update Regime</div>
+          <div class="cs-lbl">当前更新机制</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:${hasTarget ? (recallError < 0.05 ? "var(--mint)" : "var(--rose)") : "var(--muted)"}">
-            ${hasTarget ? (recallError < 0.05 ? "Exact (0.00)" : `+${recallError.toFixed(2)} Err`) : "—"}
+            ${hasTarget ? (recallError < 0.05 ? "精确（0.00）" : `+${recallError.toFixed(2)} 误差`) : "—"}
           </div>
-          <div class="cs-lbl">k_${activeSlot} Recall Precision</div>
+          <div class="cs-lbl">k_${activeSlot} 召回精度</div>
         </div>
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--iris)">${writeHistory.length} Ops</div>
-          <div class="cs-lbl">Operation Counter</div>
+          <div class="cs-num" style="color:var(--iris)">${writeHistory.length} 次操作</div>
+          <div class="cs-lbl">操作计数器</div>
         </div>
       </div>
 
       <div class="delta-matrix-wrap">
         <div class="delta-matrix-box">
           <div class="delta-box-title">
-            <span>Associative Matrix S_t ∈ ℝ^(4×4)</span>
-            <span style="font-size:12px;color:var(--faint)">k_i × v_j (48 heads in §04)</span>
+            <span>关联矩阵 S_t ∈ ℝ^(4×4)</span>
+            <span style="font-size:12px;color:var(--faint)">k_i × v_j（§04 中有 48 个头）</span>
           </div>
           <table class="delta-grid-table">
             <thead>
               <tr>
-                <th scope="col">Slot Key (k)</th>
+                <th scope="col">槽位键（k）</th>
                 <th scope="col">v[0]</th>
                 <th scope="col">v[1]</th>
                 <th scope="col">v[2]</th>
@@ -990,19 +990,19 @@ function stackSegments(pairs) {
 
         <div class="delta-probe-box">
           <div class="delta-box-title">
-            <span>Query Probe: y_t = S_t^T q_t</span>
-            <span style="font-size:12px;color:var(--amber)">Probing k_${activeSlot}</span>
+            <span>查询探针：y_t = S_t^T q_t</span>
+            <span style="font-size:12px;color:var(--amber)">正在探测 k_${activeSlot}</span>
           </div>
           <div style="font-size:12px;color:var(--muted);line-height:1.6">
-            <div style="margin-bottom:4px"><b>Retrieved Signal y:</b> <code>[ ${retrievedFormatted} ]</code></div>
-            <div style="margin-bottom:6px"><b>Target Expected:</b> <code>[ ${targetFormatted} ]</code></div>
+            <div style="margin-bottom:4px"><b>检索信号 y：</b><code>[ ${retrievedFormatted} ]</code></div>
+            <div style="margin-bottom:6px"><b>预期目标：</b><code>[ ${targetFormatted} ]</code></div>
             
             <div style="padding:6px 8px;border-radius:4px;background:var(--bg-1);margin-top:6px">
               ${!hasTarget 
-                ? '<span style="color:var(--faint)">Slot is empty. Write a payload to observe associative retention.</span>'
+                ? '<span style="color:var(--faint)">槽位为空。写入载荷以观察关联保持效果。</span>'
                 : (recallError < 0.05 
-                    ? '<span style="color:var(--mint);font-weight:600">✓ Clean Memory Retrieval:</span> Delta-rule subtraction <code>(I - β k k^T)</code> cleanly eliminated all previous state without ghost interference.'
-                    : `<span style="color:var(--rose);font-weight:600">⚠️ Superposition Ghosting (+${recallError.toFixed(2)}):</span> Additive linear attention retained past writes simultaneously, causing unrecoverable feature cross-talk.`)}
+                    ? '<span style="color:var(--mint);font-weight:600">✓ 干净的记忆检索：</span>Delta 规则减法 <code>(I - β k k^T)</code> 完全消除了先前状态，没有重影干扰。'
+                    : `<span style="color:var(--rose);font-weight:600">⚠️ 叠加重影（+${recallError.toFixed(2)}）：</span>加法式线性注意力同时保留过去的写入，造成无法恢复的特征串扰。`)}
             </div>
           </div>
         </div>
@@ -1010,8 +1010,8 @@ function stackSegments(pairs) {
 
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px;margin-top:10px">
         ${writeHistory.length === 0 
-          ? "State matrix is zeroed. Choose an update rule, target slot, and feature payload above, or click a <b>Guided Scenario</b>." 
-          : `<b>Last Operation:</b> ${writeHistory[writeHistory.length - 1]}`}
+          ? "状态矩阵已归零。请在上方选择更新规则、目标槽位和特征载荷，或点击一个<b>引导场景</b>。"
+          : `<b>上次操作：</b>${writeHistory[writeHistory.length - 1]}`}
       </div>
     `;
     katexRender(deltaLabReadout);
@@ -1049,13 +1049,13 @@ function stackSegments(pairs) {
       for (let c = 0; c < 4; c++) {
         S[slotIdx][c] = S[slotIdx][c] * (1.0 - beta) + beta * v[c];
       }
-      writeHistory.push(`DeltaNet: Wrote <b>${payload.name}</b> to Slot ${slotIdx} · Stale state erased via <code>(I - β k k^T)</code>`);
+      writeHistory.push(`DeltaNet：将 <b>${payload.name}</b> 写入槽位 ${slotIdx} · 通过 <code>(I - β k k^T)</code> 清除陈旧状态`);
     } else {
       // Pure Linear Attention: S_t = S_{t-1} + k v^T
       for (let c = 0; c < 4; c++) {
         S[slotIdx][c] += v[c];
       }
-      writeHistory.push(`Additive Linear: Added <b>${payload.name}</b> into Slot ${slotIdx} · Superposition accumulation`);
+      writeHistory.push(`加法式线性注意力：将 <b>${payload.name}</b> 加入槽位 ${slotIdx} · 叠加累积`);
     }
     renderDeltaLab();
   }
@@ -1070,7 +1070,7 @@ function stackSegments(pairs) {
         expectedSlots[r].vec = expectedSlots[r].vec.map(x => +(x * alpha).toFixed(4));
       }
     }
-    writeHistory.push(`Global Decay Applied: <code>S ← 0.85 · S</code> (Data-dependent retention forgetting)`);
+    writeHistory.push(`已应用全局衰减：<code>S ← 0.85 · S</code>（依赖数据的保持遗忘）`);
     renderDeltaLab();
   }
 
@@ -1147,24 +1147,24 @@ function stackSegments(pairs) {
     wyScanVisual.innerHTML = `
       <div class="calc-stat-grid">
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--mint)">${numChunks.toLocaleString()} Chunks</div>
-          <div class="cs-lbl">Sequential Inter-Chunk Steps</div>
+          <div class="cs-num" style="color:var(--mint)">${numChunks.toLocaleString()} 个分块</div>
+          <div class="cs-lbl">顺序执行的分块间步骤</div>
         </div>
         <div class="cs-card">
-          <div class="cs-num">${curChunkSize} Tokens</div>
-          <div class="cs-lbl">Parallel Intra-Chunk Block</div>
+          <div class="cs-num">${curChunkSize} 个词元</div>
+          <div class="cs-lbl">并行分块内块</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--amber)">${flopsPerChunk.toFixed(2)} MFLOPs</div>
-          <div class="cs-lbl">Intra-Chunk GEMM Compute</div>
+          <div class="cs-lbl">分块内 GEMM 计算量</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--iris)">100% Tensor Core</div>
-          <div class="cs-lbl">Hardware Saturation</div>
+          <div class="cs-lbl">硬件饱和度</div>
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5;background:rgba(29,110,107,0.06);padding:8px 12px;border-radius:6px;border-top:2px solid var(--mint);margin-top:8px">
-        ✓ <b>Chunked WY Representation:</b> The sequential product $\\prod_{t=1}^C (I - \\beta_t k_t k_t^T)$ factors into a block-triangular representation $(I - W Y^T)^{-1}$, transforming $\\mathcal{O}(T)$ recurrence into dense parallel GEMMs across $C=${curChunkSize}$ tokens simultaneously.
+        ✓ <b>分块 WY 表示：</b>顺序乘积 $\\prod_{t=1}^C (I - \\beta_t k_t k_t^T)$ 可分解为块三角表示 $(I - W Y^T)^{-1}$，将 $\\mathcal{O}(T)$ 循环转换为同时跨 $C=${curChunkSize}$ 个词元的稠密并行 GEMM。
       </div>
     `;
     katexRender(wyScanVisual);
@@ -1215,23 +1215,23 @@ function stackSegments(pairs) {
       <div class="calc-stat-grid">
         <div class="cs-card">
           <div class="cs-num" style="color:var(--mint)">${totalGqaGb.toFixed(2)} GB</div>
-          <div class="cs-lbl">GQA-4 Cache (16 Layers)</div>
+          <div class="cs-lbl">GQA-4 缓存（16 层）</div>
         </div>
         <div class="cs-card">
           <div class="cs-num">${bytesPerTokLayer.toLocaleString()} B</div>
-          <div class="cs-lbl">Bytes / Token / Layer</div>
+          <div class="cs-lbl">字节 / 词元 / 层</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--rose)">${totalMhaGb.toFixed(1)} GB</div>
-          <div class="cs-lbl">Standard MHA (64L · 24H)</div>
+          <div class="cs-lbl">标准 MHA（64 层 · 24 头）</div>
         </div>
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--amber)">${savingsFactor}× Less</div>
-          <div class="cs-lbl">VRAM Compression</div>
+          <div class="cs-num" style="color:var(--amber)">减少 ${savingsFactor}×</div>
+          <div class="cs-lbl">显存压缩</div>
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px">
-        Sequence: <b>${T.toLocaleString()} tokens</b> × Batch <b>${B}</b> @ <b>${bp === 2 ? "BF16" : (bp === 1 ? "FP8" : "FP4")}</b> · 48 DeltaNet layers require <b>0 GB</b> dynamic KV-cache (fixed recurrent matrix).
+        序列：<b>${T.toLocaleString()} 个词元</b> × 批大小 <b>${B}</b> @ <b>${bp === 2 ? "BF16" : (bp === 1 ? "FP8" : "FP4")}</b> · 48 个 DeltaNet 层的动态 KV 缓存需求为 <b>0 GB</b>（固定循环矩阵）。
       </div>
     `;
   }
@@ -1307,23 +1307,23 @@ function stackSegments(pairs) {
       const wl = twoPi / theta(j);
       const wlTxt = wl >= 1e6 ? (wl / 1e6).toFixed(2) + "M" : (wl >= 1e3 ? (wl / 1e3).toFixed(1) + "k" : wl.toFixed(0));
 
-      const axisLabel = axis === "time" ? "Temporal Axis (T)" : (axis === "height" ? "Vertical Axis (H)" : "Horizontal Axis (W)");
+      const axisLabel = axis === "time" ? "时间轴（T）" : (axis === "height" ? "垂直轴（H）" : "水平轴（W）");
 
       ropeOut.innerHTML = `
         <div class="rf-stat-box">
-          <div class="rf-head">Rotary Phase @ Dim-Pair j = ${j}</div>
-          <div class="rf-row"><span>Target Axis</span><span class="val amber">${axisLabel}</span></div>
-          <div class="rf-row"><span>Phase Rotation Angle</span><span class="val mint">${norm.toFixed(2)} rad (${turns.toFixed(1)} turns)</span></div>
-          <div class="rf-row"><span>Spatial Wavelength</span><span class="val">${wlTxt} tokens / cycle</span></div>
-          <div class="rf-row"><span>Angular Frequency θ_j</span><span class="val" style="color:var(--iris)">${theta(j).toExponential(2)} rad/tok</span></div>
+          <div class="rf-head">维度对 j = ${j} 的旋转相位</div>
+          <div class="rf-row"><span>目标轴</span><span class="val amber">${axisLabel}</span></div>
+          <div class="rf-row"><span>相位旋转角</span><span class="val mint">${norm.toFixed(2)} 弧度（${turns.toFixed(1)} 圈）</span></div>
+          <div class="rf-row"><span>空间波长</span><span class="val">${wlTxt} 词元 / 周期</span></div>
+          <div class="rf-row"><span>角频率 θ_j</span><span class="val" style="color:var(--iris)">${theta(j).toExponential(2)} 弧度/词元</span></div>
         </div>
         <div style="font-size:12px;color:var(--muted);line-height:1.45;padding:4px 2px">
-          Dim-pair j=${j} provides ${j < 8 ? "high-frequency local syntactic discrimination" : "long-range global document phase grounding"}. 3D MRoPE interleaves $[11, 11, 10]$ pairs across 3D axes.
+          维度对 j=${j} 提供${j < 8 ? "高频局部语法辨别能力" : "长程全局文档相位定位能力"}。3D MRoPE 在三个轴上交错排列 $[11, 11, 10]$ 个维度对。
         </div>
       `;
       katexRender(ropeOut);
-      if (ropePos?.type === "range") ropePos.setAttribute("aria-valuetext", `${ropePos.value} tokens position`);
-      if (ropeDim?.type === "range") ropeDim.setAttribute("aria-valuetext", `dim-pair ${ropeDim.value}`);
+      if (ropePos?.type === "range") ropePos.setAttribute("aria-valuetext", `${ropePos.value} 词元位置`);
+      if (ropeDim?.type === "range") ropeDim.setAttribute("aria-valuetext", `维度对 ${ropeDim.value}`);
     }
 
     [ropePos, ropeDim, mropeAxis].forEach(el => {
@@ -1350,40 +1350,40 @@ function stackSegments(pairs) {
       attnGateVisual.innerHTML = `
         <div class="calc-stat-grid">
           <div class="cs-card">
-            <div class="cs-num" style="color:var(--mint)">σ = 0.94 (Open)</div>
-            <div class="cs-lbl">Output Gate Value</div>
+            <div class="cs-num" style="color:var(--mint)">σ = 0.94（开启）</div>
+            <div class="cs-lbl">输出门控值</div>
           </div>
           <div class="cs-card">
             <div class="cs-num">100%</div>
-            <div class="cs-lbl">Signal Transmission</div>
+            <div class="cs-lbl">信号传输率</div>
           </div>
           <div class="cs-card">
-            <div class="cs-num" style="color:var(--amber)">High Attention</div>
-            <div class="cs-lbl">Retrieval Confidence</div>
+            <div class="cs-num" style="color:var(--amber)">高注意力</div>
+            <div class="cs-lbl">检索置信度</div>
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--mint);line-height:1.5;background:rgba(29,110,107,0.06);padding:8px 12px;border-radius:6px;border-top:2px solid var(--mint);margin-top:8px">
-          ✓ <b>Relevant Context Ingested:</b> The output sigmoid gate $\sigma(x W_g) \approx 0.94$ passes full attention values into $W_{\text{out}}$, delivering sharp factual retrieval into the residual stream.
+          ✓ <b>已摄取相关上下文：</b>输出 sigmoid 门控 $\sigma(x W_g) \approx 0.94$ 将完整注意力值传入 $W_{\text{out}}$，把清晰的事实检索结果送入残差流。
         </div>
       `;
     } else {
       attnGateVisual.innerHTML = `
         <div class="calc-stat-grid">
           <div class="cs-card">
-            <div class="cs-num" style="color:var(--rose)">σ = 0.08 (Clamped)</div>
-            <div class="cs-lbl">Output Gate Value</div>
+            <div class="cs-num" style="color:var(--rose)">σ = 0.08（钳制）</div>
+            <div class="cs-lbl">输出门控值</div>
           </div>
           <div class="cs-card">
             <div class="cs-num">8.0%</div>
-            <div class="cs-lbl">Signal Transmission</div>
+            <div class="cs-lbl">信号传输率</div>
           </div>
           <div class="cs-card">
-            <div class="cs-num" style="color:var(--faint)">Noise Filtered</div>
-            <div class="cs-lbl">Distractor Suppression</div>
+            <div class="cs-num" style="color:var(--faint)">噪声已滤除</div>
+            <div class="cs-lbl">干扰项抑制</div>
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--rose);line-height:1.5;background:rgba(138,51,36,0.06);padding:8px 12px;border-radius:6px;border-top:2px solid var(--rose);margin-top:8px">
-          ✗ <b>Distractor Context Suppressed:</b> When retrieved context contains stale history, the learned gate closes ($\sigma \approx 0.08$), preventing noisy attention logits from polluting downstream DeltaNet states.
+          ✗ <b>已抑制干扰上下文：</b>当检索上下文含有陈旧历史时，学习到的门控关闭（$\sigma \approx 0.08$），防止带噪注意力 logits 污染下游 DeltaNet 状态。
         </div>
       `;
     }
@@ -1470,7 +1470,7 @@ function stackSegments(pairs) {
       <span class="lg-item" style="color:${PAL.muted}"><span class="lg-sw" style="background:transparent;border-top:1.5px dashed ${PAL.muted}"></span>ReLU</span>
       <span class="lg-item" style="color:${PAL.mint}"><span class="lg-sw" style="background:${PAL.mint}"></span>GELU</span>
       <span class="lg-item" style="color:${PAL.amber}"><span class="lg-sw" style="background:${PAL.amber}"></span>SiLU</span>
-      <span class="lg-item" style="color:${PAL.iris}"><span class="lg-sw" style="background:${PAL.iris}"></span>SwiGLU Unit (SiLU(x)·x)</span>
+      <span class="lg-item" style="color:${PAL.iris}"><span class="lg-sw" style="background:${PAL.iris}"></span>SwiGLU 单元（SiLU(x)·x）</span>
     `;
     svg.parentNode.insertBefore(legend, svg.nextSibling);
 
@@ -1482,9 +1482,9 @@ function stackSegments(pairs) {
       marker.setAttribute("cx", X(x)); marker.setAttribute("cy", Y(silu(x) * x));
       if ($("ffnOut")) {
         $("ffnOut").innerHTML = `
-          <div class="row"><span>x = ${x.toFixed(2)} · SiLU(x) = ${silu(x).toFixed(2)} · SwiGLU Gated Output = <b style="color:var(--iris)">${(silu(x) * x).toFixed(2)}</b></span><span class="v"></span></div>
-          <div class="row"><span>ReLU passes ${relu(x) > 0 ? "linear signal" : "zero"} · GELU soft-gates · SiLU preserves smooth negative lobe for gradient stability</span><span class="v"></span></div>
-          <div style="color:var(--faint);font-size:12px;margin-top:4px">Multiplicative gating $(x W_{\\text{gate}}) \\odot \\text{SiLU}(x W_{\\text{up}})$ across 17,408 hidden units acts as key-value memory retrieval for world knowledge.</div>
+          <div class="row"><span>x = ${x.toFixed(2)} · SiLU(x) = ${silu(x).toFixed(2)} · SwiGLU 门控输出 = <b style="color:var(--iris)">${(silu(x) * x).toFixed(2)}</b></span><span class="v"></span></div>
+          <div class="row"><span>ReLU 传递${relu(x) > 0 ? "线性信号" : "零值"} · GELU 进行软门控 · SiLU 保留平滑负半叶以维持梯度稳定</span><span class="v"></span></div>
+          <div style="color:var(--faint);font-size:12px;margin-top:4px">跨 17,408 个隐藏单元的乘法门控 $(x W_{\\text{gate}}) \\odot \\text{SiLU}(x W_{\\text{up}})$ 充当世界知识的键值记忆检索。</div>
         `;
         katexRender($("ffnOut"));
       }
@@ -1580,15 +1580,15 @@ function stackSegments(pairs) {
 
     resBusStats.innerHTML = `
       <div class="rf-stat-box">
-        <div class="rf-head">Residual Communication Bus Arbitration</div>
-        <div class="rf-row"><span>Bus Width</span><span class="val amber">d_model = 5,120</span></div>
-        <div class="rf-row"><span>RMSNorm Stacking</span><span class="val mint">129 Core Norms (Pre-Branch)</span></div>
-        <div class="rf-row"><span>Layer 64 Signal Variance</span><span class="val ${resBusMode === "prenorm" ? "mint" : "rose"}">${resBusMode === "prenorm" ? "1.05σ (Bounded) ✓" : "9.82σ (Exploded) ✗"}</span></div>
+        <div class="rf-head">残差通信总线仲裁</div>
+        <div class="rf-row"><span>总线宽度</span><span class="val amber">d_model = 5,120</span></div>
+        <div class="rf-row"><span>RMSNorm 堆叠</span><span class="val mint">129 个核心归一化（分支前）</span></div>
+        <div class="rf-row"><span>第 64 层信号方差</span><span class="val ${resBusMode === "prenorm" ? "mint" : "rose"}">${resBusMode === "prenorm" ? "1.05σ（有界）✓" : "9.82σ（爆炸）✗"}</span></div>
       </div>
       <div style="font-size:12px;color:var(--muted);line-height:1.45;padding:4px 2px">
         ${resBusMode === "prenorm" 
-          ? "✓ Pre-RMSNorm ensures the identity path stays unattenuated while bounding the magnitude written back by 48 DeltaNet and 16 Attention mixers." 
-          : "⚠️ Without RMSNorm bus arbitration, variance grows with depth $\\mathcal{O}(\\sqrt{L})$, destabilizing softmax logits and causing numerical overflow."}
+          ? "✓ 前置 RMSNorm 确保恒等路径不发生衰减，同时限制 48 个 DeltaNet 和 16 个注意力混合器写回的幅值。"
+          : "⚠️ 若无 RMSNorm 总线仲裁，方差会随深度按 $\\mathcal{O}(\\sqrt{L})$ 增长，使 Softmax logits 不稳定并导致数值溢出。"}
       </div>
     `;
     katexRender(resBusStats);
@@ -1612,34 +1612,34 @@ function stackSegments(pairs) {
 
   const VISION_STAGES = {
     "1": {
-      name: "Stage 01 · Patchify & Spatial Tiling",
-      tensor: "Input [B, C=3, H, W] → Patches [B, N_patches, 3×14×14 = 588]",
-      desc: "Decomposes input RGB images into a regular 2D grid of non-overlapping 14×14 pixel patches. An initial 2D convolution projects 588 pixel values into a 1,536-dimensional linear embedding.",
-      insight: "Dynamic native resolution support prevents geometric distortion and aspect-ratio skewing by tiling arbitrary aspect ratios into 224px coordinate blocks."
+      name: "阶段 01 · 图像块化与空间平铺",
+      tensor: "输入 [B, C=3, H, W] → 图像块 [B, N_patches, 3×14×14 = 588]",
+      desc: "将输入 RGB 图像分解为规则的二维网格，其中包含互不重叠的 14×14 像素图像块。初始二维卷积将 588 个像素值投影为 1,536 维线性嵌入。",
+      insight: "动态原生分辨率支持通过将任意宽高比平铺到 224px 坐标块中，避免几何失真和宽高比扭曲。"
     },
     "2": {
-      name: "Stage 02 · SigLIP Vision Transformer (ViT) Encoding",
-      tensor: "Patches [B, N, 1536] → ViT Features [B, N, 1536]",
-      desc: "A 30-layer Vision Transformer (16 attention heads, 6,144 FFN width) applies bidirectional self-attention across all image patches simultaneously, extracting semantic and fine-grained visual representations.",
-      insight: "Trained using SigLIP pairwise sigmoid loss rather than CLIP softmax, eliminating the batch-size communication bottleneck and yielding sharper spatial features."
+      name: "阶段 02 · SigLIP 视觉 Transformer（ViT）编码",
+      tensor: "图像块 [B, N, 1536] → ViT 特征 [B, N, 1536]",
+      desc: "30 层视觉 Transformer（16 个注意力头、6,144 FFN 宽度）同时对所有图像块应用双向自注意力，提取语义和细粒度视觉表示。",
+      insight: "使用 SigLIP 成对 sigmoid 损失而非 CLIP Softmax 进行训练，消除批大小通信瓶颈，并生成更清晰的空间特征。"
     },
     "3": {
-      name: "Stage 03 · 2×2 Spatial Neighborhood Concatenation",
-      tensor: "ViT Features [B, N, 1536] → Merged [B, N/4, 4×1536 = 6144]",
-      desc: "Groups 2×2 adjacent spatial patch vectors into a single unified 6,144-dimensional representation. Compresses the total visual token count by exactly 75% (4× reduction).",
-      insight: "Essential for long context budgets: an 800×600 screenshot shrinks from 2,494 raw patch tokens to just 624 merged tokens, enabling multi-image chat and hour-long video ingestion."
+      name: "阶段 03 · 2×2 空间邻域拼接",
+      tensor: "ViT 特征 [B, N, 1536] → 合并后 [B, N/4, 4×1536 = 6144]",
+      desc: "将 2×2 个相邻空间图像块向量组合为统一的 6,144 维表示。视觉词元总数恰好压缩 75%（减少 4 倍）。",
+      insight: "这对长上下文预算至关重要：一张 800×600 截图从 2,494 个原始图像块词元缩减到仅 624 个合并词元，从而支持多图对话和长达数小时的视频摄取。"
     },
     "4": {
-      name: "Stage 04 · 2-Layer MLP Projector & Residual Alignment",
-      tensor: "Merged [B, N/4, 6144] → Residual Stream [B, N/4, 5120]",
-      desc: "A 2-layer MLP with SiLU activation transforms 6,144-dim vision vectors into the language model's 5,120-dim residual space: Linear(6144 → 6144) → SiLU → Linear(6144 → 5120).",
-      insight: "Trained during multimodal SFT with precise output scaling to match the natural activation variance of text pretraining."
+      name: "阶段 04 · 两层 MLP 投影器与残差对齐",
+      tensor: "合并后 [B, N/4, 6144] → 残差流 [B, N/4, 5120]",
+      desc: "采用 SiLU 激活的两层 MLP 将 6,144 维视觉向量转换到语言模型的 5,120 维残差空间：Linear(6144 → 6144) → SiLU → Linear(6144 → 5120)。",
+      insight: "在多模态 SFT 期间通过精确输出缩放进行训练，以匹配文本预训练的自然激活方差。"
     },
     "5": {
-      name: "Stage 05 · 3D MRoPE Coordinates & Residual Interleaving",
-      tensor: "Residual Stream [B, N/4, 5120] with [T, H, W] Position IDs",
-      desc: "Wraps visual tokens between `<|vision_start|>` and `<|vision_end|>` delimiters. 3D MRoPE assigns separate temporal, vertical, and horizontal rotary positional frequencies.",
-      insight: "Enables the language model to understand native 2D layout geometry and video temporal continuity within the same rotary table."
+      name: "阶段 05 · 3D MRoPE 坐标与残差交错",
+      tensor: "带 [T, H, W] 位置 ID 的残差流 [B, N/4, 5120]",
+      desc: "将视觉词元包裹在 `<|vision_start|>` 与 `<|vision_end|>` 分隔符之间。3D MRoPE 分别分配时间、垂直和水平旋转位置频率。",
+      insight: "使语言模型能在同一旋转表内理解原生二维布局几何和视频时间连续性。"
     }
   };
 
@@ -1650,7 +1650,7 @@ function stackSegments(pairs) {
     visionDetailCard.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:6px">
         <span style="font-family:var(--display);font-size:15px;font-weight:700;color:var(--fg)">${info.name}</span>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--mint);font-weight:600">Stage ${stageNum} / 5</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--mint);font-weight:600">阶段 ${stageNum} / 5</span>
       </div>
       <div style="background:var(--bg-2);padding:8px 12px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--line);font-family:var(--mono);font-size:12px;color:var(--amber);margin-bottom:8px">
         ${info.tensor}
@@ -1659,7 +1659,7 @@ function stackSegments(pairs) {
         ${info.desc}
       </div>
       <div style="font-size:12px;color:var(--faint);font-family:var(--mono)">
-        <b>Architectural Key:</b> ${info.insight}
+        <b>架构要点：</b>${info.insight}
       </div>
     `;
   }
@@ -1685,12 +1685,12 @@ function stackSegments(pairs) {
   const visMergeToggle = $("visMergeToggle");
 
   const PRESETS = {
-    "224x224x1":   { w: 224,  h: 224,  frames: 1,  name: "Standard Tile (224×224)" },
-    "800x600x1":   { w: 800,  h: 600,  frames: 1,  name: "Web Screenshot (800×600)" },
-    "1920x1080x1": { w: 1920, h: 1080, frames: 1,  name: "1080p Slide (1920×1080)" },
-    "3840x2160x1": { w: 3840, h: 2160, frames: 1,  name: "4K High-Res Diagram (3840×2160)" },
-    "448x448x16":  { w: 448,  h: 448,  frames: 16, name: "Short Video Clip (448×448 · 16f)" },
-    "640x360x64":  { w: 640,  h: 360,  frames: 64, name: "Long Video Sequence (640×360 · 64f)" }
+    "224x224x1":   { w: 224,  h: 224,  frames: 1,  name: "标准图像块（224×224）" },
+    "800x600x1":   { w: 800,  h: 600,  frames: 1,  name: "网页截图（800×600）" },
+    "1920x1080x1": { w: 1920, h: 1080, frames: 1,  name: "1080p 幻灯片（1920×1080）" },
+    "3840x2160x1": { w: 3840, h: 2160, frames: 1,  name: "4K 高分辨率图表（3840×2160）" },
+    "448x448x16":  { w: 448,  h: 448,  frames: 16, name: "短视频片段（448×448 · 16 帧）" },
+    "640x360x64":  { w: 640,  h: 360,  frames: 64, name: "长视频序列（640×360 · 64 帧）" }
   };
 
   function renderVisionCalc() {
@@ -1713,24 +1713,24 @@ function stackSegments(pairs) {
     visCalcReadout.innerHTML = `
       <div class="calc-stat-grid">
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--mint)">${finalTokens.toLocaleString()} Tokens</div>
-          <div class="cs-lbl">${useMerge ? "Ingested Tokens (4× Merged)" : "Raw Patch Tokens"}</div>
+          <div class="cs-num" style="color:var(--mint)">${finalTokens.toLocaleString()} 个词元</div>
+          <div class="cs-lbl">${useMerge ? "摄取词元（4× 合并）" : "原始图像块词元"}</div>
         </div>
         <div class="cs-card">
           <div class="cs-num">${rawTokens.toLocaleString()}</div>
-          <div class="cs-lbl">Raw 14×14 Patches</div>
+          <div class="cs-lbl">原始 14×14 图像块</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--amber)">${embeddingMb} MB</div>
-          <div class="cs-lbl">Residual VRAM Footprint</div>
+          <div class="cs-lbl">残差显存占用</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--iris)">${contextPct}%</div>
-          <div class="cs-lbl">Of 262k Context Budget</div>
+          <div class="cs-lbl">占 262k 上下文预算</div>
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px">
-        Input: <b>${p.name}</b> · Patches: <b>${Math.ceil(p.w/14)} × ${Math.ceil(p.h/14)}</b> per frame × ${p.frames} frame(s) · Compression: <b>${useMerge ? "4× Spatial Merge Active ✓" : "1:1 Raw Patches"}</b>.
+        输入：<b>${p.name}</b> · 图像块：每帧 <b>${Math.ceil(p.w/14)} × ${Math.ceil(p.h/14)}</b> × ${p.frames} 帧 · 压缩：<b>${useMerge ? "4× 空间合并已启用 ✓" : "1:1 原始图像块"}</b>。
       </div>
     `;
   }
@@ -1829,13 +1829,13 @@ function stackSegments(pairs) {
     const speedup = (totalTokens / Math.max(1, steps)).toFixed(2);
 
     out.innerHTML = `
-      <div class="row"><span>Target Forward Passes</span><span class="v">${steps} passes</span></div>
-      <div class="row"><span>Total Emitted Tokens</span><span class="v a">${totalTokens} tokens</span></div>
-      <div class="row"><span>Draft Acceptance Rate</span><span class="v m">${accepted}/${proposed} = ${(accepted / Math.max(1, proposed) * 100).toFixed(0)}%</span></div>
-      <div class="row"><span>Effective Speedup Multiplier</span><span class="v" style="color:var(--mint);font-size:13px"><b>${speedup}×</b> speedup</span></div>
-      <div class="row"><span>Theoretical E[Tokens/Pass] @ β=${beta.toFixed(2)}, K=${K}</span><span class="v i">${effRate.toFixed(2)} tok/pass</span></div>
+      <div class="row"><span>目标模型前向传播次数</span><span class="v">${steps} 次</span></div>
+      <div class="row"><span>输出词元总数</span><span class="v a">${totalTokens} 个词元</span></div>
+      <div class="row"><span>草稿接受率</span><span class="v m">${accepted}/${proposed} = ${(accepted / Math.max(1, proposed) * 100).toFixed(0)}%</span></div>
+      <div class="row"><span>有效加速倍数</span><span class="v" style="color:var(--mint);font-size:13px">加速 <b>${speedup}×</b></span></div>
+      <div class="row"><span>理论 E[词元/次] @ β=${beta.toFixed(2)}, K=${K}</span><span class="v i">${effRate.toFixed(2)} 词元/次</span></div>
       <div style="color:var(--faint);font-size:12px;margin-top:6px;line-height:1.4">
-        <span style="color:var(--mint)">■ Green</span> = Accepted MTP Drafts · <span style="color:var(--rose)">■ Red</span> = Rejected Tail · <span style="color:var(--amber)">■ Amber</span> = Target Root / Resampled Token
+        <span style="color:var(--mint)">■ 绿色</span> = 已接受的 MTP 草稿 · <span style="color:var(--rose)">■ 红色</span> = 被拒绝的尾部 · <span style="color:var(--amber)">■ 琥珀色</span> = 目标根词元 / 重采样词元
       </div>
     `;
 
@@ -1847,8 +1847,8 @@ function stackSegments(pairs) {
 
   function stop() {
     if (timer) { clearInterval(timer); timer = null; }
-    AUTO_BTN.textContent = "play \u25b6";
-    AUTO_BTN.setAttribute("aria-label", "Auto-run speculative decoding cycles");
+    AUTO_BTN.textContent = "播放 \u25b6";
+    AUTO_BTN.setAttribute("aria-label", "自动运行推测解码循环");
     AUTO_BTN.classList.remove("on");
   }
 
@@ -1856,13 +1856,13 @@ function stackSegments(pairs) {
     stop();
     row.innerHTML = "";
     pos = 0; steps = 0; accepted = 0; proposed = 0; totalTokens = 0;
-    out.innerHTML = `<div class="row" style="border:0"><span style="color:var(--faint)">press <b style="color:var(--amber)">step</b> or <b style="color:var(--amber)">play</b> to start MTP speculative drafting</span><span class="v"></span></div>`;
+    out.innerHTML = `<div class="row" style="border:0"><span style="color:var(--faint)">按<b style="color:var(--amber)">单步</b>或<b style="color:var(--amber)">播放</b>，开始 MTP 推测草拟</span><span class="v"></span></div>`;
   }
 
   const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
   function play() {
-    AUTO_BTN.textContent = "pause \u23f8";
-    AUTO_BTN.setAttribute("aria-label", "Pause auto-run");
+    AUTO_BTN.textContent = "暂停 \u23f8";
+    AUTO_BTN.setAttribute("aria-label", "暂停自动运行");
     AUTO_BTN.classList.add("on");
     timer = setInterval(step, 900);
   }
@@ -1915,84 +1915,84 @@ function stackSegments(pairs) {
 
   const MTP_NODES = {
     backbone: {
-      badge: "TARGET BACKBONE",
-      title: "Main Transformer Backbone (Layer 64)",
+      badge: "目标骨干网络",
+      title: "Transformer 骨干网络（第 64 层）",
       math: "h_t = RMSNorm(Block₆₄(h_t⁽⁶³⁾)) ∈ ℝ^(B × 1 × 5120)",
-      desc: "Produces the final 5120-dimensional hidden state h_t across all 64 layers (48 DeltaNet + 16 full-attention layers). This activation vector serves as the foundational root state for both standard generation and speculative branch expansion.",
-      shape: "[Batch, 1, 5120]",
-      dtype: "bfloat16 (Layer 64)"
+      desc: "经过全部 64 层（48 个 DeltaNet 层 + 16 个完整注意力层）生成最终的 5120 维隐藏状态 h_t。该激活向量是标准生成与推测分支扩展的基础根状态。",
+      shape: "[批, 1, 5120]",
+      dtype: "bfloat16（第 64 层）"
     },
     lm_head: {
-      badge: "VOCABULARY PROJECTION",
-      title: "Shared Unembedding LM Head",
+      badge: "词表投影",
+      title: "共享反嵌入 LM 头",
       math: "x_(t+1) ~ Softmax(W_u · RMSNorm(h_t)),  W_u ∈ ℝ^(248320 × 5120)",
-      desc: "Tied or shared unembedding matrix mapping 5120-dim hidden states to 248,320 vocabulary logits. In Qwen 3.8, all MTP draft heads share this exact same LM Head weight matrix, avoiding 1.27B duplicated parameters (~2.6 GB VRAM savings).",
+      desc: "绑定或共享的反嵌入矩阵，将 5120 维隐藏状态映射为 248,320 个词表 logits。在 Qwen 3.8 中，所有 MTP 草稿头共享完全相同的 LM 头权重矩阵，避免 1.27B 重复参数（节省约 2.6 GB 显存）。",
       shape: "[248320, 5120]",
-      dtype: "bfloat16 (Shared)"
+      dtype: "bfloat16（共享）"
     },
     head_1: {
-      badge: "MTP DRAFT HEAD (K=1)",
-      title: "MTP Head 1 (Depth-1 Speculative Head)",
+      badge: "MTP 草稿头（K=1）",
+      title: "MTP 头 1（深度 1 推测头）",
       math: "h̃_(t+1) = Block_MTP1([RMSNorm(h_t); Embed(x_(t+1))])",
-      desc: "A dedicated hybrid transformer block (DeltaNet + RMSNorm) dedicated to predicting the 1-step lookahead token. It receives the concatenated backbone representation and embedding of the root token, projecting to draft token x̃_(t+2).",
-      shape: "[Batch, 1, 5120]",
-      dtype: "bfloat16 (~1.3B params)"
+      desc: "专用于预测提前 1 步词元的混合 Transformer 块（DeltaNet + RMSNorm）。它接收拼接后的骨干网络表示和根词元嵌入，并投影为草稿词元 x̃_(t+2)。",
+      shape: "[批, 1, 5120]",
+      dtype: "bfloat16（约 1.3B 参数）"
     },
     head_2: {
-      badge: "MTP DRAFT HEAD (K=2)",
-      title: "MTP Head 2 (Depth-2 Speculative Head)",
+      badge: "MTP 草稿头（K=2）",
+      title: "MTP 头 2（深度 2 推测头）",
       math: "h̃_(t+2) = Block_MTP2([RMSNorm(h̃_(t+1)); Embed(x̃_(t+2))])",
-      desc: "The second speculative head predicts the 2-step lookahead token x̃_(t+3). In Qwen 3.8-27B native configuration, K=2 allows proposing 3 candidate tokens simultaneously while keeping parameter overhead capped at +4.8% (~2.6 GB).",
-      shape: "[Batch, 1, 5120]",
-      dtype: "bfloat16 (~1.3B params)"
+      desc: "第二个推测头预测提前 2 步的词元 x̃_(t+3)。在 Qwen 3.8-27B 原生配置中，K=2 可同时提出 3 个候选词元，同时将参数开销限制在 +4.8%（约 2.6 GB）。",
+      shape: "[批, 1, 5120]",
+      dtype: "bfloat16（约 1.3B 参数）"
     },
     head_3: {
-      badge: "MTP DRAFT HEAD (K=3)",
-      title: "MTP Head 3 (Depth-3 Speculative Head)",
+      badge: "MTP 草稿头（K=3）",
+      title: "MTP 头 3（深度 3 推测头）",
       math: "h̃_(t+3) = Block_MTP3([RMSNorm(h̃_(t+2)); Embed(x̃_(t+3))])",
-      desc: "Extended depth-3 speculative head for ultra-high speedup on highly predictable domains (e.g. structured code syntax / JSON serialization). Proposes candidate x̃_(t+4).",
-      shape: "[Batch, 1, 5120]",
-      dtype: "bfloat16 (~1.3B params)"
+      desc: "扩展的深度 3 推测头，用于在高度可预测的领域（如结构化代码语法 / JSON 序列化）实现超高加速。提出候选 x̃_(t+4)。",
+      shape: "[批, 1, 5120]",
+      dtype: "bfloat16（约 1.3B 参数）"
     },
     verifier: {
-      badge: "SINGLE-PASS VERIFIER",
-      title: "Target Backbone Parallel Tree Verifier",
+      badge: "单次验证器",
+      title: "目标骨干网络并行树验证器",
       math: "P(x_(t+1), x̃_(t+2), x̃_(t+3) | x_(≤t)) = Forward_Target(Batch, M_tree)",
-      desc: "Executes one single forward pass across all proposed candidate tokens using a 2D causal tree attention mask. Verification latency is identical to standard 1-token generation because memory bandwidth reads weights only once for the entire candidate batch.",
-      shape: "[Batch, K+1, 5120]",
-      dtype: "bfloat16 (Target Weights)"
+      desc: "使用二维因果树注意力掩码，对所有候选词元执行单次前向传播。验证延迟与标准单词元生成相同，因为内存带宽只需为整个候选批读取一次权重。",
+      shape: "[批, K+1, 5120]",
+      dtype: "bfloat16（目标权重）"
     }
   };
 
   const VERIF_PRESETS = [
     {
-      domain: "Structured Python AST",
+      domain: "结构化 Python AST",
       prompt: "def compute_attention_scores(q, k, v):",
       tokens: [
-        { role: "Root (t+1)", text: "\\n    ", prob: "98.4%", accept: true, reason: "Definite indentation" },
-        { role: "Draft 1 (t+2)", text: "scores = ", prob: "94.2%", accept: true, reason: "Standard idiom" },
-        { role: "Draft 2 (t+3)", text: "torch.matmul(", prob: "91.7%", accept: true, reason: "Matches AST prior" },
-        { role: "Draft 3 (t+4)", text: "q, k.transpose(-1,-2))", prob: "88.5%", accept: true, reason: "Tensor matmul arg" }
+        { role: "根（t+1）", text: "\\n    ", prob: "98.4%", accept: true, reason: "确定的缩进" },
+        { role: "草稿 1（t+2）", text: "scores = ", prob: "94.2%", accept: true, reason: "标准惯用写法" },
+        { role: "草稿 2（t+3）", text: "torch.matmul(", prob: "91.7%", accept: true, reason: "匹配 AST 先验" },
+        { role: "草稿 3（t+4）", text: "q, k.transpose(-1,-2))", prob: "88.5%", accept: true, reason: "张量矩阵乘参数" }
       ]
     },
     {
-      domain: "TypeScript Type Annotation",
+      domain: "TypeScript 类型注解",
       prompt: "type TransformerConfig = { hidden_size: ",
       tokens: [
-        { role: "Root (t+1)", text: "number", prob: "96.1%", accept: true, reason: "Field type" },
-        { role: "Draft 1 (t+2)", text: "; num_heads: ", prob: "92.8%", accept: true, reason: "Config property" },
-        { role: "Draft 2 (t+3)", text: "string", prob: "31.4%", accept: false, correction: "number", reason: "Target corrects to 'number'" },
-        { role: "Draft 3 (t+4)", text: "; num_layers", prob: "0.0%", accept: false, pruned: true, reason: "Pruned after divergence" }
+        { role: "根（t+1）", text: "number", prob: "96.1%", accept: true, reason: "字段类型" },
+        { role: "草稿 1（t+2）", text: "; num_heads: ", prob: "92.8%", accept: true, reason: "配置属性" },
+        { role: "草稿 2（t+3）", text: "string", prob: "31.4%", accept: false, correction: "number", reason: "目标模型纠正为“number”" },
+        { role: "草稿 3（t+4）", text: "; num_layers", prob: "0.0%", accept: false, pruned: true, reason: "分歧后剪枝" }
       ]
     },
     {
-      domain: "SQL Aggregation Query",
+      domain: "SQL 聚合查询",
       prompt: "SELECT user_id, COUNT(id) AS total_orders",
       tokens: [
-        { role: "Root (t+1)", text: " FROM ", prob: "99.1%", accept: true, reason: "SQL keyword" },
-        { role: "Draft 1 (t+2)", text: "orders ", prob: "95.6%", accept: true, reason: "Source table" },
-        { role: "Draft 2 (t+3)", text: "GROUP BY ", prob: "93.0%", accept: true, reason: "Aggregation clause" },
-        { role: "Draft 3 (t+4)", text: "user_id;", prob: "94.8%", accept: true, reason: "Group key" }
+        { role: "根（t+1）", text: " FROM ", prob: "99.1%", accept: true, reason: "SQL 关键字" },
+        { role: "草稿 1（t+2）", text: "orders ", prob: "95.6%", accept: true, reason: "源表" },
+        { role: "草稿 2（t+3）", text: "GROUP BY ", prob: "93.0%", accept: true, reason: "聚合子句" },
+        { role: "草稿 3（t+4）", text: "user_id;", prob: "94.8%", accept: true, reason: "分组键" }
       ]
     }
   ];
@@ -2120,24 +2120,24 @@ function stackSegments(pairs) {
 
     // 1. Target Backbone
     const backboneY = depthK === 1 ? 65 : depthK === 2 ? 100 : 120;
-    const bb = drawNode("backbone", 20, backboneY, 130, 68, "Main Backbone", "Layer 64 Hidden (h_t)", "d=5120 · 27.58B", "rgba(184,52,31,0.1)", PAL.amber, PAL.amber);
+    const bb = drawNode("backbone", 20, backboneY, 130, 68, "骨干网络", "第 64 层隐藏态（h_t）", "d=5120 · 27.58B", "rgba(184,52,31,0.1)", PAL.amber, PAL.amber);
 
     // 2. Shared LM Head
-    const lm = drawNode("lm_head", 185, 18, 150, 52, "Shared LM Head", "Softmax(W_u · h_t)", "→ Root x_{t+1} (248k)", "rgba(29,110,107,0.1)", PAL.mint, PAL.mint);
+    const lm = drawNode("lm_head", 185, 18, 150, 52, "共享 LM 头", "Softmax(W_u · h_t)", "→ 根 x_{t+1}（248k）", "rgba(29,110,107,0.1)", PAL.mint, PAL.mint);
 
     // 3. MTP Head 1 (K=1)
-    const h1 = drawNode("head_1", 185, 82, 150, 52, "MTP Head 1 (K=1)", "RMSNorm + Hybrid Block", "→ Draft x̃_{t+2}", "rgba(43,58,138,0.1)", PAL.iris, PAL.iris);
+    const h1 = drawNode("head_1", 185, 82, 150, 52, "MTP 头 1（K=1）", "RMSNorm + 混合块", "→ 草稿 x̃_{t+2}", "rgba(43,58,138,0.1)", PAL.iris, PAL.iris);
 
     // 4. MTP Head 2 (K=2)
     let h2 = null;
     if (depthK >= 2) {
-      h2 = drawNode("head_2", 185, 146, 150, 52, "MTP Head 2 (K=2)", "RMSNorm + Hybrid Block", "→ Draft x̃_{t+3}", "rgba(186,117,23,0.1)", PAL.amber, PAL.amber);
+      h2 = drawNode("head_2", 185, 146, 150, 52, "MTP 头 2（K=2）", "RMSNorm + 混合块", "→ 草稿 x̃_{t+3}", "rgba(186,117,23,0.1)", PAL.amber, PAL.amber);
     }
 
     // 5. MTP Head 3 (K=3)
     let h3 = null;
     if (depthK >= 3) {
-      h3 = drawNode("head_3", 185, 210, 150, 52, "MTP Head 3 (K=3)", "RMSNorm + Hybrid Block", "→ Draft x̃_{t+4}", "rgba(43,122,158,0.1)", PAL.sky, PAL.sky);
+      h3 = drawNode("head_3", 185, 210, 150, 52, "MTP 头 3（K=3）", "RMSNorm + 混合块", "→ 草稿 x̃_{t+4}", "rgba(43,122,158,0.1)", PAL.sky, PAL.sky);
     }
 
     // 6. Target Verifier Container
@@ -2147,7 +2147,7 @@ function stackSegments(pairs) {
     vG.setAttribute("data-node", "verifier");
     vG.setAttribute("tabindex", "0");
     vG.setAttribute("role", "button");
-    vG.setAttribute("aria-label", "Single-Pass Target Verifier");
+    vG.setAttribute("aria-label", "单次目标验证器");
 
     const vRect = document.createElementNS(NS, "rect");
     vRect.setAttribute("x", "380"); vRect.setAttribute("y", "18");
@@ -2166,7 +2166,7 @@ function stackSegments(pairs) {
     vt1.setAttribute("font-weight", "700");
     vt1.setAttribute("letter-spacing", "0.05em");
     vt1.setAttribute("fill", PAL.ink);
-    vt1.textContent = "SINGLE-PASS TARGET VERIFIER";
+    vt1.textContent = "单次目标验证器";
     vG.appendChild(vt1);
 
     const vt2 = document.createElementNS(NS, "text");
@@ -2175,15 +2175,15 @@ function stackSegments(pairs) {
     vt2.setAttribute("font-family", '"IBM Plex Mono", ui-monospace, monospace');
     vt2.setAttribute("font-size", "8");
     vt2.setAttribute("fill", "rgba(26,22,18,0.5)");
-    vt2.textContent = "1 Target Forward Pass · 2D Tree Mask";
+    vt2.textContent = "1 次目标前向传播 · 二维树掩码";
     vG.appendChild(vt2);
 
     // Inner slots in Verifier
     const slots = [
-      { label: "Pos 0: Root x_{t+1}", color: PAL.mint },
-      { label: "Pos 1: Draft x̃_{t+2} (Head 1)", color: PAL.iris },
-      ...(depthK >= 2 ? [{ label: "Pos 2: Draft x̃_{t+3} (Head 2)", color: PAL.amber }] : []),
-      ...(depthK >= 3 ? [{ label: "Pos 3: Draft x̃_{t+4} (Head 3)", color: PAL.sky }] : [])
+      { label: "位置 0：根 x_{t+1}", color: PAL.mint },
+      { label: "位置 1：草稿 x̃_{t+2}（头 1）", color: PAL.iris },
+      ...(depthK >= 2 ? [{ label: "位置 2：草稿 x̃_{t+3}（头 2）", color: PAL.amber }] : []),
+      ...(depthK >= 3 ? [{ label: "位置 3：草稿 x̃_{t+4}（头 3）", color: PAL.sky }] : [])
     ];
 
     slots.forEach((s, idx) => {
@@ -2249,18 +2249,18 @@ function stackSegments(pairs) {
 
     if (maskTopo === "chain") {
       headers = [
-        "Prefix",
-        "Root",
-        "Draft 1",
-        ...(depthK >= 2 ? ["Draft 2"] : []),
-        ...(depthK >= 3 ? ["Draft 3"] : [])
+        "前缀",
+        "根",
+        "草稿 1",
+        ...(depthK >= 2 ? ["草稿 2"] : []),
+        ...(depthK >= 3 ? ["草稿 3"] : [])
       ];
       fullLabels = [
-        "Prefix (x ≤ t)",
-        "Root (x_{t+1})",
-        "Draft 1 (x̃_{t+2})",
-        ...(depthK >= 2 ? ["Draft 2 (x̃_{t+3})"] : []),
-        ...(depthK >= 3 ? ["Draft 3 (x̃_{t+4})"] : [])
+        "前缀（x ≤ t）",
+        "根（x_{t+1}）",
+        "草稿 1（x̃_{t+2}）",
+        ...(depthK >= 2 ? ["草稿 2（x̃_{t+3}）"] : []),
+        ...(depthK >= 3 ? ["草稿 3（x̃_{t+4}）"] : [])
       ];
 
       const N = headers.length;
@@ -2273,29 +2273,29 @@ function stackSegments(pairs) {
       }
 
       descriptions = [
-        "Prefix tokens attend strictly to prior context history.",
-        "Root token x_{t+1} attends to Prefix history and self.",
-        "Draft token x̃_{t+2} attends to Prefix, Root, and self (cannot see future drafts).",
-        ...(depthK >= 2 ? ["Draft token x̃_{t+3} attends to Prefix, Root, Draft 1, and self."] : []),
-        ...(depthK >= 3 ? ["Draft token x̃_{t+4} attends to the full linear speculative branch."] : [])
+        "前缀词元严格关注先前的上下文历史。",
+        "根词元 x_{t+1} 关注前缀历史和自身。",
+        "草稿词元 x̃_{t+2} 关注前缀、根和自身（无法看到未来草稿）。",
+        ...(depthK >= 2 ? ["草稿词元 x̃_{t+3} 关注前缀、根、草稿 1 和自身。"] : []),
+        ...(depthK >= 3 ? ["草稿词元 x̃_{t+4} 关注完整的线性推测分支。"] : [])
       ];
     } else {
       // Branching Tree Beam 2
       headers = [
-        "Prefix",
-        "Root",
+        "前缀",
+        "根",
         "1A",
         "1B",
         "2A",
         "2B"
       ];
       fullLabels = [
-        "Prefix (x ≤ t)",
-        "Root (x_{t+1})",
-        "Draft 1A (Branch A)",
-        "Draft 1B (Branch B)",
-        "Draft 2A (Branch A)",
-        "Draft 2B (Branch B)"
+        "前缀（x ≤ t）",
+        "根（x_{t+1}）",
+        "草稿 1A（分支 A）",
+        "草稿 1B（分支 B）",
+        "草稿 2A（分支 A）",
+        "草稿 2B（分支 B）"
       ];
       matrix = [
         [1, 0, 0, 0, 0, 0],
@@ -2306,16 +2306,16 @@ function stackSegments(pairs) {
         [1, 1, 0, 1, 0, 1]  // 2B descends from 1B
       ];
       descriptions = [
-        "Prefix tokens attend to prior context history.",
-        "Root token attends to prefix history and self.",
-        "Branch A (Depth 1) attends to Prefix, Root, and self.",
-        "Branch B (Depth 1) attends to Prefix and Root, but CANNOT attend to Branch A (independent hypothesis).",
-        "Branch A (Depth 2) attends to Prefix, Root, Draft 1A, and self.",
-        "Branch B (Depth 2) attends to Prefix, Root, Draft 1B, and self (completely isolated from Branch A)."
+        "前缀词元关注先前的上下文历史。",
+        "根词元关注前缀历史和自身。",
+        "分支 A（深度 1）关注前缀、根和自身。",
+        "分支 B（深度 1）关注前缀和根，但不能关注分支 A（独立假设）。",
+        "分支 A（深度 2）关注前缀、根、草稿 1A 和自身。",
+        "分支 B（深度 2）关注前缀、根、草稿 1B 和自身（与分支 A 完全隔离）。"
       ];
     }
 
-    let html = `<table class="mtp-mask-table"><thead><tr><th>Query ↓ \\ Key →</th>`;
+    let html = `<table class="mtp-mask-table"><thead><tr><th>查询 ↓ \\ 键 →</th>`;
     headers.forEach((h, idx) => {
       html += `<th title="${fullLabels[idx]}">${h}</th>`;
     });
@@ -2327,7 +2327,7 @@ function stackSegments(pairs) {
         const isAllowed = val === 1;
         const cls = isAllowed ? "allowed" : "masked";
         const txt = isAllowed ? "1" : "0";
-        html += `<td class="mtp-mask-cell ${cls}" data-row="${rIdx}" data-col="${cIdx}" title="Query: ${fullLabels[rIdx]} → Key: ${fullLabels[cIdx]} : ${isAllowed ? 'Allowed (0)' : 'Masked (-∞)'}">${txt}</td>`;
+        html += `<td class="mtp-mask-cell ${cls}" data-row="${rIdx}" data-col="${cIdx}" title="查询：${fullLabels[rIdx]} → 键：${fullLabels[cIdx]}：${isAllowed ? '允许（0）' : '已掩码（-∞）'}">${txt}</td>`;
       });
       html += `</tr>`;
     });
@@ -2342,12 +2342,12 @@ function stackSegments(pairs) {
         const c = parseInt(cell.getAttribute("data-col"), 10);
         const isAllowed = cell.classList.contains("allowed");
         if (mtpMaskExplainer) {
-          mtpMaskExplainer.innerHTML = `<strong>Query:</strong> ${fullLabels[r]} &nbsp;→&nbsp; <strong>Key:</strong> ${fullLabels[c]} : <span style="color:${isAllowed ? 'var(--mint)' : 'var(--amber)'}">${isAllowed ? '✓ Attending Allowed (0 dB)' : '✕ Masked (-∞ dB)'}</span>. ${descriptions[r]}`;
+          mtpMaskExplainer.innerHTML = `<strong>查询：</strong>${fullLabels[r]} &nbsp;→&nbsp; <strong>键：</strong>${fullLabels[c]}：<span style="color:${isAllowed ? 'var(--mint)' : 'var(--amber)'}">${isAllowed ? '✓ 允许关注（0 dB）' : '✕ 已掩码（-∞ dB）'}</span>。${descriptions[r]}`;
         }
       });
       cell.addEventListener("mouseleave", () => {
         if (mtpMaskExplainer) {
-          mtpMaskExplainer.textContent = "Hover over any cell or token row in the matrix to see its valid attention receptive field.";
+          mtpMaskExplainer.textContent = "将鼠标悬停在矩阵中的任意单元格或词元行上，即可查看其有效注意力感受野。";
         }
       });
     });
@@ -2372,7 +2372,7 @@ function stackSegments(pairs) {
       else if (!diverged) diverged = true;
 
       const cls = isAcc ? "accepted" : "rejected";
-      const statusText = isAcc ? "✓ ACCEPTED" : (t.pruned ? "— PRUNED" : `✕ RESAMPLED (${t.correction || 'target'})`);
+      const statusText = isAcc ? "✓ 已接受" : (t.pruned ? "— 已剪枝" : `✕ 已重采样（${t.correction || '目标'}）`);
       const statusCls = isAcc ? "accept" : "reject";
 
       candHtml += `
@@ -2395,12 +2395,12 @@ function stackSegments(pairs) {
 
     mtpVerifComparison.innerHTML = `
       <div class="verif-cmp-card">
-        <div class="cmp-title">Sequential Generation (${totalTokensEvaluated} passes)</div>
-        <div class="cmp-stat">${seqLatencyMs} ms <span style="font-size:12px;color:var(--muted)">(${totalTokensEvaluated} × memory load)</span></div>
+        <div class="cmp-title">顺序生成（${totalTokensEvaluated} 次前向传播）</div>
+        <div class="cmp-stat">${seqLatencyMs} ms <span style="font-size:12px;color:var(--muted)">（${totalTokensEvaluated} × 内存加载）</span></div>
       </div>
       <div class="verif-cmp-card">
-        <div class="cmp-title">MTP Single-Pass Tree (${acceptedTokensTotal} tokens accepted)</div>
-        <div class="cmp-stat mint">${mtpLatencyMs} ms <span style="font-size:12px;color:var(--mint);font-weight:600">(${speedup}× faster)</span></div>
+        <div class="cmp-title">MTP 单次树（接受 ${acceptedTokensTotal} 个词元）</div>
+        <div class="cmp-stat mint">${mtpLatencyMs} ms <span style="font-size:12px;color:var(--mint);font-weight:600">（快 ${speedup}×）</span></div>
       </div>
     `;
   }
@@ -2492,44 +2492,44 @@ function stackSegments(pairs) {
 
   const FUNNEL_STAGES = {
     "1": {
-      name: "Stage 01 · Raw Harvest & Web Crawl",
-      volIn: "120+ Petabytes raw WARC / HTML / PDFs / Git Repositories",
-      volOut: "45 Petabytes normalized raw documents",
-      retention: "37.5% volume retention",
-      heuristics: "Boilerplate stripping, HTML tag extraction, ad removal, MIME type validation, and UTF-8 normalization.",
-      details: "Aggregates massive public web crawls (CommonCrawl, curated domains), ArXiv LaTeX sources, public GitHub code, and encyclopedic archives. Language classifier identifies 119 candidate languages."
+      name: "阶段 01 · 原始数据采集与网页抓取",
+      volIn: "120+ PB 原始 WARC / HTML / PDF / Git 仓库",
+      volOut: "45 PB 规范化原始文档",
+      retention: "数据量保留率 37.5%",
+      heuristics: "去除网页样板内容、提取 HTML 标签、移除广告、验证 MIME 类型并进行 UTF-8 规范化。",
+      details: "汇集海量公开网页抓取数据（Common Crawl、精选域名）、ArXiv LaTeX 源文件、公开 GitHub 代码和百科档案。语言分类器识别出 119 种候选语言。"
     },
     "2": {
-      name: "Stage 02 · Multimodal Layout-Aware OCR",
-      volIn: "45 Petabytes unparsed PDFs, charts, and scanned math papers",
-      volOut: "18 Petabytes structured markdown with LaTeX formulas",
-      retention: "40.0% parsed text retention",
-      heuristics: "Qwen2.5-VL layout segmentation, bounding box alignment, two-column reflow, and table-to-markdown conversion.",
-      details: "Standard text parsers mangle complex STEM documents, tables, and mathematical proofs. A finetuned vision-language model parses multi-column layouts into clean, linear Markdown."
+      name: "阶段 02 · 多模态布局感知 OCR",
+      volIn: "45 PB 未解析的 PDF、图表和数学论文扫描件",
+      volOut: "18 PB 含 LaTeX 公式的结构化 Markdown",
+      retention: "解析文本保留率 40.0%",
+      heuristics: "Qwen2.5-VL 布局分割、边界框对齐、双栏重排，以及表格转 Markdown。",
+      details: "标准文本解析器会破坏复杂的 STEM 文档、表格和数学证明。经过微调的视觉语言模型将多栏布局解析为整洁、线性的 Markdown。"
     },
     "3": {
-      name: "Stage 03 · Quality Filtering, Dedup & Decontamination",
-      volIn: "18 Petabytes structured text (~48 Trillion candidate tokens)",
-      volOut: "22 Trillion high-density organic tokens",
-      retention: "45.8% token retention",
-      heuristics: "MinHash-LSH near-duplicate deduplication, perplexity classifier ensembles, repetition penalties, and 13-gram decontamination.",
-      details: "Filters out low-entropy machine junk, SEO spam, and toxic content. 13-gram exact match scans permanently remove benchmark overlaps against GSM8K, MATH, HumanEval, and SWE-bench."
+      name: "阶段 03 · 质量过滤、去重与去污染",
+      volIn: "18 PB 结构化文本（约 48 万亿候选词元）",
+      volOut: "22 万亿高密度自然词元",
+      retention: "词元保留率 45.8%",
+      heuristics: "MinHash-LSH 近重复去重、困惑度分类器集成、重复惩罚和 13-gram 去污染。",
+      details: "过滤低熵机器垃圾、SEO 垃圾内容和有害内容。通过 13-gram 精确匹配扫描，永久移除与 GSM8K、MATH、HumanEval 和 SWE-bench 基准重叠的内容。"
     },
     "4": {
-      name: "Stage 04 · Model-in-the-Loop Verifier Synthesis",
-      volIn: "22 Trillion organic foundation tokens",
-      volOut: "+14 Trillion verified synthetic tokens (Total 36T)",
-      retention: "+63.6% volume expansion via synthesis",
-      heuristics: "Automated verification oracles: SymPy Computer Algebra System, Lean 4 provers, and Dockerized unit-test execution.",
-      details: "Qwen2.5-Math and Qwen2.5-Coder synthesize missing textbook derivations, algorithmic solutions, and multi-turn agent tool traces. Only verified correct outputs enter pretraining shards."
+      name: "阶段 04 · 模型闭环验证器合成",
+      volIn: "22 万亿自然基础词元",
+      volOut: "+14 万亿经验证的合成词元（总计 36T）",
+      retention: "通过合成扩充数据量 +63.6%",
+      heuristics: "自动验证判定器：SymPy 计算机代数系统、Lean 4 证明器和容器化的单元测试执行。",
+      details: "Qwen2.5-Math 和 Qwen2.5-Coder 合成教材中缺失的推导、算法解法和多轮智能体工具轨迹。只有验证正确的输出才会进入预训练分片。"
     },
     "5": {
-      name: "Stage 05 · Best-Fit Sequence Packing & Sharding",
-      volIn: "36 Trillion verified clean tokens",
-      volOut: "36 Trillion tokens packed into 4,096 & 262,144 shards",
-      retention: "98.4% sequence bin packing fill rate",
-      heuristics: "Best-fit bin packing, attention mask reset boundaries, position-ID resets, and deterministic shard shuffling.",
-      details: "Eliminates padding token waste during massive distributed pretraining while strictly preventing attention leakage across document boundaries."
+      name: "阶段 05 · 最佳适配序列打包与分片",
+      volIn: "36 万亿经验证的干净词元",
+      volOut: "36 万亿词元，打包为 4,096 与 262,144 长度的分片",
+      retention: "序列装箱填充率 98.4%",
+      heuristics: "最佳适配装箱、注意力掩码边界重置、位置 ID 重置和确定性分片混洗。",
+      details: "在大规模分布式预训练期间消除填充词元浪费，同时严格防止跨文档边界的注意力泄漏。"
     }
   };
 
@@ -2544,19 +2544,19 @@ function stackSegments(pairs) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;font-family:var(--mono);font-size:12px">
         <div style="background:var(--bg-2);padding:8px 12px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--line)">
-          <span style="color:var(--faint);text-transform:uppercase;font-size:12px;display:block;margin-bottom:2px">Input Volume</span>
+          <span style="color:var(--faint);text-transform:uppercase;font-size:12px;display:block;margin-bottom:2px">输入数据量</span>
           <span style="color:var(--fg);font-weight:600">${info.volIn}</span>
         </div>
         <div style="background:var(--bg-2);padding:8px 12px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--line)">
-          <span style="color:var(--faint);text-transform:uppercase;font-size:12px;display:block;margin-bottom:2px">Output Shard Yield</span>
+          <span style="color:var(--faint);text-transform:uppercase;font-size:12px;display:block;margin-bottom:2px">输出分片产量</span>
           <span style="color:var(--mint);font-weight:600">${info.volOut}</span>
         </div>
       </div>
       <div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:6px">
-        <b>Pipeline Strategy:</b> ${info.details}
+        <b>流水线策略：</b> ${info.details}
       </div>
       <div style="font-size:12px;color:var(--faint);font-family:var(--mono)">
-        <b>Filtering Rules:</b> ${info.heuristics}
+        <b>过滤规则：</b> ${info.heuristics}
       </div>
     `;
   }
@@ -2586,22 +2586,22 @@ function stackSegments(pairs) {
 
   const STAGE_MIXES = {
     s1: {
-      name: "Stage 1 · General Foundation Mix (30 Trillion Tokens)",
+      name: "阶段 1 · 通用基础混合（30 万亿词元）",
       web: 35, code: 30, stem: 20, multi: 15,
       tokens: { web: "10.5T", code: "9.0T", stem: "6.0T", multi: "4.5T" },
-      desc: "Balanced distribution establishing broad language grounding across 119 natural languages, syntax mastery, and foundational world knowledge."
+      desc: "均衡分布，在 119 种自然语言中建立广泛的语言基础、句法掌握能力和基础世界知识。"
     },
     s2: {
-      name: "Stage 2 · Reasoning & STEM Mix (+5 Trillion Tokens)",
+      name: "阶段 2 · 推理与 STEM 混合（+5 万亿词元）",
       web: 15, code: 35, stem: 40, multi: 10,
       tokens: { web: "0.75T", code: "1.75T", stem: "2.0T", multi: "0.5T" },
-      desc: "Heavily weighted towards verified synthetic mathematics (SymPy checked), competitive programming, and formal algorithmic reasoning."
+      desc: "大幅提高经验证的合成数学数据（由 SymPy 检查）、竞赛编程和形式化算法推理的权重。"
     },
     s3: {
-      name: "Stage 3 · Long-Context 262k Mix (~1 Trillion Tokens)",
+      name: "阶段 3 · 262k 长上下文混合（约 1 万亿词元）",
       web: 25, code: 45, stem: 20, multi: 10,
       tokens: { web: "0.25T", code: "0.45T", stem: "0.20T", multi: "0.10T" },
-      desc: "Full repository-level codebases, multi-document synthesis, and long-horizon needle-in-a-haystack tasks annealed up to 262k tokens."
+      desc: "完整仓库级代码库、多文档综合和长程大海捞针任务，逐步退火至 262k 词元。"
     }
   };
 
@@ -2617,16 +2617,16 @@ function stackSegments(pairs) {
       <div style="font-family:var(--display);font-size:14px;font-weight:700;color:var(--fg);margin-bottom:6px">${mix.name}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:8px;margin-bottom:8px;font-family:var(--mono);font-size:12px">
         <div style="background:var(--bg-2);padding:6px 10px;border-radius:4px">
-          <span style="color:var(--sky)">Web &amp; Books:</span> <b>${mix.web}% (${mix.tokens.web})</b>
+          <span style="color:var(--sky)">网页与图书：</span> <b>${mix.web}% (${mix.tokens.web})</b>
         </div>
         <div style="background:var(--bg-2);padding:6px 10px;border-radius:4px">
-          <span style="color:var(--mint)">Code &amp; Repos:</span> <b>${mix.code}% (${mix.tokens.code})</b>
+          <span style="color:var(--mint)">代码与仓库：</span> <b>${mix.code}% (${mix.tokens.code})</b>
         </div>
         <div style="background:var(--bg-2);padding:6px 10px;border-radius:4px">
-          <span style="color:var(--amber)">STEM &amp; Math:</span> <b>${mix.stem}% (${mix.tokens.stem})</b>
+          <span style="color:var(--amber)">STEM 与数学：</span> <b>${mix.stem}% (${mix.tokens.stem})</b>
         </div>
         <div style="background:var(--bg-2);padding:6px 10px;border-radius:4px">
-          <span style="color:var(--iris)">Multilingual:</span> <b>${mix.multi}% (${mix.tokens.multi})</b>
+          <span style="color:var(--iris)">多语言：</span> <b>${mix.multi}% (${mix.tokens.multi})</b>
         </div>
       </div>
       <div style="font-size:12px;color:var(--muted);line-height:1.45">${mix.desc}</div>
@@ -2653,80 +2653,80 @@ function stackSegments(pairs) {
       packingVisual.innerHTML = `
         <div class="pv-seq-track">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-family:var(--mono);font-size:12px;color:var(--muted)">
-            <span>Packed 4,096-Token Training Sequence (3 Documents)</span>
-            <span style="color:var(--mint);font-weight:600">Fill Rate: 99.8% · 8 Pad Tokens</span>
+            <span>打包后的 4,096 词元训练序列（3 篇文档）</span>
+            <span style="color:var(--mint);font-weight:600">填充率：99.8% · 8 个填充词元</span>
           </div>
           <div class="pv-track-bar">
             <div class="pv-doc d1" style="flex:1850">
-              <span class="doc-lbl">Doc 1: Python AST</span>
-              <span class="pos-lbl">1,850 tok · Pos 0–1,849 · Mask [1..1850]</span>
+              <span class="doc-lbl">文档 1：Python AST</span>
+              <span class="pos-lbl">1,850 词元 · 位置 0–1,849 · 掩码 [1..1850]</span>
             </div>
             <div class="pv-doc d2" style="flex:1420">
-              <span class="doc-lbl">Doc 2: Lean 4 Proof</span>
-              <span class="pos-lbl">1,420 tok · Pos 0–1,419 · Mask Reset ✓</span>
+              <span class="doc-lbl">文档 2：Lean 4 证明</span>
+              <span class="pos-lbl">1,420 词元 · 位置 0–1,419 · 掩码已重置 ✓</span>
             </div>
             <div class="pv-doc d3" style="flex:818">
-              <span class="doc-lbl">Doc 3: Multilingual</span>
-              <span class="pos-lbl">818 tok · Pos 0–817 · Mask Reset ✓</span>
+              <span class="doc-lbl">文档 3：多语言</span>
+              <span class="pos-lbl">818 词元 · 位置 0–817 · 掩码已重置 ✓</span>
             </div>
           </div>
         </div>
         <div class="pv-stats-grid">
           <div class="pv-stat-card">
-            <span class="pv-stat-lbl">Attention FLOPs</span>
-            <span class="pv-stat-val" style="color:var(--mint)">6.13M (Block-Diag: −63.5%)</span>
+            <span class="pv-stat-lbl">注意力 FLOPs</span>
+            <span class="pv-stat-val" style="color:var(--mint)">6.13M（块对角：−63.5%）</span>
           </div>
           <div class="pv-stat-card">
-            <span class="pv-stat-lbl">FlashAttention Varlen</span>
+            <span class="pv-stat-lbl">FlashAttention 变长模式</span>
             <span class="pv-stat-val" style="color:var(--sky)">cu_seqlens = [0, 1850, 3270, 4088]</span>
           </div>
           <div class="pv-stat-card">
-            <span class="pv-stat-lbl">RoPE Position Range</span>
-            <span class="pv-stat-val" style="color:var(--fg)">Strict Pos 0 Reset at EOS</span>
+            <span class="pv-stat-lbl">RoPE 位置范围</span>
+            <span class="pv-stat-val" style="color:var(--fg)">在 EOS 处严格重置为位置 0</span>
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--mint);line-height:1.5;background:rgba(29,110,107,0.06);padding:8px 12px;border-radius:6px;border-top:2px solid var(--mint)">
-          ✓ <b>Correct Mask Isolation Active:</b> Attention matrix blocks cross-document attention using FlashAttention varlen paths. Position IDs reset to 0 at each EOS delimiter, preventing positional RoPE contamination across unrelated articles.
+          ✓ <b>正确的掩码隔离已启用：</b> 注意力矩阵通过 FlashAttention 变长路径阻断跨文档注意力。每个 EOS 分隔符处的位置 ID 都重置为 0，防止不相关文章之间发生 RoPE 位置污染。
         </div>
       `;
     } else {
       packingVisual.innerHTML = `
         <div class="pv-seq-track">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-family:var(--mono);font-size:12px;color:var(--rose)">
-            <span>Naive Concatenation (Attention Mask Ignored)</span>
-            <span style="font-weight:600">Cross-Doc Contamination Bug ✗</span>
+            <span>朴素拼接（忽略注意力掩码）</span>
+            <span style="font-weight:600">跨文档污染缺陷 ✗</span>
           </div>
           <div class="pv-track-bar">
             <div class="pv-doc d1 bleed" style="flex:1850">
-              <span class="doc-lbl">Doc 1: Python AST</span>
-              <span class="pos-lbl">1,850 tok · Pos 0–1,849</span>
+              <span class="doc-lbl">文档 1：Python AST</span>
+              <span class="pos-lbl">1,850 词元 · 位置 0–1,849</span>
             </div>
             <div class="pv-doc d2 bleed" style="flex:1420">
-              <span class="doc-lbl">Doc 2: Lean 4 ⚠️</span>
-              <span class="pos-lbl">1,420 tok · Attends to Doc 1</span>
+              <span class="doc-lbl">文档 2：Lean 4 ⚠️</span>
+              <span class="pos-lbl">1,420 词元 · 关注文档 1</span>
             </div>
             <div class="pv-doc d3 bleed" style="flex:818">
-              <span class="doc-lbl">Doc 3: Multilingual ⚠️</span>
-              <span class="pos-lbl">818 tok · Attends to Doc 1 &amp; 2</span>
+              <span class="doc-lbl">文档 3：多语言 ⚠️</span>
+              <span class="pos-lbl">818 词元 · 关注文档 1 和 2</span>
             </div>
           </div>
         </div>
         <div class="pv-stats-grid">
           <div class="pv-stat-card">
-            <span class="pv-stat-lbl">Attention FLOPs</span>
-            <span class="pv-stat-val" style="color:var(--rose)">16.78M (Full 4k: +174% Waste)</span>
+            <span class="pv-stat-lbl">注意力 FLOPs</span>
+            <span class="pv-stat-val" style="color:var(--rose)">16.78M（完整 4k：浪费 +174%）</span>
           </div>
           <div class="pv-stat-card">
-            <span class="pv-stat-lbl">Attention Leakage</span>
-            <span class="pv-stat-val" style="color:var(--rose)">Unmasked (Cross-Doc Bleed)</span>
+            <span class="pv-stat-lbl">注意力泄漏</span>
+            <span class="pv-stat-val" style="color:var(--rose)">未掩码（跨文档渗漏）</span>
           </div>
           <div class="pv-stat-card">
-            <span class="pv-stat-lbl">RoPE Position Range</span>
-            <span class="pv-stat-val" style="color:var(--rose)">Spurious Drift Pos 0 → 4,087</span>
+            <span class="pv-stat-lbl">RoPE 位置范围</span>
+            <span class="pv-stat-val" style="color:var(--rose)">位置 0 → 4,087 的伪漂移</span>
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--rose);line-height:1.5;background:rgba(138,51,36,0.06);padding:8px 12px;border-radius:6px;border-top:2px solid var(--rose)">
-          ✗ <b>Attention Leakage Bug:</b> Without attention mask resets, Doc 2 and Doc 3 attend directly into previous documents' tokens. Associative memory writes become corrupted with unrelated document history, and RoPE frequencies drift past the document's true length.
+          ✗ <b>注意力泄漏缺陷：</b> 若不重置注意力掩码，文档 2 和文档 3 会直接关注先前文档的词元。联想记忆写入会被无关文档历史污染，RoPE 频率也会漂移并超出文档的真实长度。
         </div>
       `;
     }
@@ -2826,7 +2826,7 @@ function stackSegments(pairs) {
     s2Lbl.setAttribute("fill", PAL.amber);
     s2Lbl.setAttribute("font-size", "9.5");
     s2Lbl.setAttribute("font-family", '"IBM Plex Mono", ui-monospace, monospace');
-    s2Lbl.textContent = "Stage 2 (STEM Restart)";
+    s2Lbl.textContent = "阶段 2（STEM 重启）";
     lossSvg.appendChild(s2Lbl);
 
     // Compute Loss curves
@@ -2898,25 +2898,25 @@ function stackSegments(pairs) {
     sDot.setAttribute("stroke-width", "2");
     lossSvg.appendChild(sDot);
 
-    const stageName = curTokens < 30 ? "Stage 1 (General Foundation)" : (curTokens < 35 ? "Stage 2 (Reasoning & STEM)" : "Stage 3 (262k Long Context)");
+    const stageName = curTokens < 30 ? "阶段 1（通用基础）" : (curTokens < 35 ? "阶段 2（推理与 STEM）" : "阶段 3（262k 长上下文）");
     const pct = ((curTokens / 36) * 100).toFixed(1);
 
     lossStats.innerHTML = `
       <div class="rf-stat-box">
-        <div class="rf-head">Curriculum Milestone @ ${curTokens.toFixed(1)}T Tokens (${pct}%)</div>
-        <div class="rf-row"><span>Active Phase</span><span class="val amber" style="font-size:12px">${stageName}</span></div>
-        <div class="rf-row"><span>General Cross-Entropy Loss</span><span class="val mint">${activeLoss.toFixed(3)} (PPL ~${Math.exp(activeLoss).toFixed(2)})</span></div>
-        <div class="rf-row"><span>STEM / Code Loss</span><span class="val">${activeStem.toFixed(3)}</span></div>
-        <div class="rf-row"><span>MTP Aux Loss</span><span class="val" style="color:var(--iris)">${getMtpLoss(curTokens).toFixed(3)}</span></div>
+        <div class="rf-head">课程里程碑 @ ${curTokens.toFixed(1)}T 词元（${pct}%）</div>
+        <div class="rf-row"><span>当前阶段</span><span class="val amber" style="font-size:12px">${stageName}</span></div>
+        <div class="rf-row"><span>通用交叉熵损失</span><span class="val mint">${activeLoss.toFixed(3)}（PPL 约 ${Math.exp(activeLoss).toFixed(2)}）</span></div>
+        <div class="rf-row"><span>STEM / 代码损失</span><span class="val">${activeStem.toFixed(3)}</span></div>
+        <div class="rf-row"><span>MTP 辅助损失</span><span class="val" style="color:var(--iris)">${getMtpLoss(curTokens).toFixed(3)}</span></div>
       </div>
       <div class="rf-stat-box" style="padding:10px 14px">
-        <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--faint);margin-bottom:4px">Milestone Insight</div>
+        <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--faint);margin-bottom:4px">里程碑解读</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.45">
-          ${curTokens < 30 
-            ? "Phase 1 steadily compresses natural language grammar, factual world knowledge, and broad multilingual representations across 119 languages." 
-            : (curTokens < 35 
-              ? "Phase 2 LR restart rapidly steepens reasoning and competitive coding benchmarks without degradation to Stage 1 core representations." 
-              : "Phase 3 anneals chunked WY recurrent scan kernels and YaRN RoPE scaling to lock in full 262k context length capability.")}
+          ${curTokens < 30
+            ? "阶段 1 持续压缩自然语言语法、事实性世界知识，以及覆盖 119 种语言的广泛多语言表征。"
+            : (curTokens < 35
+              ? "阶段 2 重启学习率（LR），在不损害阶段 1 核心表征的前提下，迅速提升推理和竞赛编程基准表现。"
+              : "阶段 3 对分块 WY 循环扫描核和 YaRN RoPE 缩放进行退火，固化完整的 262k 上下文长度能力。")}
         </div>
       </div>
     `;
@@ -2930,7 +2930,7 @@ function stackSegments(pairs) {
   });
   renderLossTrajectory();
   if (lossTokenSlider?.type === "range") {
-    const vt = () => lossTokenSlider.setAttribute("aria-valuetext", `${(+lossTokenSlider.value).toFixed(1)} trillion tokens`);
+    const vt = () => lossTokenSlider.setAttribute("aria-valuetext", `${(+lossTokenSlider.value).toFixed(1)} 万亿词元`);
     lossTokenSlider.addEventListener("input", vt); vt();
   }
 
@@ -2981,23 +2981,23 @@ function stackSegments(pairs) {
       <div class="calc-stat-grid">
         <div class="cs-card">
           <div class="cs-num">${yottaFlops.toFixed(2)} YFLOPs</div>
-          <div class="cs-lbl">Total Compute Volume</div>
+          <div class="cs-lbl">总计算量</div>
         </div>
         <div class="cs-card">
           <div class="cs-num">${exaFlopDays.toFixed(0)} EFD</div>
-          <div class="cs-lbl">ExaFLOP-Days</div>
+          <div class="cs-lbl">ExaFLOP-天</div>
         </div>
         <div class="cs-card">
-          <div class="cs-num" style="color:var(--mint)">${totalDays.toFixed(1)} Days</div>
-          <div class="cs-lbl">Wall-Clock Duration</div>
+          <div class="cs-num" style="color:var(--mint)">${totalDays.toFixed(1)} 天</div>
+          <div class="cs-lbl">实际耗时</div>
         </div>
         <div class="cs-card">
           <div class="cs-num" style="color:var(--iris)">${totalMWh.toLocaleString(undefined, {maximumFractionDigits: 0})} MWh</div>
-          <div class="cs-lbl">Energy (PUE 1.25)</div>
+          <div class="cs-lbl">能耗（PUE 1.25）</div>
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px">
-        Cluster throughput: <b>${(clusterFlopsPerSec / 1e18).toFixed(1)} Sustained ExaFLOPs/s</b> across ${gpuCount.toLocaleString()} × ${gpu.name} @ ${(mfu * 100).toFixed(0)}% MFU · Power Draw: <b>${clusterMw.toFixed(2)} MW</b>.
+        集群吞吐量：${gpuCount.toLocaleString()} × ${gpu.name}、MFU ${(mfu * 100).toFixed(0)}% 时，<b>持续 ${(clusterFlopsPerSec / 1e18).toFixed(1)} ExaFLOPs/s</b> · 功耗：<b>${clusterMw.toFixed(2)} MW</b>。
       </div>
     `;
   }
@@ -3045,7 +3045,7 @@ function stackSegments(pairs) {
       txt.setAttribute("class", "bp-tick");
       txt.setAttribute("x", gx); txt.setAttribute("y", H - 8);
       txt.setAttribute("text-anchor", "middle");
-      txt.textContent = `Step ${sVal}`;
+      txt.textContent = `步骤 ${sVal}`;
       optimSvg.appendChild(txt);
     });
 
@@ -3099,15 +3099,15 @@ function stackSegments(pairs) {
 
     optimStats.innerHTML = `
       <div class="rf-stat-box">
-        <div class="rf-head">Optimizer Second-Moment Memory</div>
-        <div class="rf-row"><span>Selected β₂ Parameter</span><span class="val amber">${curBeta2}</span></div>
-        <div class="rf-row"><span>Variance Half-Life</span><span class="val ${curBeta2 === 0.95 ? "mint" : "rose"}">${halfLifeSteps} steps</span></div>
-        <div class="rf-row"><span>Recovery from Gradient Shock</span><span class="val">${curBeta2 === 0.95 ? "Rapid (~14 steps) ✓" : "Severely Stalled (~693 steps) ✗"}</span></div>
+        <div class="rf-head">优化器二阶矩记忆</div>
+        <div class="rf-row"><span>所选 β₂ 参数</span><span class="val amber">${curBeta2}</span></div>
+        <div class="rf-row"><span>方差半衰期</span><span class="val ${curBeta2 === 0.95 ? "mint" : "rose"}">${halfLifeSteps} 步</span></div>
+        <div class="rf-row"><span>从梯度冲击中恢复</span><span class="val">${curBeta2 === 0.95 ? "迅速（约 14 步）✓" : "严重停滞（约 693 步）✗"}</span></div>
       </div>
       <div style="font-size:12px;color:var(--muted);line-height:1.45;padding:4px 2px">
-        ${curBeta2 === 0.95 
-          ? "✓ Tuned β₂ = 0.95 flushes corrupted second-moment variance quickly, preventing stale damping on DeltaNet recurrent state updates." 
-          : "⚠️ Standard β₂ = 0.999 keeps effective learning rate suppressed long after a transient gradient outlier, stalling hybrid state convergence."}
+        ${curBeta2 === 0.95
+          ? "✓ 调优后的 β₂ = 0.95 可快速清除受污染的二阶矩方差，防止过时的阻尼影响 DeltaNet 循环状态更新。"
+          : "⚠️ 标准 β₂ = 0.999 会在瞬时梯度异常值过后仍长期压低有效学习率，导致混合状态收敛停滞。"}
       </div>
     `;
   }
@@ -3147,48 +3147,48 @@ function stackSegments(pairs) {
 
   const PROMPT_BANKS = {
     math: {
-      title: "Math: Modular Inverse in Diophantine Equation",
+      title: "数学：丢番图方程中的模逆元",
       passRollouts: [
-        "Extended Euclidean algorithm: 43 = 2(17) + 9, 17 = 1(9) + 8, 9 = 1(8) + 1. Reversing: 1 = 9 - (17 - 9) = 2(43 - 2(17)) - 17 = 2(43) - 5(17). Thus 17⁻¹ ≡ -5 ≡ 38 (mod 43). x ≡ 5 × 38 = 190 ≡ 18 (mod 43). Verification: 17(18) = 306 = 7(43) + 5. ✓",
-        "Direct modular search: x = (5 + 43k)/17. For k=7: 5 + 301 = 306, 306 / 17 = 18 exactly. Minimal positive integer x = 18. ✓",
-        "Fermat's Little Theorem: 17⁴¹ ≡ 1 (mod 43). Compute 17⁴¹ * 5 mod 43 via binary exponentiation... yields x = 18. ✓",
-        "Linear congruence decomposition: 17x - 43y = 5. Bezout identity yields particular solution (18, 7). General solution x = 18 + 43n. Minimal positive x = 18. ✓"
+        "扩展欧几里得算法：43 = 2(17) + 9，17 = 1(9) + 8，9 = 1(8) + 1。反向代入：1 = 9 - (17 - 9) = 2(43 - 2(17)) - 17 = 2(43) - 5(17)。因此 17⁻¹ ≡ -5 ≡ 38 (mod 43)。x ≡ 5 × 38 = 190 ≡ 18 (mod 43)。验证：17(18) = 306 = 7(43) + 5。✓",
+        "直接进行模搜索：x = (5 + 43k)/17。当 k=7 时：5 + 301 = 306，306 / 17 恰好等于 18。最小正整数 x = 18。✓",
+        "费马小定理：17⁴¹ ≡ 1 (mod 43)。通过二进制快速幂计算 17⁴¹ * 5 mod 43……得到 x = 18。✓",
+        "分解线性同余式：17x - 43y = 5。贝祖恒等式给出特解 (18, 7)。通解为 x = 18 + 43n。最小正整数 x = 18。✓"
       ],
       failRollouts: [
-        "Arithmetic slip: 17⁻¹ computed as 28 instead of 38. x ≡ 5 × 28 = 140 ≡ 11 (mod 43). Verifier fails: 17(11) = 187 ≠ 5 mod 43. ✗",
-        "Modulus confusion: Treated 43 as composite and factored into primes. Outputted x = 24. ✗",
-        "Loop timeout / endless reasoning loop: Re-evaluating 17k without terminating. ✗",
-        "Formatting violation: Did not box final integer answer. ✗"
+        "算术失误：将 17⁻¹ 算成 28 而非 38。x ≡ 5 × 28 = 140 ≡ 11 (mod 43)。验证失败：17(11) = 187 ≠ 5 mod 43。✗",
+        "模数混淆：误将 43 视为合数并进行质因数分解。输出 x = 24。✗",
+        "循环超时／无休止推理：反复计算 17k 而不终止。✗",
+        "格式违规：未用方框标出最终整数答案。✗"
       ]
     },
     code: {
-      title: "Code: Memory-Leak Fix in Concurrency Thread-Pool",
+      title: "代码：并发线程池内存泄漏修复",
       passRollouts: [
-        "Identified unclosed channel in worker teardown loop. Added defer close(worker.jobs) and synced with sync.WaitGroup. All race tests pass with 0 leak. ✓",
-        "Replaced naked goroutine spawns with bounded worker pool semaphore. Context cancellation cleanly drains pending tasks. Unit test assertions pass. ✓",
-        "Fixed circular reference in task closure holding worker pointers in heap. Garbage collector frees buffers immediately. Verified with pprof. ✓",
-        "Applied atomic pointer swap during pool resizing. Eliminates mutex contention deadlock under 10k req/s load test. ✓"
+        "发现工作线程清理循环中存在未关闭的通道。添加 defer close(worker.jobs)，并使用 sync.WaitGroup 同步。所有竞态测试均通过，泄漏为 0。✓",
+        "用有界工作池信号量替代直接启动 goroutine。取消上下文时会彻底清空待处理任务。单元测试断言通过。✓",
+        "修复任务闭包中的循环引用，该引用导致工作线程指针滞留在堆中。垃圾收集器可立即释放缓冲区，已使用 pprof 验证。✓",
+        "在线程池调整大小期间采用原子指针交换。在每秒 1 万请求的负载测试下消除了互斥锁竞争死锁。✓"
       ],
       failRollouts: [
-        "Introduced mutex deadlock: Acquired lock inside defer before channel receive. Thread pool freezes on shutdown. ✗",
-        "Memory leak worsened: Added buffer without bounds check, causing OOM panic under burst traffic. ✗",
-        "Syntax error: Missing return type on closure signature. Compilation failed. ✗",
-        "Race condition: Read worker status without atomic load. Data race detector triggered. ✗"
+        "引入互斥锁死锁：在接收通道消息之前于 defer 中获取锁。线程池在关闭时卡死。✗",
+        "内存泄漏恶化：添加缓冲区时未检查边界，突发流量下触发 OOM panic。✗",
+        "语法错误：闭包签名缺少返回类型，编译失败。✗",
+        "竞态条件：读取工作线程状态时未使用原子加载，触发数据竞态检测器。✗"
       ]
     },
     agent: {
-      title: "Agent: 3-Step Tool-Calling with Retry Fallback",
+      title: "智能体：带重试回退的三步工具调用",
       passRollouts: [
-        "<think>API endpoint 503 returned. Need to back off and query secondary mirror.</think> <call:fetch_mirror(url='api.v2')/> -> status:200. Extracted schema and validated checksum. ✓",
-        "<think>JSON response missing 'id' key. Inspecting raw payload...</think> Parsed nested payload under 'data.item.id'. Fallback succeeded. ✓",
-        "<think>Rate limit 429 encountered.</think> Executed exponential jitter sleep (150ms). Retried and parsed response. ✓",
-        "<think>Schema format mismatch.</think> Converted timestamp from ISO-8601 to epoch milliseconds. Assertion pass. ✓"
+        "<think>API 端点返回 503。需要退避并查询备用镜像。</think> <call:fetch_mirror(url='api.v2')/> -> 状态：200。已提取模式并验证校验和。✓",
+        "<think>JSON 响应缺少 'id' 键。正在检查原始载荷……</think> 已解析 'data.item.id' 下的嵌套载荷。回退成功。✓",
+        "<think>遇到 429 速率限制。</think> 执行指数抖动休眠（150ms）。重试并成功解析响应。✓",
+        "<think>模式格式不匹配。</think> 已将时间戳从 ISO-8601 转换为纪元毫秒。断言通过。✓"
       ],
       failRollouts: [
-        "<think>API 503 returned.</think> Retried in tight loop without delay 10 times, exhausting retry budget. ✗",
-        "Hallucinated non-existent tool parameter 'force_override=True'. Tool call crashed with ValidationError. ✗",
-        "Leaked internal scratchpad to user without producing structured JSON output. ✗",
-        "Ignored error return code and hallucinated mock data. ✗"
+        "<think>API 返回 503。</think> 无延迟紧密循环重试 10 次，耗尽重试预算。✗",
+        "臆造不存在的工具参数 'force_override=True'。工具调用因 ValidationError 崩溃。✗",
+        "向用户泄露内部草稿，却未生成结构化 JSON 输出。✗",
+        "忽略错误返回码并臆造模拟数据。✗"
       ]
     }
   };
@@ -3225,7 +3225,7 @@ function stackSegments(pairs) {
     const lossGrpo = -(rollouts.reduce((acc, r) => acc + Math.min(r.adv, 1.2 * r.adv), 0) / G) + beta * estKl;
 
     grpoGroupStats.innerHTML = `
-      Group Mean μ: <b>${meanR.toFixed(2)}</b> · Std σ: <b>${stdR.toFixed(2)}</b> · KL: <b>${estKl.toFixed(3)}</b> · J_GRPO: <b style="color:var(--mint)">${lossGrpo.toFixed(3)}</b>
+      组均值 μ：<b>${meanR.toFixed(2)}</b> · 标准差 σ：<b>${stdR.toFixed(2)}</b> · KL：<b>${estKl.toFixed(3)}</b> · J_GRPO：<b style="color:var(--mint)">${lossGrpo.toFixed(3)}</b>
     `;
 
     grpoRolloutsList.innerHTML = rollouts.map(r => {
@@ -3235,8 +3235,8 @@ function stackSegments(pairs) {
           <div class="grpo-id">${r.id}</div>
           <div class="grpo-text">${r.text}</div>
           <div class="grpo-meta">
-            <span class="grpo-reward-badge ${r.isPass ? "pass" : "fail"}">Reward r = ${r.r.toFixed(2)}</span>
-            <span class="grpo-adv ${isPos ? "pos" : "neg"}">Adv A = ${isPos ? "+" : ""}${r.adv.toFixed(2)} ${isPos ? "▲ Boost" : "▼ Suppress"}</span>
+            <span class="grpo-reward-badge ${r.isPass ? "pass" : "fail"}">奖励 r = ${r.r.toFixed(2)}</span>
+            <span class="grpo-adv ${isPos ? "pos" : "neg"}">优势 A = ${isPos ? "+" : ""}${r.adv.toFixed(2)} ${isPos ? "▲ 增强" : "▼ 抑制"}</span>
           </div>
         </div>
       `;
@@ -3266,8 +3266,8 @@ function stackSegments(pairs) {
     const effort = +effortSel.value;
     const diff = +effortDiff.value;
     const preserve = effortPreserve.value === "true";
-    if (effortSel.type === "range") effortSel.setAttribute("aria-valuetext", `effort level ${effort} of 3`);
-    if (effortDiff.type === "range") effortDiff.setAttribute("aria-valuetext", `${diff}% task difficulty`);
+    if (effortSel.type === "range") effortSel.setAttribute("aria-valuetext", `推理强度 ${effort}，共 3 级`);
+    if (effortDiff.type === "range") effortDiff.setAttribute("aria-valuetext", `任务难度 ${diff}%`);
 
     const NS = "http://www.w3.org/2000/svg";
     effortSvg.innerHTML = "";
@@ -3290,7 +3290,7 @@ function stackSegments(pairs) {
     l2.setAttribute("stroke", "rgba(26,22,18,.15)");
     effortSvg.appendChild(l2);
 
-    [[0, "off (0 tok)"], [1, "low (1k)"], [2, "med (4k)"], [3, "xhigh (16k)"]].forEach(([f, s]) => {
+    [[0, "关闭（0 词元）"], [1, "低（1k）"], [2, "中（4k）"], [3, "极高（16k）"]].forEach(([f, s]) => {
       const t = document.createElementNS(NS, "text");
       t.setAttribute("x", X(f)); t.setAttribute("y", oy + 18);
       t.setAttribute("text-anchor", "middle");
@@ -3360,14 +3360,14 @@ function stackSegments(pairs) {
     const recoveryRate = preserve ? Math.min(96, curAcc * 1.08) : Math.max(40, curAcc * 0.82);
 
     effortOut.innerHTML = `
-      <div class="row"><span>Expected Benchmark Pass@1 @ Difficulty ${diff}%</span><span class="v m" style="font-size:14px;font-weight:700">${curAcc.toFixed(1)}%</span></div>
-      <div class="row"><span>Deliberation Thinking Tokens Allocated</span><span class="v i">${curToks.toLocaleString()} tokens</span></div>
-      <div class="row"><span>Agent Multi-Turn Self-Correction Probability (preserve_thinking=${preserve})</span><span class="v a">${recoveryRate.toFixed(1)}%</span></div>
-      <div class="row"><span>Marginal Accuracy Left on Table vs xhigh</span><span class="v" style="color:var(--faint)">${(getAcc(3, diff) - curAcc).toFixed(1)} pts</span></div>
+      <div class="row"><span>难度 ${diff}% 时的预期基准 Pass@1</span><span class="v m" style="font-size:14px;font-weight:700">${curAcc.toFixed(1)}%</span></div>
+      <div class="row"><span>分配的审慎思考词元</span><span class="v i">${curToks.toLocaleString()} 词元</span></div>
+      <div class="row"><span>智能体多轮自我纠正概率（preserve_thinking=${preserve}）</span><span class="v a">${recoveryRate.toFixed(1)}%</span></div>
+      <div class="row"><span>相较极高强度尚未获得的边际准确率</span><span class="v" style="color:var(--faint)">${(getAcc(3, diff) - curAcc).toFixed(1)} 个百分点</span></div>
       <div style="color:var(--faint);font-size:12px;margin-top:8px;line-height:1.45">
-        ${effort === 0 
-          ? "Direct instant mode active: Zero latency overhead, best for chat & simple retrieval." 
-          : `Thinking mode active: Subgoal decomposition allocates ~${curToks.toLocaleString()} tokens of test-time compute.`}
+        ${effort === 0
+          ? "已启用直接即时模式：无额外延迟，最适合聊天和简单检索。"
+          : `已启用思考模式：子目标分解分配约 ${curToks.toLocaleString()} 个词元的测试时计算量。`}
       </div>
     `;
   }
@@ -3392,46 +3392,46 @@ function stackSegments(pairs) {
     math_backtrack: [
       {
         role: "user",
-        text: "Find all real solutions to: $\\sqrt{x + 3} - \\sqrt{x - 2} = 1$."
+        text: "求方程 $\\sqrt{x + 3} - \\sqrt{x - 2} = 1$ 的所有实数解。"
       },
       {
         role: "assistant",
-        think: `1. Domain check: x + 3 >= 0 => x >= -3, and x - 2 >= 0 => x >= 2. Intersection domain is x in [2, inf).
-2. Isolate radicals: sqrt(x + 3) = 1 + sqrt(x - 2).
-3. Square both sides: x + 3 = 1 + 2*sqrt(x - 2) + (x - 2).
-4. Simplify algebra: x + 3 = x - 1 + 2*sqrt(x - 2) => 4 = 2*sqrt(x - 2) => sqrt(x - 2) = 2.
-5. Wait, let me double check sign: 3 - (-1) = 4, correct!
-6. Square again: x - 2 = 4 => x = 6.
-7. Verification test: sqrt(6 + 3) - sqrt(6 - 2) = sqrt(9) - sqrt(4) = 3 - 2 = 1. Matches right hand side exactly!`,
-        output: "The only real solution is <strong>x = 6</strong>."
+        think: `1. 检查定义域：x + 3 >= 0 => x >= -3，且 x - 2 >= 0 => x >= 2。交集定义域为 x ∈ [2, +∞)。
+2. 分离根式：sqrt(x + 3) = 1 + sqrt(x - 2)。
+3. 两边平方：x + 3 = 1 + 2*sqrt(x - 2) + (x - 2)。
+4. 化简代数式：x + 3 = x - 1 + 2*sqrt(x - 2) => 4 = 2*sqrt(x - 2) => sqrt(x - 2) = 2。
+5. 等一下，再检查一下符号：3 - (-1) = 4，正确！
+6. 再次平方：x - 2 = 4 => x = 6。
+7. 验证：sqrt(6 + 3) - sqrt(6 - 2) = sqrt(9) - sqrt(4) = 3 - 2 = 1。与右侧完全一致！`,
+        output: "唯一的实数解是 <strong>x = 6</strong>。"
       }
     ],
     agent_swe: [
       {
         role: "user",
-        text: "Fix flaky test `test_websocket_heartbeat_timeout` failing intermittently on CI."
+        text: "修复在 CI 中间歇性失败的不稳定测试 `test_websocket_heartbeat_timeout`。"
       },
       {
         role: "assistant",
-        think: `The issue reports a race condition where the heartbeat ticker fires before the mock client socket registers the handshake.
-Let's inspect the test file and connection teardown.`,
+        think: `问题报告了一处竞态条件：心跳计时器在模拟客户端套接字注册握手之前触发。
+让我们检查测试文件和连接清理过程。`,
         toolCall: "run_command(CommandLine='pytest tests/test_ws.py -k test_websocket_heartbeat_timeout --count=5')",
-        toolObs: "FAILED tests/test_ws.py::test_websocket_heartbeat_timeout (2/5 failed: AssertionError: heartbeat not received within 50ms)",
-        thinkCont: `Root cause confirmed: The test uses a hardcoded 50ms sleep instead of waiting for the connection state condition.
-Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`,
+        toolObs: "失败 tests/test_ws.py::test_websocket_heartbeat_timeout（5 次中有 2 次失败：AssertionError：50ms 内未收到心跳）",
+        thinkCont: `根因已确认：测试使用硬编码的 50ms 休眠，而不是等待连接状态条件。
+将测试改为使用事件驱动的 'wait_for_condition(timeout=2.0)'。`,
         toolCall2: "replace_file_content(TargetFile='tests/test_ws.py', Instruction='Replace fixed sleep with event waiter')",
-        toolObs2: "File edited successfully.",
-        output: "Fixed the flaky test by replacing the brittle 50ms sleep with an explicit condition waiter on `client.is_connected`. All 5 verification test runs now pass reliably."
+        toolObs2: "文件编辑成功。",
+        output: "已将脆弱的 50ms 休眠替换为对 `client.is_connected` 的显式条件等待器，从而修复不稳定测试。5 次验证测试现均可稳定通过。"
       }
     ],
     direct_bypass: [
       {
         role: "user",
-        text: "What is the capital of Australia?"
+        text: "澳大利亚的首都是哪里？"
       },
       {
         role: "assistant",
-        output: "The capital of Australia is **Canberra**."
+        output: "澳大利亚的首都是**堪培拉**。"
       }
     ]
   };
@@ -3444,7 +3444,7 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
       if (step.role === "user") {
         return `
           <div class="cot-step">
-            <span class="cot-role">User</span>
+            <span class="cot-role">用户</span>
             <div class="cot-bubble" style="background:var(--bg-1)">${step.text}</div>
           </div>
         `;
@@ -3454,26 +3454,26 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
           innerHtml += `<div class="cot-think-block"><b>&lt;think&gt;</b><br>${step.think.replace(/\n/g, "<br>")}</div>`;
         }
         if (step.toolCall) {
-          innerHtml += `<div class="cot-tool-block"><b>Tool Call:</b> <code>${step.toolCall}</code></div>`;
+          innerHtml += `<div class="cot-tool-block"><b>工具调用：</b> <code>${step.toolCall}</code></div>`;
         }
         if (step.toolObs) {
-          innerHtml += `<div class="cot-obs-block"><b>Tool Output:</b> ${step.toolObs}</div>`;
+          innerHtml += `<div class="cot-obs-block"><b>工具输出：</b> ${step.toolObs}</div>`;
         }
         if (step.thinkCont) {
-          innerHtml += `<div class="cot-think-block"><b>&lt;think&gt; (Self-Reflection)</b><br>${step.thinkCont.replace(/\n/g, "<br>")}</div>`;
+          innerHtml += `<div class="cot-think-block"><b>&lt;think&gt;（自我反思）</b><br>${step.thinkCont.replace(/\n/g, "<br>")}</div>`;
         }
         if (step.toolCall2) {
-          innerHtml += `<div class="cot-tool-block"><b>Tool Call:</b> <code>${step.toolCall2}</code></div>`;
+          innerHtml += `<div class="cot-tool-block"><b>工具调用：</b> <code>${step.toolCall2}</code></div>`;
         }
         if (step.toolObs2) {
-          innerHtml += `<div class="cot-obs-block"><b>Tool Output:</b> ${step.toolObs2}</div>`;
+          innerHtml += `<div class="cot-obs-block"><b>工具输出：</b> ${step.toolObs2}</div>`;
         }
         if (step.output) {
           innerHtml += `<div style="margin-top:8px">${step.output}</div>`;
         }
         return `
           <div class="cot-step">
-            <span class="cot-role" style="color:var(--iris)">Qwen 3.8-27B Assistant</span>
+            <span class="cot-role" style="color:var(--iris)">Qwen 3.8-27B 助手</span>
             <div class="cot-bubble">${innerHtml}</div>
           </div>
         `;
@@ -3547,24 +3547,24 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
       [16, "Q4_K_M"]
     ];
     const precHit = precTable.find(([gb]) => Math.abs(gb - weightsGB) < 0.75);
-    const precName = precHit ? precHit[1] : "Custom";
-    const kvName = { "2": "BF16", "1": "FP8", "0.5": "NVFP4" }[String(kvB)] || "Custom";
+    const precName = precHit ? precHit[1] : "自定义";
+    const kvName = { "2": "BF16", "1": "FP8", "0.5": "NVFP4" }[String(kvB)] || "自定义";
 
     quantOut.innerHTML = `
-      <div class="row"><span>1. Model Weights (${precName} Quantized)</span><span class="v">${weightsGB.toFixed(1)} GB</span></div>
-      <div class="row"><span>2. GQA KV-Cache (16 layers × ${batch} seq @ ${T.toLocaleString()} tok in ${kvName})</span><span class="v a">${kvGB < 1 ? (kvGB * 1000).toFixed(0) + " MB" : kvGB.toFixed(2) + " GB"}</span></div>
-      <div class="row"><span>3. DeltaNet Recurrent States (48 layers, fixed matrix)</span><span class="v m">${(dnStateGB * 1000).toFixed(1)} MB</span></div>
-      <div class="row"><span>4. CUDA Driver &amp; Runtime Activation Buffers</span><span class="v">${overheadGB.toFixed(2)} GB</span></div>
+      <div class="row"><span>1. 模型权重（${precName}量化）</span><span class="v">${weightsGB.toFixed(1)} GB</span></div>
+      <div class="row"><span>2. GQA KV 缓存（16 层 × ${batch} 个序列，${kvName} 格式，共 ${T.toLocaleString()} 个词元）</span><span class="v a">${kvGB < 1 ? (kvGB * 1000).toFixed(0) + " MB" : kvGB.toFixed(2) + " GB"}</span></div>
+      <div class="row"><span>3. DeltaNet 循环状态（48 层，固定矩阵）</span><span class="v m">${(dnStateGB * 1000).toFixed(1)} MB</span></div>
+      <div class="row"><span>4. CUDA 驱动与运行时激活缓冲区</span><span class="v">${overheadGB.toFixed(2)} GB</span></div>
       <div class="row" style="border-top:1px solid var(--line-strong);margin-top:6px;padding-top:10px">
-        <span><b>Total Serving Footprint vs ${budget} GB Target GPU</b></span>
+        <span><b>服务总占用与 ${budget} GB 目标 GPU 对比</b></span>
         <span class="big" style="color:${fits ? "var(--mint)" : "var(--rose)"}">
-          ${totalGB.toFixed(2)} GB ${fits ? `· Fits comfortably (${(budget - totalGB).toFixed(1)} GB headroom ✓)` : `· Over budget by ${(totalGB - budget).toFixed(1)} GB ✗`}
+          ${totalGB.toFixed(2)} GB ${fits ? `· 轻松容纳（余量 ${(budget - totalGB).toFixed(1)} GB ✓）` : `· 超出预算 ${(totalGB - budget).toFixed(1)} GB ✗`}
         </span>
       </div>
       <div style="color:var(--faint);font-size:12px;margin-top:8px;line-height:1.45">
         ${fits 
-          ? "✓ Configuration verified. High throughput serving ready with zero out-of-memory hazard." 
-          : "⚠️ Remedy overflow: (1) Switch KV Cache dtype from BF16 to FP8/NVFP4, (2) Step down weights precision to NVFP4, or (3) Lower concurrency."}
+          ? "✓ 配置已验证。可进行高吞吐服务，不存在显存溢出风险。"
+          : "⚠️ 解决溢出：（1）将 KV 缓存数据类型从 BF16 切换为 FP8/NVFP4；（2）将权重精度降至 NVFP4；或（3）降低并发数。"}
       </div>
     `;
   }
@@ -3711,7 +3711,7 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
     dotLbl.setAttribute("font-size", "10");
     dotLbl.setAttribute("font-weight", "700");
     dotLbl.setAttribute("font-family", '"IBM Plex Mono", ui-monospace, monospace');
-    dotLbl.textContent = `Batch=1 Decode (${decodeIntensity.toFixed(1)} FLOP/B)`;
+    dotLbl.textContent = `批大小=1 解码（${decodeIntensity.toFixed(1)} FLOP/B）`;
     rfSvg.appendChild(dotLbl);
 
     // Roofline text captions
@@ -3719,7 +3719,7 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
     capX.setAttribute("class", "bp-cap");
     capX.setAttribute("x", P.l + IW / 2); capX.setAttribute("y", H - 6);
     capX.setAttribute("text-anchor", "middle");
-    capX.textContent = "Operational Intensity (FLOPs / Byte, log scale) →";
+    capX.textContent = "运算强度（FLOPs / 字节，对数刻度）→";
     rfSvg.appendChild(capX);
 
     const capY = document.createElementNS(NS, "text");
@@ -3727,24 +3727,24 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
     capY.setAttribute("transform", `rotate(-90 12 ${P.t + IH / 2})`);
     capY.setAttribute("x", 12); capY.setAttribute("y", P.t + IH / 2);
     capY.setAttribute("text-anchor", "middle");
-    capY.textContent = "Attainable Performance (TFLOPs) →";
+    capY.textContent = "可达性能（TFLOPs）→";
     rfSvg.appendChild(capY);
 
     // Stats Sidebar
     rfStats.innerHTML = `
       <div class="rf-stat-box">
-        <div class="rf-head">Hardware Serving Ceiling</div>
-        <div class="rf-row"><span>Memory Bandwidth</span><span class="val amber">${hw.bw} GB/s</span></div>
-        <div class="rf-row"><span>Baseline Generation</span><span class="val">${baselineTokS.toFixed(1)} tok/s</span></div>
-        <div class="rf-row"><span>MTP Speculative Speed</span><span class="val mint" style="font-size:14px;font-weight:700">${effectiveTokS.toFixed(1)} tok/s</span></div>
-        <div class="rf-row"><span>Inter-Token Latency</span><span class="val">${latencyPerTokMs.toFixed(1)} ms</span></div>
-        <div class="rf-row"><span>Time to First Token (est)</span><span class="val">${ttftShortMs.toFixed(0)} ms</span></div>
+        <div class="rf-head">硬件服务上限</div>
+        <div class="rf-row"><span>内存带宽</span><span class="val amber">${hw.bw} GB/s</span></div>
+        <div class="rf-row"><span>基准生成速度</span><span class="val">${baselineTokS.toFixed(1)} 词元/秒</span></div>
+        <div class="rf-row"><span>MTP 推测速度</span><span class="val mint" style="font-size:14px;font-weight:700">${effectiveTokS.toFixed(1)} 词元/秒</span></div>
+        <div class="rf-row"><span>词元间延迟</span><span class="val">${latencyPerTokMs.toFixed(1)} ms</span></div>
+        <div class="rf-row"><span>首词元时间（估算）</span><span class="val">${ttftShortMs.toFixed(0)} ms</span></div>
       </div>
 
       <div class="rf-stat-box" style="padding:10px 14px">
-        <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--faint);margin-bottom:4px">Roofline Takeaway</div>
+        <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--faint);margin-bottom:4px">屋顶线要点</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.45">
-          Single-stream generation operates firmly inside the <b>memory-bandwidth-bound slope</b> (${decodeIntensity.toFixed(1)} vs ${kneePoint.toFixed(0)} FLOP/B knee). MTP speculative draft heads multiply effective speed by <b>${mtpSpeedup(mtpBeta, 2).toFixed(2)}×</b> (§08 acceptance model, β=${mtpBeta.toFixed(2)}, γ_verify=0.15) without increasing weight memory traffic.
+          单流生成稳定运行在<b>内存带宽受限斜坡</b>内（${decodeIntensity.toFixed(1)} 对比 ${kneePoint.toFixed(0)} FLOP/B 拐点）。MTP 推测草稿头无需增加权重内存流量，即可将有效速度提升至 <b>${mtpSpeedup(mtpBeta, 2).toFixed(2)}×</b>（§08 接受模型，β=${mtpBeta.toFixed(2)}，γ_verify=0.15）。
         </div>
       </div>
     `;
@@ -3769,73 +3769,73 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
     if (schedMode === "continuous") {
       schedPipeline.innerHTML = `
         <div class="sched-track">
-          <span class="sched-seq-name">Req 1 (128k Doc)</span>
+          <span class="sched-seq-name">请求 1（128k 文档）</span>
           <div class="sched-blocks">
-            <div class="sched-chunk prefill" style="flex:2" title="Prefill Chunk 1 (16k)">Chunk 1/4</div>
-            <div class="sched-chunk prefill" style="flex:2" title="Prefill Chunk 2 (16k)">Chunk 2/4</div>
-            <div class="sched-chunk prefill" style="flex:2" title="Prefill Chunk 3 (16k)">Chunk 3/4</div>
-            <div class="sched-chunk prefill" style="flex:2" title="Prefill Chunk 4 (16k)">Chunk 4/4</div>
-            <div class="sched-chunk decode" style="flex:1" title="Autoregressive Decode Step">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
+            <div class="sched-chunk prefill" style="flex:2" title="预填充分块 1（16k）">分块 1/4</div>
+            <div class="sched-chunk prefill" style="flex:2" title="预填充分块 2（16k）">分块 2/4</div>
+            <div class="sched-chunk prefill" style="flex:2" title="预填充分块 3（16k）">分块 3/4</div>
+            <div class="sched-chunk prefill" style="flex:2" title="预填充分块 4（16k）">分块 4/4</div>
+            <div class="sched-chunk decode" style="flex:1" title="自回归解码步骤">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
           </div>
         </div>
         <div class="sched-track">
-          <span class="sched-seq-name">Req 2 (Chat 2k)</span>
+          <span class="sched-seq-name">请求 2（2k 对话）</span>
           <div class="sched-blocks">
-            <div class="sched-chunk prefill" style="flex:1.5" title="Instant Prefill (2k)">Prefill</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
+            <div class="sched-chunk prefill" style="flex:1.5" title="即时预填充（2k）">预填充</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
           </div>
         </div>
         <div class="sched-track">
-          <span class="sched-seq-name">Req 3 (Agent SWE)</span>
+          <span class="sched-seq-name">请求 3（软件工程智能体）</span>
           <div class="sched-blocks">
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk prefill" style="flex:1.5" title="Tool Observation (4k)">Tool Call</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk prefill" style="flex:1.5" title="工具观察结果（4k）">工具调用</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--mint);margin-top:6px;display:flex;justify-content:space-between">
-          <span>✓ Zero Pipeline Bubbles · Tensor Core Utilization: <b>84%</b></span>
-          <span>Max Inter-Token Jitter: <b>&lt;18 ms</b></span>
+          <span>✓ 无流水线空泡 · Tensor Core 利用率：<b>84%</b></span>
+          <span>最大词元间抖动：<b>&lt;18 ms</b></span>
         </div>
       `;
     } else {
       // Naive batching
       schedPipeline.innerHTML = `
         <div class="sched-track">
-          <span class="sched-seq-name">Req 1 (128k Doc)</span>
+          <span class="sched-seq-name">请求 1（128k 文档）</span>
           <div class="sched-blocks">
-            <div class="sched-chunk prefill" style="flex:6" title="Monolithic 128k Prefill Stall (3.8s)">Full Monolithic Prefill (3.8s GPU Lock)</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
+            <div class="sched-chunk prefill" style="flex:6" title="整体式 128k 预填充停顿（3.8 秒）">完整整体式预填充（GPU 锁定 3.8 秒）</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
           </div>
         </div>
         <div class="sched-track">
-          <span class="sched-seq-name">Req 2 (Chat 2k)</span>
+          <span class="sched-seq-name">请求 2（2k 对话）</span>
           <div class="sched-blocks">
-            <div class="sched-chunk bubble" style="flex:6" title="Pipeline Bubble (Blocked waiting for Req 1)">Blocked / Stalled (3.8s Jitter)</div>
-            <div class="sched-chunk prefill" style="flex:1">Prefill</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
+            <div class="sched-chunk bubble" style="flex:6" title="流水线空泡（阻塞等待请求 1）">阻塞 / 停顿（抖动 3.8 秒）</div>
+            <div class="sched-chunk prefill" style="flex:1">预填充</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
           </div>
         </div>
         <div class="sched-track">
-          <span class="sched-seq-name">Req 3 (Agent SWE)</span>
+          <span class="sched-seq-name">请求 3（软件工程智能体）</span>
           <div class="sched-blocks">
-            <div class="sched-chunk bubble" style="flex:6" title="Pipeline Bubble (Blocked)">Blocked / Stalled</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
-            <div class="sched-chunk decode" style="flex:1">Dec</div>
+            <div class="sched-chunk bubble" style="flex:6" title="流水线空泡（已阻塞）">阻塞 / 停顿</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
+            <div class="sched-chunk decode" style="flex:1">解码</div>
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:12px;color:var(--rose);margin-top:6px;display:flex;justify-content:space-between">
-          <span>✗ Severe Latency Bubble · Tensor Core Utilization: <b>31%</b></span>
-          <span>Inter-Token Latency Spike: <b>3,800 ms</b></span>
+          <span>✗ 严重延迟空泡 · Tensor Core 利用率：<b>31%</b></span>
+          <span>词元间延迟峰值：<b>3,800 ms</b></span>
         </div>
       `;
     }
@@ -3915,40 +3915,40 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
 
       cards = [
         {
-          op: "1. Residual Input Vector (x)",
-          tag: "Activation",
+          op: "1. 残差输入向量（x）",
+          tag: "激活",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(in_bytes),
-          math: "Input residual hidden stream from preceding RMSNorm (d_model = 5120)"
+          math: "来自前置 RMSNorm 的输入残差隐藏流（d_model = 5120）"
         },
         {
-          op: "2. Fused Q, K, V Linear Projection (W_in)",
-          tag: "GEMM Projection",
+          op: "2. 融合 Q、K、V 线性投影（W_in）",
+          tag: "GEMM 投影",
           shape: `[${B}, ${T}, 10240]`,
           bytes: formatBytes(qkv_bytes),
           math: `Q, K: <code>[${B}, ${T}, 16, 128]</code> · V: <code>[${B}, ${T}, 48, 128]</code>`
         },
         {
-          op: "3. L2 Head Normalization & Write Gate (β_t)",
-          tag: "Normalization + Gating",
+          op: "3. L2 头归一化与写入门（β_t）",
+          tag: "归一化 + 门控",
           shape: `[${B}, ${T}, 48]`,
           bytes: formatBytes(beta_bytes),
-          math: `L2-norm on Q,K; Q/K repeated 3× to 48 heads; β_t = 2σ(xW_β + b_β) ∈ (0, 2)`
+          math: `对 Q、K 做 L2 归一化；Q/K 重复 3× 扩展至 48 个头；β_t = 2σ(xW_β + b_β) ∈ (0, 2)`
         },
         {
-          op: "4. Associative Recurrent State Matrix (S_t)",
-          tag: "State Memory",
+          op: "4. 关联循环状态矩阵（S_t）",
+          tag: "状态内存",
           shape: `[${B}, 48, 128, 128]`,
           highlight: true,
           bytes: formatBytes(state_bytes),
-          math: `Delta-rule matrix update: <code>S_t = α_t S_{t-1} − β_t (S_{t-1} k_t − v_t) k_tᵀ</code>`
+          math: `Delta 规则矩阵更新：<code>S_t = α_t S_{t-1} − β_t (S_{t-1} k_t − v_t) k_tᵀ</code>`
         },
         {
-          op: "5. Associative Readout & Output Projection (W_out)",
-          tag: "Output GEMM",
+          op: "5. 关联读取与输出投影（W_out）",
+          tag: "输出 GEMM",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(out_bytes),
-          math: `y_t = S_tᵀ q_t ∈ <code>[${B}, ${T}, 6144]</code> → Linear Proj to <code>[${B}, ${T}, 5120]</code>`
+          math: `y_t = S_tᵀ q_t ∈ <code>[${B}, ${T}, 6144]</code> → 线性投影至 <code>[${B}, ${T}, 5120]</code>`
         }
       ];
     } else if (mod === "attention") {
@@ -3971,40 +3971,40 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
 
       cards = [
         {
-          op: "1. Residual Input Vector (x)",
-          tag: "Activation",
+          op: "1. 残差输入向量（x）",
+          tag: "激活",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(in_bytes),
-          math: "Input residual stream from RMSNorm(x)"
+          math: "来自 RMSNorm(x) 的输入残差流"
         },
         {
-          op: "2. Q, K, V & Gate Projections",
-          tag: "Linear GEMM",
+          op: "2. Q、K、V 与门控投影",
+          tag: "线性 GEMM",
           shape: `Q: [${B}, ${T}, 24, 256] · KV: [${B}, ${T}, 4, 256]`,
           bytes: formatBytes(q_bytes + kv_bytes + gate_bytes),
-          math: `Grouped-Query Attention (24 query heads : 4 KV heads = 6:1 sharing)`
+          math: `分组查询注意力（24 个查询头 : 4 个 KV 头 = 6:1 共享）`
         },
         {
-          op: "3. 3D MRoPE Rotary Phase Embedding",
-          tag: "Coordinate Rotation",
-          shape: `[${B}, ${T}, 24, 64] rotary`,
+          op: "3. 3D MRoPE 旋转相位嵌入",
+          tag: "坐标旋转",
+          shape: `[${B}, ${T}, 24, 64] 旋转`,
           bytes: formatBytes(q_bytes * (64 / 256)),
-          math: `Rotates head channels 0..63 across <code>[11, 11, 10]</code> sections; channels 64..255 pass unmodified`
+          math: `按 <code>[11, 11, 10]</code> 分段旋转头通道 0..63；通道 64..255 保持不变`
         },
         {
-          op: "4. Autoregressive KV-Cache Buffer",
-          tag: "Unbounded Buffer",
+          op: "4. 自回归 KV 缓存缓冲区",
+          tag: "无界缓冲区",
           shape: `[${B}, 4, ${T}, 256] × 2 (K & V)`,
           highlight: true,
           bytes: formatBytes(kv_bytes),
-          math: `Grows linearly with sequence length T: <code>2 · 4 · 256 · T · dtype</code>`
+          math: `随序列长度 T 线性增长：<code>2 · 4 · 256 · T · dtype</code>`
         },
         {
-          op: "5. FlashAttention SDPA & Output σ-Gate",
-          tag: "Attention + Gating",
+          op: "5. FlashAttention SDPA 与输出 σ 门",
+          tag: "注意力 + 门控",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(out_bytes),
-          math: `Output = <code>(SDPA(Q, K_rep, V_rep) ⊙ σ(x W_g)) @ W_out</code>`
+          math: `输出 = <code>(SDPA(Q, K_rep, V_rep) ⊙ σ(x W_g)) @ W_out</code>`
         }
       ];
     } else if (mod === "swiglu") {
@@ -4020,33 +4020,33 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
 
       cards = [
         {
-          op: "1. Pre-FFN Residual Input",
-          tag: "Activation",
+          op: "1. FFN 前残差输入",
+          tag: "激活",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(in_bytes),
-          math: "Post-mixer residual stream passed through RMSNorm"
+          math: "混合器后的残差流经过 RMSNorm"
         },
         {
-          op: "2. Parallel Gate & Up Projections (W_gate, W_up)",
-          tag: "GEMM Projection",
+          op: "2. 并行门控与上投影（W_gate、W_up）",
+          tag: "GEMM 投影",
           shape: `[${B}, ${T}, 17408] × 2`,
           highlight: true,
           bytes: formatBytes(gate_up_bytes),
-          math: `Expansion ratio 3.4 × 5120 = 17,408 intermediate hidden dimension (padded to a multiple of 2,048)`
+          math: `扩展比 3.4 × 5120 = 17,408 个中间隐藏维度（填充至 2,048 的倍数）`
         },
         {
-          op: "3. Swish (SiLU) Activation & Elementwise Hadamard Product",
-          tag: "Non-Linearity",
+          op: "3. Swish（SiLU）激活与逐元素 Hadamard 积",
+          tag: "非线性",
           shape: `[${B}, ${T}, 17408]`,
           bytes: formatBytes(B * T * D_FF * b),
-          math: `Intermediate tensor: <code>h_ffn = SiLU(x @ W_gate) ⊙ (x @ W_up)</code>`
+          math: `中间张量：<code>h_ffn = SiLU(x @ W_gate) ⊙ (x @ W_up)</code>`
         },
         {
-          op: "4. Down-Projection to Residual Bus (W_down)",
-          tag: "Down GEMM",
+          op: "4. 下投影至残差总线（W_down）",
+          tag: "下投影 GEMM",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(out_bytes),
-          math: `Final projection: <code>h_ffn @ W_down</code> added to residual stream`
+          math: `最终投影：将 <code>h_ffn @ W_down</code> 加入残差流`
         }
       ];
     } else if (mod === "mtp") {
@@ -4065,26 +4065,26 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
 
       cards = [
         {
-          op: "1. Final Backbone Hidden States (h_64)",
-          tag: "Backbone State",
+          op: "1. 骨干网络最终隐藏状态（h_64）",
+          tag: "骨干网络状态",
           shape: `[${B}, ${T}, 5120]`,
           bytes: formatBytes(in_bytes),
-          math: "Latent output from 64th super-block layer"
+          math: "来自第 64 个超级块层的潜在输出"
         },
         {
-          op: "2. MTP Draft Head Projections (Depth k=1, k=2)",
-          tag: "Draft GEMM",
+          op: "2. MTP 草稿头投影（深度 k=1、k=2）",
+          tag: "草稿 GEMM",
           shape: `[${B}, ${T}, 2, 5120]`,
           bytes: formatBytes(proj_bytes),
-          math: `Predicts +1 and +2 future token draft representations simultaneously`
+          math: `同时预测未来第 +1 和 +2 个词元的草稿表示`
         },
         {
-          op: "3. Untied Vocabulary Classification Logits",
-          tag: "Speculative Logits",
+          op: "3. 非绑定词表分类 logits",
+          tag: "推测 logits",
           shape: `[${B}, ${T}, 2, 248320]`,
           highlight: true,
           bytes: formatBytes(logits_bytes),
-          math: `Parallel draft logits evaluated against verification threshold in a single forward step`
+          math: `在一次前向步骤中并行评估草稿 logits 是否达到验证阈值`
         }
       ];
     } else if (mod === "superblock") {
@@ -4102,33 +4102,33 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
 
       cards = [
         {
-          op: "Layer 4k+0: Gated DeltaNet #1 + SwiGLU",
-          tag: "Linear Attention",
-          shape: `State: [${B}, 48, 128, 128]`,
+          op: "层 4k+0：门控 DeltaNet #1 + SwiGLU",
+          tag: "线性注意力",
+          shape: `状态：[${B}, 48, 128, 128]`,
           bytes: formatBytes(B * 48 * 128 * 128 * b),
-          math: "Sub-quadratic prefill + constant-space recurrence"
+          math: "次二次复杂度预填充 + 常量空间递归"
         },
         {
-          op: "Layer 4k+1: Gated DeltaNet #2 + SwiGLU",
-          tag: "Linear Attention",
-          shape: `State: [${B}, 48, 128, 128]`,
+          op: "层 4k+1：门控 DeltaNet #2 + SwiGLU",
+          tag: "线性注意力",
+          shape: `状态：[${B}, 48, 128, 128]`,
           bytes: formatBytes(B * 48 * 128 * 128 * b),
-          math: "Associative memory retrieval with learned forgetting"
+          math: "带学习遗忘机制的联想记忆检索"
         },
         {
-          op: "Layer 4k+2: Gated DeltaNet #3 + SwiGLU",
-          tag: "Linear Attention",
-          shape: `State: [${B}, 48, 128, 128]`,
+          op: "层 4k+2：门控 DeltaNet #3 + SwiGLU",
+          tag: "线性注意力",
+          shape: `状态：[${B}, 48, 128, 128]`,
           bytes: formatBytes(B * 48 * 128 * 128 * b),
-          math: "Deep syntactic & linguistic token tracking"
+          math: "深层语法与语言词元追踪"
         },
         {
-          op: "Layer 4k+3: Gated Full Attention + SwiGLU",
-          tag: "Full Attention",
-          shape: `KV Cache: [${B}, 4, ${T}, 256]`,
+          op: "层 4k+3：门控全注意力 + SwiGLU",
+          tag: "全注意力",
+          shape: `KV 缓存：[${B}, 4, ${T}, 256]`,
           highlight: true,
           bytes: formatBytes(attn_kv_bytes),
-          math: "Exact global cross-token routing with 3D MRoPE positions"
+          math: "利用 3D MRoPE 位置实现精确的全局跨词元路由"
         }
       ];
     }
@@ -4152,29 +4152,29 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
     // Render statistics sidebar
     tracerStats.innerHTML = `
       <div class="tracer-stat-box">
-        <div class="tsb-head">Subsystem Resource Profile</div>
-        <div class="tsb-row"><span>Parameters</span><span class="val amber">${(stats.params / 1e6).toFixed(1)} M</span></div>
-        <div class="tsb-row"><span>Forward FLOPs</span><span class="val">${formatFlops(stats.flops)}</span></div>
-        <div class="tsb-row"><span>Peak Activation RAM</span><span class="val">${formatBytes(stats.actMemory)}</span></div>
-        <div class="tsb-row"><span>Persistent State RAM</span><span class="val mint">${formatBytes(stats.stateMemory)}</span></div>
+        <div class="tsb-head">子系统资源概况</div>
+        <div class="tsb-row"><span>参数量</span><span class="val amber">${(stats.params / 1e6).toFixed(1)} M</span></div>
+        <div class="tsb-row"><span>前向 FLOPs</span><span class="val">${formatFlops(stats.flops)}</span></div>
+        <div class="tsb-row"><span>峰值激活内存</span><span class="val">${formatBytes(stats.actMemory)}</span></div>
+        <div class="tsb-row"><span>持久状态内存</span><span class="val mint">${formatBytes(stats.stateMemory)}</span></div>
       </div>
 
       <div class="tracer-stat-box">
-        <div class="tsb-head">Serving Hardware Context</div>
-        <div class="tsb-row"><span>Batch Size (B)</span><span class="val">${B}</span></div>
-        <div class="tsb-row"><span>Context Tokens (T)</span><span class="val">${T.toLocaleString()}</span></div>
-        <div class="tsb-row"><span>Precision Dtype</span><span class="val">${b === 2 ? "BF16 (16-bit)" : b === 1 ? "FP8 (8-bit)" : "FP32 (32-bit)"}</span></div>
-        <div class="tsb-row"><span>Architecture Ratio</span><span class="val amber">3:1 Hybrid</span></div>
+        <div class="tsb-head">服务硬件上下文</div>
+        <div class="tsb-row"><span>批大小（B）</span><span class="val">${B}</span></div>
+        <div class="tsb-row"><span>上下文词元（T）</span><span class="val">${T.toLocaleString()}</span></div>
+        <div class="tsb-row"><span>精度数据类型</span><span class="val">${b === 2 ? "BF16（16 位）" : b === 1 ? "FP8（8 位）" : "FP32（32 位）"}</span></div>
+        <div class="tsb-row"><span>架构比例</span><span class="val amber">3:1 混合</span></div>
       </div>
 
       <div class="tracer-stat-box" style="padding:10px 14px">
-        <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--faint);margin-bottom:4px">Key Tensor Insight</div>
+        <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--faint);margin-bottom:4px">关键张量洞见</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.45">
           ${mod === "deltanet" 
-            ? "DeltaNet's associative matrix <code>S</code> remains strictly constant in size (<b>" + formatBytes(stats.stateMemory) + "</b>) regardless of whether sequence length T is 1 or 262,144 tokens."
+            ? "无论序列长度 T 是 1 还是 262,144 个词元，DeltaNet 的关联矩阵 <code>S</code> 大小始终严格固定（<b>" + formatBytes(stats.stateMemory) + "</b>）。"
             : mod === "attention"
-            ? "Full Attention's KV cache scales linearly with T (<b>" + formatBytes(stats.stateMemory) + "</b>), requiring the 3:1 hybrid design to bound total footprint."
-            : "SwiGLU provides a wide 3.4× expansion for superior multi-step reasoning capabilities with zero recurrent state overhead."}
+            ? "全注意力的 KV 缓存随 T 线性增长（<b>" + formatBytes(stats.stateMemory) + "</b>），因此需要采用 3:1 混合设计来限制总占用。"
+            : "SwiGLU 提供宽达 3.4× 的扩展，在不产生循环状态开销的情况下增强多步推理能力。"}
         </div>
       </div>
     `;
@@ -4196,33 +4196,33 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
   const CODE_FILES = {
     full: {
       name: "qwen38_full.py",
-      desc: "Complete self-contained hybrid architecture with 16×[ΔΔΔA] super-blocks, SwiGLU, and MTP head.",
-      meta: "342 lines · Python 3.10+ · PyTorch 2.0+"
+      desc: "完整、自包含的混合架构，含 16×[ΔΔΔA] 超级块、SwiGLU 和 MTP 头。",
+      meta: "342 行 · Python 3.10+ · PyTorch 2.0+"
     },
     deltanet: {
       name: "01_deltanet.py",
-      desc: "Gated DeltaNet linear mixer with L2 normalization and associative delta-rule state updates.",
-      meta: "68 lines · Linear Attention §04"
+      desc: "门控 DeltaNet 线性混合器，采用 L2 归一化和关联 Delta 规则状态更新。",
+      meta: "68 行 · 线性注意力 §04"
     },
     attention: {
       name: "02_attention.py",
-      desc: "Gated Attention with Grouped-Query Attention (GQA), 3D MRoPE, and Sigmoid output gate.",
-      meta: "66 lines · Full Attention §05"
+      desc: "门控注意力，采用分组查询注意力（GQA）、3D MRoPE 和 Sigmoid 输出门。",
+      meta: "66 行 · 全注意力 §05"
     },
     swiglu: {
       name: "03_swiglu_block.py",
-      desc: "RMSNorm, SwiGLU FFN with 17,408 hidden dimension, and the 16×[ΔΔΔA] hybrid super-block motif.",
-      meta: "55 lines · FFN & Residual Bus §06"
+      desc: "RMSNorm、隐藏维度为 17,408 的 SwiGLU FFN，以及 16×[ΔΔΔA] 混合超级块结构。",
+      meta: "55 行 · FFN 与残差总线 §06"
     },
     mtp: {
       name: "04_mtp_head.py",
-      desc: "Multi-Token Prediction draft heads for parallel speculative decoding.",
-      meta: "24 lines · Speculative Heads §08"
+      desc: "用于并行推测解码的多词元预测草稿头。",
+      meta: "24 行 · 推测头 §08"
     },
     verify: {
       name: "05_run_verify.py",
-      desc: "Executable test harness with shape assertions, parameter counting, and forward inference timing.",
-      meta: "46 lines · Verification Script"
+      desc: "可执行测试工具，包含形状断言、参数计数和前向推理计时。",
+      meta: "46 行 · 验证脚本"
     }
   };
   document.querySelectorAll('script[type="text/plain"][data-py]').forEach(el => {
@@ -4332,25 +4332,25 @@ Let's modify the test to use an event-driven 'wait_for_condition(timeout=2.0)'.`
   if (btnToggleAnnot) {
     btnToggleAnnot.addEventListener("click", () => {
       showAnnotations = !showAnnotations;
-      if (annotStateEl) annotStateEl.textContent = showAnnotations ? "ON" : "OFF";
+      if (annotStateEl) annotStateEl.textContent = showAnnotations ? "开" : "关";
       renderCodeStudio();
     });
   }
 
   if (btnCopyCode) {
-    const origLabel = copyBtnText ? copyBtnText.textContent : "Copy code";
+    const origLabel = copyBtnText ? copyBtnText.textContent : "复制代码";
     btnCopyCode.addEventListener("click", () => {
       const file = CODE_FILES[activeFile];
       if (!file) return;
       navigator.clipboard.writeText(file.code).then(() => {
-        if (copyBtnText) copyBtnText.textContent = "Code copied ✓";
+        if (copyBtnText) copyBtnText.textContent = "代码已复制 ✓";
         btnCopyCode.classList.add("primary");
         setTimeout(() => {
           if (copyBtnText) copyBtnText.textContent = origLabel;
           btnCopyCode.classList.remove("primary");
         }, 2000);
       }).catch(() => {
-        if (copyBtnText) copyBtnText.textContent = "Copy failed — select the code and copy manually.";
+        if (copyBtnText) copyBtnText.textContent = "复制失败——请选择代码并手动复制。";
         setTimeout(() => { if (copyBtnText) copyBtnText.textContent = origLabel; }, 2600);
       });
     });

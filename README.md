@@ -1,105 +1,103 @@
-# Qwen 3.8-27B — The Architecture, From Scratch
+# Qwen 3.8-27B — 从零理解模型架构（简体中文版）
 
-A self-contained static explainer site that derives Alibaba's **Qwen 3.8-27B**
-(August 2026, Apache 2.0) from first principles: architecture mathematics, data
-pipeline, training curriculum, post-training RL, and inference optimizations,
-with interactive widgets, SVG diagrams, and animated charts. No build step,
-no framework, no npm.
+独立的静态讲解网站，从基本原理出发，解析阿里巴巴 **Qwen 3.8-27B**
+（2026 年 8 月，模型采用 Apache 2.0 许可证）的架构数学、数据流水线、
+训练课程、后训练强化学习和推理优化，并配有交互组件、SVG 示意图及动态图表。
+无需构建步骤、前端框架或安装 npm 依赖。
 
-**Read it live:** https://atandra2000.github.io/qwen3.8-guide/
+**英文原版：** https://atandra2000.github.io/qwen3.8-guide/
 
-Part of a from-scratch deep learning portfolio. See
-[atandra2000](https://github.com/atandra2000) for the accompanying model
-implementations (GPT-2 → hybrid DeltaNet/attention stacks) in raw PyTorch.
+原作为从零实现深度学习系列的一部分，作者为 Atandra Bharati。
+配套的原生 PyTorch 模型实现（从 GPT-2 到 DeltaNet/注意力混合堆栈）见
+[atandra2000](https://github.com/atandra2000)。
+本仓库提供简体中文本地化，保留原作署名、技术内容与 MIT 许可证。
 
-## Run locally
+## 本地运行
 
 ```bash
-cd qwen38-site
-python3 -m http.server 8137
-# open http://localhost:8137
+npm run serve
+# 打开 http://localhost:8137
 ```
 
-Any static file server works (`npx serve`, `php -S`, nginx…). Opening
-`index.html` directly from disk also works, because there are no fetch() calls.
+也可以使用任意静态文件服务器（如 `php -S`、nginx）。
+由于没有 fetch() 调用，直接打开本地的 `index.html` 也能使用。
 
-## Deploy
+## 部署
 
-| Host | Command |
+| 平台 | 命令或方式 |
 |------|---------|
-| GitHub Pages | **Live:** https://atandra2000.github.io/qwen3.8-guide/ (served from branch `main`, root `/`) |
-| Vercel | `vercel --prod` (framework preset: Other) |
-| Netlify | drag-and-drop the folder onto app.netlify.com/drop |
-| Cloudflare Pages | connect repo, build command: none, output dir: `/` |
+| GitHub Pages | 从 `main` 分支的根目录 `/` 部署；上面的链接为英文原版 |
+| Vercel | `vercel --prod`（框架预设：Other） |
+| Netlify | 将目录拖放到 app.netlify.com/drop |
+| Cloudflare Pages | 连接仓库，不设置构建命令，输出目录为 `/` |
 | S3 | `aws s3 sync . s3://<bucket>/ --cache-control "max-age=86400"` |
 
-## Structure
+## 目录结构
 
 ```
 qwen38-site/
-├── index.html          # the whole page (assembled from _parts/)
-├── css/styles.css      # design system (research-paper dark, two type registers)
-├── js/app.js           # 36 interactive widgets, all computed client-side
-└── _parts/             # source sections; edit here, then re-assemble:
+├── index.html          # 完整页面（由 _parts/ 拼接生成）
+├── css/styles.css      # 视觉样式与中西文字体回退
+├── js/app.js           # 36 个交互组件，全部在客户端计算
+├── og-image.svg        # 中文社交分享卡片源图（og-image.png 为栅格版本）
+└── _parts/             # 章节源文件；修改后重新拼接：
                          cat _parts/0*.html > index.html
 ```
 
-## Design system
+## 视觉设计
 
-Two registers, one system: **serif carries the argument** (STIX Two Text
-masthead + headings and body prose, one family with hierarchy by weight as in
-journal typesetting), **mono carries the evidence** (IBM Plex Mono for math, tables,
-code, widget readouts, labels). Color is semantic, not
-decorative: amber = DeltaNet/primary, mint = attention/vision, iris =
-training/RL, sky = data pipeline, rose = warnings. The hero is a datasheet-style
-spec sheet, not stat cards.
+两种字体风格共用一套设计：**衬线字体承载论述**（STIX Two Text 用于刊头、
+标题及正文，通过字重区分层次），**等宽字体承载证据**（IBM Plex Mono 用于数学、
+表格、代码、组件读数与标签），并提供本地中文字体回退。
+颜色具有语义：主色对应 DeltaNet，青色对应注意力与视觉，靛蓝对应训练与强化学习，
+琥珀色对应数据流水线，赭红色表示警告。首页采用数据手册式规格表，而非统计卡片。
 
-## Content map
+## 内容索引
 
-| § | Section | Key math / artifacts |
+| § | 章节 | 关键数学与交互内容 |
 |---|---------|---------------------|
-| 01 | Orientation + parameter audit | full dataflow diagram (Fig. 1), live param accounting → 27.58B ≈ 55.2 GB BF16 |
-| 02 | Tokenizer & input contract | interactive BPE token segmenter, multilingual fertility matrix, special token protocol catalog |
-| 03 | Hybrid backbone | 16×[3Δ+1A] periodic super-block, 64-layer memory accumulator, motif visualizer, Pareto matrix |
-| 04 | Gated DeltaNet | eq.(3)–(4): delta rule + α/β gates, native associative memory lab, chunked WY scan visualizer |
-| 05 | Gated Attention | eq.(5)–(7): GQA 6:1 KV cache calculator, 3D MRoPE [11,11,10] phase visualizer, output σ-gate noise suppressor |
-| 06 | FFN & residual stream | eq.(8)–(10): SwiGLU 17.11B parameter accounting, activation explorer, residual bus Pre-RMSNorm variance tracker |
-| 07 | Vision front-end | interactive 5-stage multimodal pipeline, image/video token budget calculator, SigLIP pairwise loss, ViT parameter accounting |
-| 08 | Multi-Token Prediction | eq.(12)–(13), interactive speculative decoding engine, single-pass verification tree, MTP vs draft model matrix |
-| 09 | Data pipeline | interactive 5-stage data funnel, dynamic curriculum mix explorer, best-fit sequence packing visualizer, verifier synthesis matrix |
-| 10 | Pretraining | interactive 3-stage curriculum, loss trajectory milestone scrubber, cluster compute & budget calculator, AdamW β₂ fast-forgetting simulator |
-| 11 | Post-training | interactive 4-stage pipeline, critic-free GRPO group advantage simulator, test-time compute explorer, agentic CoT trace viewer |
-| 12 | Optimizations | stacked VRAM budget planner, hardware roofline & tok/s simulator, chunked prefill scheduler, microscaling inspector |
-| 13 | Benchmarks | multi-axis capability radar, parity scatter, comparative bar waterfall, Pareto efficiency frontier, master benchmark index |
-| 14 | From scratch, as code | interactive tensor dimension tracer, multi-tab PyTorch studio, downloadable .py scripts, mixer contract matrix |
-| 15 | Synthesis | six takeaways |
+| 01 | 导读与参数审计 | 完整数据流图（图 1），实时参数核算 → 27.58B ≈ 55.2 GB BF16 |
+| 02 | 分词器与输入约定 | BPE 分词交互演示、多语言词元繁衍率（fertility）矩阵、特殊词元协议目录 |
+| 03 | 混合骨干网络 | 16×[3Δ+1A] 周期超块、64 层内存累加器、结构可视化、帕累托矩阵 |
+| 04 | 门控 DeltaNet | 式 (3)–(4)：delta 规则与 α/β 门控、联想记忆实验、分块 WY 扫描 |
+| 05 | 门控注意力 | 式 (5)–(7)：GQA 6:1 KV 缓存计算器、3D MRoPE [11,11,10] 相位、输出 σ 门控降噪 |
+| 06 | FFN 与残差流 | 式 (8)–(10)：SwiGLU 17.11B 参数核算、激活函数、Pre-RMSNorm 方差追踪 |
+| 07 | 视觉前端 | 五阶段多模态流水线、图像/视频词元预算、SigLIP 成对损失、ViT 参数核算 |
+| 08 | 多词元预测 | 式 (12)–(13)、推测解码引擎、单次验证树、MTP 与草稿模型对比 |
+| 09 | 数据流水线 | 五阶段数据漏斗、动态课程配比、最佳适配序列打包、验证器合成矩阵 |
+| 10 | 预训练 | 三阶段课程、损失轨迹、集群算力与预算、AdamW β₂ 快速遗忘模拟 |
+| 11 | 后训练 | 四阶段流水线、无评论家 GRPO 组内优势模拟、测试时计算、智能体思维链轨迹 |
+| 12 | 推理优化 | 显存预算、硬件屋顶线与吞吐量模拟、分块预填充、微缩放格式 |
+| 13 | 基准测试 | 能力雷达图、对比散点图、条形图、帕累托效率前沿、基准测试总表 |
+| 14 | 从零实现代码 | 张量维度追踪、多标签页 PyTorch 代码工作台、可下载的 .py 脚本、混合器接口矩阵 |
+| 15 | 总结 | 六项要点 |
 
-## Sourcing honesty
+## 来源与口径说明
 
-- **Architecture specs** (64 layers, 48Δ/16A split, head counts, dims, vocab,
-  context, YaRN params): official HF model card
+- **架构规格**（64 层、48Δ/16A 配比、头数、维度、词表、
+  上下文与 YaRN 参数）：来自官方 HF 模型卡
   [`Qwen/Qwen3.8-27B`](https://huggingface.co/Qwen/Qwen3.8-27B).
-- **Benchmarks**: vendor-published numbers, labeled as such on the page.
-- **Training/data methodology**: follows the Qwen3 technical report
-  ([arXiv:2505.09388](https://arxiv.org/abs/2505.09388)), the most recent
-  *published* recipe. The 3.8 report had not been released when this was
-  written; scale figures are marked as such.
-- **Parameter audit assumptions**: the §01 widget counts every projection once
-  and includes the untied LM head. The MTP module (≈1.32B) and vision tower
-  (≈0.9B) are estimates, so toggle them off/on in the widget. With both included:
-  27.58B ≈ 55.2 GB BF16 (decimal GB, ÷1e9, matching HF and prose figures).
-- Every derived number (param counts, KV cache sizes, FLOPs) is recomputed
-  client-side from the config so the page can't drift from its own math.
+- **基准测试**：由模型发布方公布，页面中已注明。
+- **训练与数据方法**：沿用 Qwen3 技术报告
+  （[arXiv:2505.09388](https://arxiv.org/abs/2505.09388)），即原文撰写时最新的
+  *已公开*方案。当时 3.8 报告尚未发布，规模数字已标明口径。
+- **参数审计假设**：§01 的组件对每个投影只计一次，并计入不共享权重的 LM 输出头。
+  MTP 模块（≈1.32B）和视觉塔（≈0.9B）为估算值，可在组件中切换是否计入。
+  两者均计入时：27.58B ≈ 55.2 GB BF16（十进制 GB，即 ÷1e9，与 HF 及正文一致）。
+- 所有推导数值（参数量、KV 缓存大小、FLOPs）均根据配置在客户端重新计算，
+  保证页面与自身数学推导一致。
 
-## Tests
+## 测试与本地化维护
 
-Static checks for `_parts/`↔`index.html` assembly integrity, stylesheet
-contract, parameter-math regression, and accessibility fallbacks:
+静态检查覆盖 `_parts/` 与 `index.html` 的拼接一致性、样式约定、
+参数计算回归及无障碍回退。修改章节源文件后，必须重新拼接 `index.html`；
+交互组件的动态文案位于 `js/app.js`，需要同步维护。
 
 ```bash
 npm test        # node test-site.mjs
 ```
 
-## License
+## 许可证
 
-MIT. See [LICENSE](LICENSE).
+网站代码与文档采用 MIT 许可证，原作者版权声明保持不变，见 [LICENSE](LICENSE)。
+模型本身的 Apache 2.0 许可证与网站许可证不同。
