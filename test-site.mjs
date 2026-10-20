@@ -19,6 +19,45 @@ test("index.html is byte-identical to the concatenated _parts", () => {
   assert.equal(parts.join(""), html);
 });
 
+test("the page declares Simplified Chinese and localizes all chapter navigation", () => {
+  assert.match(html, /<html lang="zh-CN">/);
+  assert.match(html, /<title>[^<]*[\u3400-\u9fff][^<]*<\/title>/);
+  const navigation = [...html.matchAll(/<a href="#([^"]+)" data-num="(\d+)" data-label="([^"]+)">/g)];
+  assert.equal(navigation.length, 15);
+  for (const [, id, , label] of navigation) {
+    assert.match(label, /[\u3400-\u9fff]/, `${id} needs a Chinese navigation label`);
+    assert.ok(html.includes(`<section id="${id}">`), `${id} must still target its chapter`);
+  }
+});
+
+test("Chinese heading anchors remain meaningful and distinguishable", () => {
+  const declaration = app.match(/^const slug = .+;$/m);
+  assert.ok(declaration, "heading slug helper must exist");
+  const context = {};
+  vm.runInNewContext(`${declaration[0]}\nfirst = slug("门控注意力"); second = slug("混合骨干网络");`, context);
+  assert.equal(context.first, "门控注意力");
+  assert.equal(context.second, "混合骨干网络");
+  assert.notEqual(context.first, context.second);
+});
+
+test("chapter prose does not regress to untranslated English paragraphs", () => {
+  for (const [, paragraph] of html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/g)) {
+    const prose = paragraph.replace(/<[^>]+>/g, "").replace(/\$\$?[\s\S]*?\$\$?/g, "").trim();
+    if (/[A-Za-z]{3,}\s+[A-Za-z]{3,}/.test(prose)) {
+      assert.match(prose, /[\u3400-\u9fff]/, `untranslated paragraph: ${prose.slice(0, 120)}`);
+    }
+  }
+});
+
+test("localization preserves the original license and attribution", () => {
+  const license = readFileSync(new URL("./LICENSE", import.meta.url), "utf8");
+  assert.match(license, /MIT License/);
+  assert.match(license, /Copyright \(c\) 2026 Atandra Bharati/);
+  const readme = readFileSync(new URL("./README.md", import.meta.url), "utf8");
+  assert.match(readme, /https:\/\/github\.com\/atandra2000/);
+  assert.match(readme, /Atandra Bharati/);
+});
+
 test("CFG.total × 2 lands at 55.17 GB BF16 (decimal GB)", () => {
   const start = app.indexOf("const CFG = {");
   const end = app.indexOf("const fmtP", start);

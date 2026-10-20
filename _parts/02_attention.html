@@ -1,89 +1,89 @@
 <!-- ============================================================ 04 DELTANET -->
 <section id="deltanet">
-  <div class="sec-tag">04 · Gated DeltaNet — the linear-attention engine</div>
-  <h2>Constant-memory associative recall via test-time fast weights</h2>
-  <p class="lead">In 48 of the 64 layers, Qwen 3.8 replaces quadratic $T \times T$ softmax attention with Gated DeltaNet. Instead of storing past tokens in an unbounded KV cache, each layer maintains a fixed-size $128 \times 128$ associative memory matrix $S_t \in \mathbb{R}^{d_k \times d_v}$ per head, continuously updated via an error-driven delta rule with data-dependent input and decay gates.</p>
+  <div class="sec-tag">04 · 门控 DeltaNet（Gated DeltaNet）— 线性注意力引擎</div>
+  <h2>通过测试时快速权重实现恒定内存的关联回忆</h2>
+  <p class="lead">在 64 层中的 48 层里，Qwen 3.8 使用门控 DeltaNet 取代了复杂度为二次方的 $T \times T$ softmax 注意力。每层不再把过去的词元存入无限增长的 KV 缓存，而是为每个头维护一个固定大小的 $128 \times 128$ 关联记忆矩阵 $S_t \in \mathbb{R}^{d_k \times d_v}$，并通过带有数据依赖型输入门控和衰减门控、由误差驱动的 delta 规则持续更新该矩阵。</p>
 
-  <h3>From additive superposition to error-correcting writes</h3>
-  <p>The state $S_t$ is a <em>fast weight</em> matrix, "fast" because it is written at inference time by the data passing through the layer, in contrast to the "slow" learned projection weights that produce the queries, keys, and values. The name DeltaNet is literally "delta rule on a net": the state is updated by an error-correcting rule rather than by accumulation. To see why that matters, start from what plain linear attention does. It writes each token additively, $S_t = S_{t-1} + v_t k_t^{\top}$. Every new key–value pair is simply summed in, so writing a new value at an address $k$ that already holds an old value does not remove the old one: the two outer products coexist, and a later query $q \approx k$ retrieves a blend of both. Over a long sequence the state saturates into a superposition of every pair ever written, and individual records become irrecoverable ghosts. That is the failure mode the widget below calls "destructive ghost traces."</p>
-  <p>The delta rule replaces the sum with an overwrite. Equation (3) writes $S_t = \alpha_t\big[S_{t-1}(I - \beta_t k_t k_t^{\top}) + \beta_t v_t k_t^{\top}\big]$. Ignore $\alpha_t$ for a moment and read the bracket in two steps. First, $S_{t-1}(I - \beta_t k_t k_t^{\top})$: because $k_t$ is L2-normalized, $k_t k_t^{\top}$ is the projector onto the $k_t$ direction, so $(I - \beta_t k_t k_t^{\top})$ removes, or scales down, whatever $S_{t-1}$ currently stores at address $k_t$. Second, $+\beta_t v_t k_t^{\top}$ stamps the new record $(k_t, v_t)$ into the vacated slot. The net effect is a <em>targeted overwrite</em>: writing $(k, v)$ replaces the old association at $k$ while leaving every other address intact, instead of layering the new on top of the old. With $\beta_t = 1$ this is exact ($S_t k_t = v_t$ to within the projection), which is why the delta rule is called error-correcting: the update is precisely the correction that makes the state satisfy $S k = v$.</p>
-  <p>The $\alpha_t$ out front is a global decay applied after the write, and it is what stops the fixed-size state from filling up forever; we return to it below. The structural point is that the delta rule turns the recurrent state from a lossy sum (which can only blur) into an addressable memory that can update a single slot in place. That is the mechanism behind the "constant-memory associative recall" in the section title, and it is what lets 48 of the 64 layers dispense with the KV cache entirely.</p>
+  <h3>从加法叠加到纠错式写入</h3>
+  <p>状态 $S_t$ 是一个<em>快速权重</em>矩阵；之所以称为“快速”，是因为它在推理时由流经该层的数据写入，这与生成查询、键和值的“慢速”已学习投影权重相对。DeltaNet 这个名称的字面含义就是“网络上的 delta 规则”：状态通过纠错规则而非累加来更新。要理解这为何重要，可以先看普通线性注意力的做法。它以加法方式写入每个词元：$S_t = S_{t-1} + v_t k_t^{\top}$。每个新的键值对只是简单相加，因此在已经保存旧值的地址 $k$ 写入新值时，并不会移除旧值：两个外积同时存在，之后的查询 $q \approx k$ 会检索出二者的混合结果。经过长序列后，状态会饱和为所有已写入键值对的叠加，单条记录则变成无法恢复的幽灵。这正是下方组件所称的“破坏性幽灵痕迹”故障模式。</p>
+  <p>delta 规则以覆写取代求和。公式 (3) 写作 $S_t = \alpha_t\big[S_{t-1}(I - \beta_t k_t k_t^{\top}) + \beta_t v_t k_t^{\top}\big]$。暂且忽略 $\alpha_t$，分两步理解括号中的内容。第一步，$S_{t-1}(I - \beta_t k_t k_t^{\top})$：由于 $k_t$ 经过 L2 归一化，$k_t k_t^{\top}$ 是投影到 $k_t$ 方向的投影算子，因此 $(I - \beta_t k_t k_t^{\top})$ 会移除或缩小 $S_{t-1}$ 当前在地址 $k_t$ 存储的内容。第二步，$+\beta_t v_t k_t^{\top}$ 将新记录 $(k_t, v_t)$ 写入腾出的槽位。最终效果是<em>定向覆写</em>：写入 $(k, v)$ 会替换 $k$ 处的旧关联，同时保持其他所有地址不变，而不是把新值叠加在旧值之上。当 $\beta_t = 1$ 时，这种替换是精确的（在投影允许的范围内 $S_t k_t = v_t$），因此 delta 规则被称为纠错规则：该更新正是使状态满足 $S k = v$ 的修正量。</p>
+  <p>最前面的 $\alpha_t$ 是写入后施加的全局衰减，它可防止固定大小的状态永远填满；下文会再次讨论它。结构上的关键在于，delta 规则把循环状态从有损求和（只会不断模糊）转变为可寻址记忆，能够原地更新单个槽位。这就是本节标题中“恒定内存的关联回忆”背后的机制，也使 64 层中的 48 层能够完全弃用 KV 缓存。</p>
 
   <!-- Gated DeltaNet Mathematical Foundations -->
-  <div class="math" aria-label="Equations 3 and 4: Gated DeltaNet update rule. State S_t is decayed by alpha_t and updated by a rank-1 beta_t times v_t times k_t transpose; output y_t is S_t transpose times q_t. Gates alpha and beta come from softplus and sigmoid paths respectively. Q and K are 16 by 128, V is 48 by 128, giving a 786,432-element state per layer.">
+  <div class="math" aria-label="公式 3 和 4：门控 DeltaNet 更新规则。状态 S_t 经 alpha_t 衰减，并由秩 1 的 beta_t 乘 v_t 再乘 k_t 转置进行更新；输出 y_t 为 S_t 转置乘 q_t。门控 alpha 和 beta 分别来自 softplus 与 sigmoid 路径。Q 和 K 的形状为 16×128，V 为 48×128，因此每层状态包含 786,432 个元素。">
     S_t = \alpha_t \cdot \Big[ S_{t-1} (I - \beta_t k_t k_t^T) + \beta_t v_t k_t^T \Big] \quad ; \quad \mathbf{y}_t = S_t^T q_t&nbsp;&nbsp;<span class="eq-no">(3)</span><br>
     \alpha_t = \exp\big(-\text{softplus}(A_k \tilde{k}_t + b)\big) \in (0, 1) \quad ; \quad \beta_t = 2\sigma(W_g \hat{x}_t) \in (0, 2]&nbsp;&nbsp;<span class="eq-no">(4)</span><br>
-    q_t, k_t \in \mathbb{R}^{16 \times 128} \quad ; \quad v_t \in \mathbb{R}^{48 \times 128} \quad ; \quad \text{State Size} = 48 \times (128 \times 128) = \mathbf{786,432\text{ elements / layer}}
+    q_t, k_t \in \mathbb{R}^{16 \times 128} \quad ; \quad v_t \in \mathbb{R}^{48 \times 128} \quad ; \quad \text{状态大小} = 48 \times (128 \times 128) = \mathbf{786,432\text{ 个元素/层}}
   </div>
 
-  <h3>The two gates: how fast to forget, how hard to write</h3>
-  <p>Equation (4) makes the two scalars in (3) data-dependent, and that data-dependence is the entire "Gated" in Gated DeltaNet. The <strong>write gate</strong> $\beta_t = 2\sigma(W_g \hat{x}_t) \in (0, 2]$ sets how hard the current token stamps its $(k, v)$ pair into the state. Its cap at 2 is a stability bound. Because $k_t$ is unit-norm, the rank-one projector $k_t k_t^{\top}$ has eigenvalue $1$ along $k_t$, so the write operator $(I - \beta_t k_t k_t^{\top})$ has eigenvalue $1 - \beta_t$ along that direction. Capping $\beta_t \le 2$ keeps $1 - \beta_t \in [-1, 1)$, a non-expanding contraction: the state norm can never grow from a write. Letting $\beta_t$ exceed $2$ would make $|1 - \beta_t| > 1$, and the write would overshoot, oscillate, and diverge over a long sequence. Within the cap, the model is free to learn $\beta_t \approx 2$ for salient tokens it must stamp firmly and $\beta_t \approx 0$ for filler it should barely write.</p>
-  <p>The <strong>decay gate</strong> $\alpha_t = \exp(-\text{softplus}(A_k \tilde{k}_t + b)) \in (0, 1)$ sets how much of the old state survives into the next step. The $\exp$ of a negative softplus is strictly below $1$ and strictly above $0$, so every step is dissipative (the state can only shrink, never amplify), and the network's job is to learn <em>how fast</em> to forget. Important, repeatedly-referenced tokens get $\alpha_t$ near $1$ and persist; irrelevant tokens get $\alpha_t$ near $0$ and are evicted, recycling the fixed state capacity. This is the other half of avoiding saturation: the delta rule prevents <em>spatial</em> collisions (overwriting the right slot), and the decay gate prevents <em>temporal</em> saturation (clearing stale records). Both gates are functions of the input, not fixed constants: a plain SSM decays on a fixed schedule regardless of content, which is why a content-aware gate beats it on recall.</p>
+  <h3>两种门控：遗忘多快，写入多强</h3>
+  <p>公式 (4) 让 (3) 中的两个标量依赖于数据，这种数据依赖性正是门控 DeltaNet 中“门控”的全部含义。<strong>写入门控</strong> $\beta_t = 2\sigma(W_g \hat{x}_t) \in (0, 2]$ 决定当前词元把其 $(k, v)$ 对写入状态的强度。其上限 2 是稳定性边界。由于 $k_t$ 是单位范数，秩一投影算子 $k_t k_t^{\top}$ 沿 $k_t$ 方向的特征值为 $1$，所以写入算子 $(I - \beta_t k_t k_t^{\top})$ 沿该方向的特征值为 $1 - \beta_t$。把 $\beta_t$ 限制为 $\le 2$，可使 $1 - \beta_t \in [-1, 1)$，形成非扩张收缩映射：状态范数绝不会因写入而增长。若让 $\beta_t$ 超过 $2$，则会有 $|1 - \beta_t| > 1$，写入将在长序列中产生过冲、振荡并最终发散。在上限内，模型可自由学习：对必须牢固写入的显著词元取 $\beta_t \approx 2$，对几乎不应写入的填充内容取 $\beta_t \approx 0$。</p>
+  <p><strong>衰减门控</strong> $\alpha_t = \exp(-\text{softplus}(A_k \tilde{k}_t + b)) \in (0, 1)$ 决定有多少旧状态能保留到下一步。负 softplus 的 $\exp$ 严格小于 $1$ 且严格大于 $0$，所以每一步都是耗散的（状态只能缩小，绝不会放大），网络要学习的是<em>遗忘多快</em>。重要且被反复引用的词元会获得接近 $1$ 的 $\alpha_t$ 并持续保留；无关词元会获得接近 $0$ 的 $\alpha_t$ 并被逐出，从而循环利用固定状态容量。这是避免饱和的另一半：delta 规则防止<em>空间</em>冲突（覆写正确槽位），衰减门控防止<em>时间</em>饱和（清除陈旧记录）。两种门控都是输入的函数，而非固定常数：普通 SSM 不论内容如何都按固定计划衰减，因此内容感知门控在回忆任务上更胜一筹。</p>
 
   <!-- Widget 1: Interactive Delta-Rule Associative Memory Lab (#w-delta) -->
   <div class="widget" id="w-delta">
-    <div class="w-head"><span class="w-title">Associative memory playground: targeted overwrite vs superposition</span><span class="w-tag">fast weights</span></div>
-    <div class="w-desc">Simulation of an associative memory matrix $S_t \in \mathbb{R}^{4 \times 4}$. While standard linear attention adds values without erasing past associations (causing memory saturation and destructive ghost traces), Gated DeltaNet applies the error-correcting delta rule $(I - \beta_t k_t k_t^T)$ to cleanly replace stale records while keeping unrelated slots intact.</div>
+    <div class="w-head"><span class="w-title">关联记忆演练场：定向覆写与叠加对比</span><span class="w-tag">快速权重</span></div>
+    <div class="w-desc">模拟关联记忆矩阵 $S_t \in \mathbb{R}^{4 \times 4}$。标准线性注意力在不擦除过去关联的情况下累加值（导致记忆饱和和破坏性幽灵痕迹），而门控 DeltaNet 则应用纠错式 delta 规则 $(I - \beta_t k_t k_t^T)$，在保持无关槽位不变的同时干净地替换陈旧记录。</div>
     
     <div class="calc-ctl">
       <div class="w-ctl" style="flex:1.1">
-        <label for="deltaModeSel">memory update algorithm</label>
+        <label for="deltaModeSel">记忆更新算法</label>
         <select id="deltaModeSel">
-          <option value="deltanet" selected>Gated DeltaNet (Delta Rule)</option>
-          <option value="linear">Pure Linear Attention (Additive)</option>
+          <option value="deltanet" selected>门控 DeltaNet（Delta 规则）</option>
+          <option value="linear">纯线性注意力（加法式）</option>
         </select>
       </div>
       <div class="w-ctl" style="flex:1">
-        <label for="deltaKeySel">target memory slot (key k)</label>
+        <label for="deltaKeySel">目标记忆槽位（键 k）</label>
         <select id="deltaKeySel">
-          <option value="0" selected>Slot 0 · User Intent</option>
-          <option value="1">Slot 1 · Doc Context</option>
-          <option value="2">Slot 2 · Tool State</option>
-          <option value="3">Slot 3 · Working Var</option>
+          <option value="0" selected>槽位 0 · 用户意图</option>
+          <option value="1">槽位 1 · 文档上下文</option>
+          <option value="2">槽位 2 · 工具状态</option>
+          <option value="3">槽位 3 · 工作变量</option>
         </select>
       </div>
       <div class="w-ctl" style="flex:1.1">
-        <label for="deltaValInput">feature payload (value v)</label>
+        <label for="deltaValInput">特征载荷（值 v）</label>
         <select id="deltaValInput">
-          <option value="alpha" selected>Alpha · [+1.0, +0.6, +0.2, -0.4]</option>
-          <option value="beta">Beta · [-0.8, +1.0, +0.5, 0.0]</option>
-          <option value="gamma">Gamma · [0.0, -0.7, +1.0, +0.8]</option>
-          <option value="delta">Delta · [+0.5, +0.8, -0.9, +0.3]</option>
-          <option value="zero">Zero · [0.0, 0.0, 0.0, 0.0]</option>
+          <option value="alpha" selected>阿尔法 · [+1.0, +0.6, +0.2, -0.4]</option>
+          <option value="beta">贝塔 · [-0.8, +1.0, +0.5, 0.0]</option>
+          <option value="gamma">伽马 · [0.0, -0.7, +1.0, +0.8]</option>
+          <option value="delta">德尔塔 · [+0.5, +0.8, -0.9, +0.3]</option>
+          <option value="zero">零 · [0.0, 0.0, 0.0, 0.0]</option>
         </select>
       </div>
     </div>
 
     <div class="delta-action-bar">
-      <div class="delta-presets" role="group" aria-label="Guided test scenarios">
-        <span class="preset-label">Scenarios:</span>
-        <button type="button" class="w-btn ghost" id="btnScenarioOverwrite" title="Write Alpha to Slot 0, then overwrite with Beta">🧪 Overwrite Collision</button>
-        <button type="button" class="w-btn ghost" id="btnScenarioMulti" title="Write unique features across all 4 slots sequentially">🧪 Fill 4 Slots</button>
+      <div class="delta-presets" role="group" aria-label="引导式测试场景">
+        <span class="preset-label">场景：</span>
+        <button type="button" class="w-btn ghost" id="btnScenarioOverwrite" title="先将阿尔法写入槽位 0，再用贝塔覆写">🧪 覆写冲突</button>
+        <button type="button" class="w-btn ghost" id="btnScenarioMulti" title="依次向全部 4 个槽位写入不同特征">🧪 填满 4 个槽位</button>
       </div>
       <div class="delta-btns">
-        <button type="button" class="w-btn primary" id="btnDeltaWrite">Write k → v</button>
-        <button type="button" class="w-btn" id="btnDeltaDecay">Apply Decay (α = 0.85)</button>
-        <button type="button" class="w-btn" id="btnDeltaReset">Reset S → 0</button>
+        <button type="button" class="w-btn primary" id="btnDeltaWrite">写入 k → v</button>
+        <button type="button" class="w-btn" id="btnDeltaDecay">应用衰减（α = 0.85）</button>
+        <button type="button" class="w-btn" id="btnDeltaReset">重置 S → 0</button>
       </div>
     </div>
 
     <div class="calc-readout" id="deltaLabReadout" aria-live="polite" style="margin-top:var(--s-3)"></div>
   </div>
 
-  <h3>Training parallelism: the chunked WY factorization</h3>
-  <p>The recurrence in (3) is inherently sequential: $S_t$ depends on $S_{t-1}$, which depends on $S_{t-2}$, and so on back to $S_0$. During decode this is fine (one step per token, $O(1)$ memory). During pretraining, where the whole sequence must be processed at once, a naive serial scan over thousands of tokens would leave the Tensor Cores idle and dominate the step time. The fix is to chunk the sequence into blocks of size $C$ (default 64) and factor the within-chunk interaction so it can be computed as matmuls rather than a recurrence.</p>
-  <p>The factorization rests on the identity $\prod_{t=1}^{C}(I - \beta_t k_t k_t^{\top}) = I - W Y^{\top}$ (Table 3, row 5): the product of $C$ rank-one write operators inside a chunk collapses to a single $I - W Y^{\top}$, where $W$ and $Y$ are built from the chunk's keys, values, and gates. Within a chunk, all $C$ token-to-state interactions become a block-triangular $W Y^{\top}$ matmul (causal, because token $t$ only sees earlier tokens) which runs on Tensor Cores in parallel. Between chunks, only the single state matrix $S$ is carried forward sequentially, in FP32 for stability. The chunk size trades parallelism against serial depth: $C = 64$ keeps the triangular solve cheap while exposing enough parallel work to saturate the hardware. The visualizer below shows both regimes side by side.</p>
+  <h3>训练并行性：分块 WY 分解</h3>
+  <p>(3) 中的递推本质上是顺序执行的：$S_t$ 依赖 $S_{t-1}$，后者又依赖 $S_{t-2}$，如此一直回溯到 $S_0$。解码时这并无问题（每个词元一步，内存为 $O(1)$）。但在预训练中，整个序列必须一次性处理，若对数千个词元进行朴素串行扫描，会让 Tensor Core 闲置并占据绝大部分单步时间。解决方法是把序列切分成大小为 $C$（默认 64）的块，并分解块内交互，使其可通过矩阵乘法而非递推来计算。</p>
+  <p>该分解建立在恒等式 $\prod_{t=1}^{C}(I - \beta_t k_t k_t^{\top}) = I - W Y^{\top}$（表 3 第 5 行）之上：一个块内 $C$ 个秩一写入算子的乘积可归并为单个 $I - W Y^{\top}$，其中 $W$ 和 $Y$ 由该块的键、值和门控构成。在块内，全部 $C$ 个词元到状态的交互都变成分块三角的 $W Y^{\top}$ 矩阵乘法（具有因果性，因为词元 $t$ 只能看到更早的词元），可在 Tensor Core 上并行运行。块与块之间只有单个状态矩阵 $S$ 以顺序方式向前传递，并使用 FP32 保证稳定性。块大小需要在并行度与串行深度之间权衡：$C = 64$ 既能让三角求解保持低成本，又能暴露足够多的并行工作以充分利用硬件。下方可视化器并排展示了两种模式。</p>
 
   <!-- Widget 2: Chunked WY Parallel Scan Visualizer (#w-deltanet-scan) -->
   <div class="widget" id="w-deltanet-scan">
-    <div class="w-head"><span class="w-title">Chunked WY parallel training scan vs streaming decode</span><span class="w-tag">hardware tiling</span></div>
-    <div class="w-desc">During pretraining, DeltaNet overcomes recurrence bottlenecks by grouping sequences into chunks of size $C=64$. Intra-chunk interactions factor into block-triangular $W Y^T$ matmuls on Tensor Cores, while inter-chunk states propagate sequentially in FP32.</div>
+    <div class="w-head"><span class="w-title">分块 WY 并行训练扫描与流式解码对比</span><span class="w-tag">硬件分块</span></div>
+    <div class="w-desc">预训练期间，DeltaNet 通过把序列分为大小 $C=64$ 的块来克服递推瓶颈。块内交互被分解为在 Tensor Core 上运行的分块三角 $W Y^T$ 矩阵乘法，而块间状态则以 FP32 顺序传播。</div>
     
     <div class="packing-ctl">
-      <div class="seg" id="wyChunkSeg" role="group" aria-label="Chunk size selector">
-        <button data-chunk="32" aria-pressed="false">Chunk Size C = 32</button>
-        <button data-chunk="64" class="on" aria-pressed="true">Chunk Size C = 64 (Default)</button>
-        <button data-chunk="128" aria-pressed="false">Chunk Size C = 128</button>
+      <div class="seg" id="wyChunkSeg" role="group" aria-label="块大小选择器">
+        <button data-chunk="32" aria-pressed="false">块大小 C = 32</button>
+        <button data-chunk="64" class="on" aria-pressed="true">块大小 C = 64（默认）</button>
+        <button data-chunk="128" aria-pressed="false">块大小 C = 128</button>
       </div>
     </div>
 
@@ -91,108 +91,108 @@
   </div>
 
   <!-- DeltaNet Asymmetric Head Architecture Breakdown -->
-  <h3>Asymmetric head layout: 16 address channels for 48 memory heads</h3>
-  <p>The DeltaNet configuration uses an asymmetric projection layout: <strong>16 Query/Key heads</strong> ($d_k = 128$) controlling <strong>48 Value heads</strong> ($d_v = 128$). This design optimizes memory capacity while minimizing write address collisions.</p>
-  <p>The clearest way to read this layout is as an address–content split: keys are <em>addresses</em> (which slot to write), values are <em>content</em> (what to store there). The 16 query/key heads give 16 address channels, enough routing resolution that two distinct tokens rarely hash to the same address and collide. The 48 value heads give 48 content channels, so each addressed slot stores a rich 128-vector record rather than a single scalar. The $48/16 = 3{:}1$ ratio means each address coordinates three content heads: capacity is tripled per address without tripling the address space, which keeps key routing sharp and the query/key projection small. Splitting them asymmetrically (few addresses, many content channels) is what maximizes stored information per unit of projection parameter.</p>
+  <h3>非对称头布局：16 个寻址通道对应 48 个记忆头</h3>
+  <p>DeltaNet 配置采用非对称投影布局：由 <strong>16 个查询/键头</strong>（$d_k = 128$）控制 <strong>48 个值头</strong>（$d_v = 128$）。这种设计在尽量减少写入地址冲突的同时优化了记忆容量。</p>
+  <p>理解该布局最清晰的方式，是把它看作地址与内容的拆分：键是<em>地址</em>（写入哪个槽位），值是<em>内容</em>（在那里存储什么）。16 个查询/键头提供 16 个寻址通道，其路由分辨率足以使两个不同词元很少散列到同一地址而发生冲突。48 个值头提供 48 个内容通道，因此每个已寻址槽位存储的是丰富的 128 维向量记录，而非单个标量。$48/16 = 3{:}1$ 的比例意味着每个地址协调三个内容头：无需将地址空间扩大三倍，就能让每个地址的容量增至三倍，从而保持键路由精准以及查询/键投影紧凑。通过非对称拆分（少量地址、大量内容通道），每单位投影参数所存储的信息量达到最大。</p>
   <ul>
-    <li><strong>Value Head Count ($n_v = 48$)</strong>: Governs the total associative memory capacity per layer ($48 \times 128 \times 128 = 786,432\text{ state floats}$). Across all 48 DeltaNet layers, the entire model maintains <strong>$37.75\text{M floats}$ ($75.5\text{ MB}$ in BF16)</strong> of recurrent state, fixed whether processing 10 tokens or 1,000,000 tokens.</li>
-    <li><strong>Query/Key Head Count ($n_{qk} = 16$)</strong>: Each address channel coordinates writes across 3 value heads ($48/16 = 3:1$ ratio), providing sharp key routing without inflating query projection weights.</li>
-    <li><strong>Single Fused Input Projection</strong>: A single GEMM projects $x \in \mathbb{R}^{5120} \to \mathbb{R}^{10240}$ to simultaneously produce $Q, K, V$, gating channels, and causal depthwise 1D conv inputs in a single kernel launch.</li>
+    <li><strong>值头数量（$n_v = 48$）</strong>：决定每层的关联记忆总容量（$48 \times 128 \times 128 = 786,432\text{ 个状态浮点数}$）。在全部 48 个 DeltaNet 层中，整个模型维护 <strong>$37.75\text{M 个浮点数}$的循环状态（BF16 下为 $75.5\text{ MB}$）</strong>，无论处理 10 个还是 1,000,000 个词元，其大小都固定不变。</li>
+    <li><strong>查询/键头数量（$n_{qk} = 16$）</strong>：每个寻址通道协调 3 个值头的写入（$48/16 = 3:1$），在不扩大查询投影权重的情况下提供精准的键路由。</li>
+    <li><strong>单次融合输入投影</strong>：单个 GEMM 将 $x \in \mathbb{R}^{5120} \to \mathbb{R}^{10240}$，在一次内核启动中同时生成 $Q, K, V$、门控通道以及因果深度可分离一维卷积输入。</li>
   </ul>
 
   <!-- Numerical Stability Checklist -->
-  <h3>Numerical stability checklist: the five kernel invariants</h3>
-  <p>Over 262k recurrent steps, any per-step operation that expands the state even slightly will diverge. A factor of $1.001$ per step compounds to $\approx 10^{114}$ over the native context, an astronomical blow-up rather than a small drift, so the kernel is built entirely from non-expanding maps. The five invariants below are not independent precautions; they are five views of one principle: every map the state passes through must be a contraction or a norm-preservation, never an amplification.</p>
+  <h3>数值稳定性检查表：五项内核不变量</h3>
+  <p>在 262k 个递推步骤中，任何每一步哪怕只会轻微扩张状态的操作最终都会发散。每步乘以 $1.001$，在原生上下文长度内累积后会达到 $\approx 10^{114}$，这不是轻微漂移，而是天文数字般的爆炸。因此，内核完全由非扩张映射构成。下列五项不变量并非彼此独立的预防措施，而是同一原则的五种体现：状态经过的每个映射都必须是收缩映射或保持范数，绝不能放大。</p>
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 3 — Numerical stability checklist:</strong> five kernel invariants (L2 norm, exp-clamp, log-shift, ‖S‖-bound, ε-floor) and the run-length bug each prevents.</caption>
+      <caption><strong>表 3 — 数值稳定性检查表：</strong>五项内核不变量（L2 范数、exp 截断、log 平移、‖S‖ 边界、ε 下限）及各自防止的长程运行缺陷。</caption>
       <thead>
         <tr>
-          <th scope="col">Stability Mechanism</th>
-          <th scope="col">Mathematical Invariant</th>
-          <th scope="col">Engineering Purpose</th>
+          <th scope="col">稳定机制</th>
+          <th scope="col">数学不变量</th>
+          <th scope="col">工程目的</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>L2 Query/Key Normalization</strong></td>
+          <td><strong>L2 查询/键归一化</strong></td>
           <td>$\|q_t\|_2 = 1.0 \quad ; \quad \|k_t\|_2 = 1.0$</td>
-          <td>Bounds update magnitude; prevents recurrent state norm explosion over 262k steps.</td>
+          <td>限制更新幅度；防止循环状态范数在 262k 步中爆炸。</td>
         </tr>
         <tr>
-          <td><strong>Write Gate Contraction Bound</strong></td>
+          <td><strong>写入门控收缩边界</strong></td>
           <td>$\beta_t = 2\sigma(W_g \hat{x}_t) \in (0, 2]$</td>
-          <td>Guarantees $(I - \beta_t k_t k_t^T)$ remains a non-expanding contraction mapping.</td>
+          <td>保证 $(I - \beta_t k_t k_t^T)$ 始终为非扩张收缩映射。</td>
         </tr>
         <tr>
-          <td><strong>Decay Gate Multiplicative Shrink</strong></td>
+          <td><strong>衰减门控乘法收缩</strong></td>
           <td>$\alpha_t = \exp(-\text{softplus}(\cdot)) \in (0, 1)$</td>
-          <td>Ensures forgetting is strictly dissipative; network learns <em>how fast</em> to forget.</td>
+          <td>确保遗忘过程严格耗散；网络学习<em>遗忘多快</em>。</td>
         </tr>
         <tr>
-          <td><strong>Mixed-Precision Boundary States</strong></td>
-          <td>BF16 state accumulator, BF16 GEMM</td>
-          <td>Preserves delicate subtraction cancellations in $(I - \beta k k^T)$ without underflow.</td>
+          <td><strong>混合精度边界状态</strong></td>
+          <td>BF16 状态累加器，BF16 GEMM</td>
+          <td>在不发生下溢的情况下，保留 $(I - \beta k k^T)$ 中细微的减法抵消。</td>
         </tr>
         <tr>
-          <td><strong>Triangular WY Factorization</strong></td>
+          <td><strong>三角 WY 分解</strong></td>
           <td>$\prod_{t=1}^C (I - \beta_t k_t k_t^T) = I - W Y^T$</td>
-          <td>Replaces $\mathcal{O}(C^3)$ serial matrix multiplies with one stable $\mathcal{O}(C^2)$ triangular solve.</td>
+          <td>用一次稳定的 $\mathcal{O}(C^2)$ 三角求解，取代 $\mathcal{O}(C^3)$ 串行矩阵乘法。</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>Gated DeltaNet gives the backbone its constant-memory compression: 48 layers that integrate the stream for free, with a fixed 75.5 MB of recurrent state regardless of context length. But compression alone cannot guarantee that a specific far-back token is retrieved. The decay gate may have evicted it, and its address may have been overwritten. That guarantee is the job of the 16 full-attention layers, which skip the recurrent state and read the raw sequence directly. §05 opens that other mixer: Gated Attention, its 6:1 GQA head grouping, the 3D MRoPE that positions image and text tokens on one axis, and the output $\sigma$-gate that filters the attention output before it touches the residual stream.</p>
+  <p>门控 DeltaNet 为骨干网络提供恒定内存压缩：48 个层无需额外代价即可整合信息流，而且无论上下文长度如何，循环状态都固定为 75.5 MB。但仅靠压缩无法保证检索到某个很久以前的特定词元。衰减门控可能已将其逐出，其地址也可能已被覆写。这项保证由 16 个全注意力层提供：它们绕过循环状态，直接读取原始序列。§05 将介绍另一种混合器：门控注意力、其 6:1 GQA 头分组、将图像和文本词元定位到统一坐标系的 3D MRoPE，以及在注意力输出触及残差流之前对其进行过滤的输出 $\sigma$ 门控。</p>
 </section>
 
 <!-- ============================================================ 05 ATTENTION -->
 <section id="attention">
-  <div class="sec-tag">05 · Gated Attention &amp; 3D MRoPE</div>
-  <h2>Sixteen sparse anchors of exact associative recall</h2>
-  <p class="lead">Every fourth layer in the 64-layer backbone (layers 4, 8, 12, ..., 64) is a Gated Attention block with Grouped-Query Attention (GQA 6:1), wide 256-dimensional query heads, partial 3D MRoPE, and a learned output sigmoid gate. These 16 layers act as global retrieval anchors that periodically refresh the recurrent associative memory.</p>
+  <div class="sec-tag">05 · 门控注意力（Gated Attention）与 3D MRoPE</div>
+  <h2>实现精确关联回忆的十六个稀疏锚点</h2>
+  <p class="lead">64 层骨干网络中每隔四层（第 4、8、12、…、64 层）就有一个门控注意力块，其中包含分组查询注意力（GQA 6:1）、宽度为 256 维的查询头、部分 3D MRoPE，以及已学习的输出 sigmoid 门控。这 16 层充当全局检索锚点，周期性刷新循环关联记忆。</p>
 
-  <h3>Grouped-Query Attention: sharing the cache</h3>
-  <p>The KV cache is the attention layer's memory cost, and it scales with the number of key/value heads, not the number of query heads. Standard Multi-Head Attention (MHA) gives every query head its own K and V projection ($n_{kv} = n_q = 24$), so 24 distinct key/value tensors are cached per token. At the other extreme, Multi-Query Attention (MQA) collapses all 24 query heads onto a single shared K,V pair ($n_{kv} = 1$), shrinking the cache 24× but degrading quality because every head must read the same stored representation. Grouped-Query Attention (GQA) splits the difference: query heads are partitioned into groups, and each group shares one K,V head. Qwen 3.8 uses $n_{kv} = 4$, so the 24 query heads form 4 groups of 6 (the "GQA 6:1") and the cache is 6× smaller than MHA.</p>
-  <p>Sharing the K,V heads is safe because query heads differentiate through their <em>query</em> projections, not through needing separate stored keys and values. Two heads reading the same K,V cache still attend to different relations, since each computes its own $Q$ and its own softmax weights; what they share is the raw key/value representation of each past token, which is largely common property. The remaining design lever is head width: Qwen 3.8 uses wide 256-dimensional heads, so each of the 4 K,V heads stores a rich 256-vector per token and each query head matches against a 256-dim key. Wide heads recover the expressivity that fewer heads sacrifice, which is why GQA-4 lands at "zero accuracy loss" in the table below while MQA does not. The σ-gate added in (7) compensates the rest.</p>
+  <h3>分组查询注意力：共享缓存</h3>
+  <p>KV 缓存是注意力层的内存开销，它随键/值头的数量而增长，而非查询头的数量。标准多头注意力（MHA）为每个查询头分配独立的 K 和 V 投影（$n_{kv} = n_q = 24$），因此每个词元都要缓存 24 组不同的键/值张量。另一个极端是多查询注意力（MQA），它让全部 24 个查询头使用同一组共享 K、V（$n_{kv} = 1$），使缓存缩小 24 倍，但由于每个头都必须读取相同的已存储表示，质量会下降。分组查询注意力（GQA）取两者之中：将查询头划分为若干组，每组共享一个 K、V 头。Qwen 3.8 使用 $n_{kv} = 4$，因此 24 个查询头组成 4 组，每组 6 个（即“GQA 6:1”），缓存比 MHA 小 6 倍。</p>
+  <p>共享 K、V 头是安全的，因为查询头通过各自的<em>查询</em>投影实现差异化，而不需要单独存储键和值。即便两个头读取同一份 K、V 缓存，仍会关注不同的关系，因为每个头都会计算自己的 $Q$ 和 softmax 权重；它们共享的只是每个过去词元的原始键/值表示，而这在很大程度上属于共性信息。剩下的设计杠杆是头宽度：Qwen 3.8 使用宽度为 256 维的头，因此 4 个 K、V 头中的每一个都为每个词元存储丰富的 256 维向量，而每个查询头也与 256 维键进行匹配。宽头弥补了头数减少所损失的表达能力，所以在下表中 GQA-4 能实现“零准确率损失”，而 MQA 不能。(7) 中新增的 σ 门控则补偿其余损失。</p>
 
   <!-- Attention Mathematics & Gating Formalism -->
-  <div class="math" aria-label="Equations 5 to 7: Gated multi-head attention with grouped-query attention: 24 query heads of dim 256, 4 key and 4 value heads of dim 256, MRoPE-positioned softmax attention with causal mask, then a sigmoid gate applied before the output projection W_o mapping 6144 to 5120.">
+  <div class="math" aria-label="公式 5 至 7：结合分组查询注意力的门控多头注意力：24 个 256 维查询头、4 个 256 维键头和 4 个 256 维值头，使用 MRoPE 定位并带因果掩码的 softmax 注意力，随后在把 6144 映射到 5120 的输出投影 W_o 之前应用 sigmoid 门控。">
     Q = x W_q \in \mathbb{R}^{B \times T \times (24 \times 256)} \quad ; \quad K = x W_k \in \mathbb{R}^{B \times T \times (4 \times 256)} \quad ; \quad V = x W_v \in \mathbb{R}^{B \times T \times (4 \times 256)}&nbsp;&nbsp;<span class="eq-no">(5)</span><br>
     \text{Attn}(Q, K, V) = \text{Softmax}\left(\frac{\text{MRoPE}(Q) \cdot \text{MRoPE}(K)^T}{\sqrt{d_k}} + M_{\text{causal}}\right) V \in \mathbb{R}^{B \times T \times (24 \times 256)}&nbsp;&nbsp;<span class="eq-no">(6)</span><br>
-    \mathbf{y}_{\text{attn}} = \left( \sigma(x W_g) \odot \text{Attn}(Q, K, V) \right) W_o \quad \text{where } W_o \in \mathbb{R}^{6144 \to 5120}&nbsp;&nbsp;<span class="eq-no">(7)</span>
+    \mathbf{y}_{\text{attn}} = \left( \sigma(x W_g) \odot \text{Attn}(Q, K, V) \right) W_o \quad \text{其中 } W_o \in \mathbb{R}^{6144 \to 5120}&nbsp;&nbsp;<span class="eq-no">(7)</span>
   </div>
 
   <!-- Widget 1: Interactive KV cache Memory & GQA Calculator (#w-cache) -->
   <div class="widget" id="w-cache">
-    <div class="w-head"><span class="w-title">GQA KV cache memory footprint &amp; bandwidth calculator</span><span class="w-tag">cache economics</span></div>
-    <div class="w-desc">Exact VRAM requirements of the 16 attention layers across context lengths ($1\text{k} \to 262\text{k}$) and batch sizes; the GQA 6:1 scheme ($n_{kv}=4$) is compared against standard Multi-Head Attention ($n_{kv}=24$).</div>
+    <div class="w-head"><span class="w-title">GQA KV 缓存内存占用与带宽计算器</span><span class="w-tag">缓存经济性</span></div>
+    <div class="w-desc">精确计算 16 个注意力层在不同上下文长度（$1\text{k} \to 262\text{k}$）和批大小下的显存需求；并将 GQA 6:1 方案（$n_{kv}=4$）与标准多头注意力（$n_{kv}=24$）进行比较。</div>
     
     <div class="calc-ctl">
       <div class="w-ctl">
-        <label for="cacheCtx">sequence context length (tokens)</label>
+        <label for="cacheCtx">序列上下文长度（词元）</label>
         <select id="cacheCtx">
-          <option value="4096">4,096 tokens (Standard Pretraining)</option>
-          <option value="32768">32,768 tokens (Long Document)</option>
-          <option value="131072">131,072 tokens (128k Repository)</option>
-          <option value="262144" selected>262,144 tokens (Max Native 262k)</option>
+          <option value="4096">4,096 个词元（标准预训练）</option>
+          <option value="32768">32,768 个词元（长文档）</option>
+          <option value="131072">131,072 个词元（128k 代码仓库）</option>
+          <option value="262144" selected>262,144 个词元（原生最大 262k）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="cacheBatch">concurrent batch size (B)</label>
+        <label for="cacheBatch">并发批大小（B）</label>
         <select id="cacheBatch">
-          <option value="1" selected>Batch Size 1 (Single User Chat)</option>
-          <option value="4">Batch Size 4 (Low-Concurrency Server)</option>
-          <option value="16">Batch Size 16 (High-Throughput Node)</option>
-          <option value="64">Batch Size 64 (Production Cluster Pod)</option>
+          <option value="1" selected>批大小 1（单用户聊天）</option>
+          <option value="4">批大小 4（低并发服务器）</option>
+          <option value="16">批大小 16（高吞吐节点）</option>
+          <option value="64">批大小 64（生产集群 Pod）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="cacheDtype">KV cache precision dtype</label>
+        <label for="cacheDtype">KV 缓存精度数据类型</label>
         <select id="cacheDtype">
-          <option value="2" selected>FP16 / BF16 (16-bit · 2 bytes/elem)</option>
-          <option value="1">FP8 Quantized (8-bit · 1 byte/elem)</option>
-          <option value="0.5">FP4 / TurboQuant (4-bit · 0.5 bytes/elem)</option>
+          <option value="2" selected>FP16 / BF16（16 位 · 2 字节/元素）</option>
+          <option value="1">FP8 量化（8 位 · 1 字节/元素）</option>
+          <option value="0.5">FP4 / TurboQuant（4 位 · 0.5 字节/元素）</option>
         </select>
       </div>
     </div>
@@ -201,113 +201,113 @@
   </div>
 
   <!-- GQA Head Architecture Comparison Table -->
-  <h3>KV-head reduction: MHA → MQA → GQA</h3>
-  <p>Standard Multi-Head Attention (MHA) allocates dedicated key/value projections for all 24 query heads, requiring 103 GB of cache per stream at 262k context. Grouped-Query Attention pools 6 query heads into each KV head, reducing KV cache memory by <strong>83.3%</strong> while preserving retrieval sharpness via wide 256-dim head projections.</p>
-  <p>The cache figures in the table follow directly from the head counts. Each token stores a key and a value for every KV head, so the per-token, per-layer footprint is $2 \cdot n_{kv} \cdot d_{\text{head}} \cdot \text{bytes}$; at BF16 with $d_{\text{head}} = 256$:</p>
-  <div class="math" aria-label="KV cache bytes per token per layer equals 2 times n_kv times 256 times 2 bytes, i.e. 1024 times n_kv; MHA(24) gives 24,576 B, GQA-4 gives 4,096 B, MQA(1) gives 1,024 B.">
-    \text{Bytes / token / layer} = 2 \cdot n_{\text{kv}} \cdot 256 \cdot 2 = 1024 \cdot n_{\text{kv}} \;\;\implies\;\; \text{MHA}(24) \to 24{,}576\text{ B},\; \text{GQA-}4 \to 4{,}096\text{ B},\; \text{MQA}(1) \to 1{,}024\text{ B}
+  <h3>KV 头精简：MHA → MQA → GQA</h3>
+  <p>标准多头注意力（MHA）为全部 24 个查询头分配专用键/值投影，在 262k 上下文下，每个信息流需要 103 GB 缓存。分组查询注意力让每 6 个查询头共用一个 KV 头，在将 KV 缓存内存减少 <strong>83.3%</strong> 的同时，通过宽度为 256 维的头投影保持检索精准度。</p>
+  <p>表中的缓存数值直接由头数量得出。每个词元会为每个 KV 头存储一个键和一个值，因此每词元、每层的占用为 $2 \cdot n_{kv} \cdot d_{\text{head}} \cdot \text{bytes}$；在 BF16 且 $d_{\text{head}} = 256$ 时：</p>
+  <div class="math" aria-label="每词元每层的 KV 缓存字节数等于 2 乘 n_kv 乘 256 再乘 2 字节，即 1024 乘 n_kv；MHA(24) 为 24,576 B，GQA-4 为 4,096 B，MQA(1) 为 1,024 B。">
+    \text{字节/词元/层} = 2 \cdot n_{\text{kv}} \cdot 256 \cdot 2 = 1024 \cdot n_{\text{kv}} \;\;\implies\;\; \text{MHA}(24) \to 24{,}576\text{ B},\; \text{GQA-}4 \to 4{,}096\text{ B},\; \text{MQA}(1) \to 1{,}024\text{ B}
   </div>
-  <p>Multiplying by 262,144 tokens and 16 attention layers recovers the table's rightmost column: GQA-4 sums to $4{,}096 \times 262{,}144 \times 16 \approx 17.18$ GB (the same $1.07$ GB/layer figure derived in §03) while MHA reaches $\approx 103$ GB. The "83.3%" saving is simply $(24-4)/24$, the fraction of KV heads removed, and it costs no accuracy because the wide 256-dim heads and the σ-gate below absorb the lost expressivity.</p>
+  <p>再乘以 262,144 个词元和 16 个注意力层，就得到表格最右列：GQA-4 总计为 $4{,}096 \times 262{,}144 \times 16 \approx 17.18$ GB（与 §03 推导的每层 $1.07$ GB 相同），而 MHA 达到 $\approx 103$ GB。“83.3%”的节省量就是 $(24-4)/24$，即移除的 KV 头比例；这不会造成准确率损失，因为宽度为 256 维的头和下方的 σ 门控吸收了损失的表达能力。</p>
 
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 4 — GQA progression MHA → MQA → GQA:</strong> KV-head count, bytes/token/layer, 262k × 16-layer VRAM, and retrieval-precision trade-off at each step.</caption>
+      <caption><strong>表 4 — GQA 演进 MHA → MQA → GQA：</strong>各阶段的 KV 头数量、字节/词元/层、262k × 16 层显存，以及检索精度权衡。</caption>
       <thead>
         <tr>
-          <th scope="col">Attention Scheme</th>
-          <th scope="col" class="r">KV Heads ($n_{kv}$)</th>
-          <th scope="col" class="r">Bytes / Token / Layer</th>
-          <th scope="col" class="r">VRAM @ 262k × 16 Layers</th>
-          <th scope="col">Retrieval Precision</th>
+          <th scope="col">注意力方案</th>
+          <th scope="col" class="r">KV 头（$n_{kv}$）</th>
+          <th scope="col" class="r">字节 / 词元 / 层</th>
+          <th scope="col" class="r">262k × 16 层时的显存</th>
+          <th scope="col">检索精度</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Full MHA</strong> (24 KV Heads)</td>
+          <td><strong>完整 MHA</strong>（24 个 KV 头）</td>
           <td class="r">24</td>
           <td class="r">24,576 B</td>
           <td class="r bad">103.0 GB</td>
-          <td>Theoretical Reference</td>
+          <td>理论基准</td>
         </tr>
         <tr>
-          <td><strong>GQA-8</strong> (8 KV Heads)</td>
+          <td><strong>GQA-8</strong>（8 个 KV 头）</td>
           <td class="r">8</td>
           <td class="r">8,192 B</td>
           <td class="r">34.4 GB</td>
-          <td>Indistinguishable from MHA</td>
+          <td>与 MHA 无可分辨差异</td>
         </tr>
         <tr>
-          <td><strong>GQA-4 (Qwen 3.8 Chosen)</strong></td>
+          <td><strong>GQA-4（Qwen 3.8 采用）</strong></td>
           <td class="r good"><strong>4</strong></td>
           <td class="r hl"><strong>4,096 B</strong></td>
           <td class="r good"><strong>17.18 GB</strong></td>
-          <td class="good">Zero accuracy loss; compensated by σ-gate</td>
+          <td class="good">零准确率损失；由 σ 门控补偿</td>
         </tr>
         <tr>
-          <td><strong>MQA</strong> (1 KV Head)</td>
+          <td><strong>MQA</strong>（1 个 KV 头）</td>
           <td class="r">1</td>
           <td class="r">1,024 B</td>
           <td class="r">4.29 GB</td>
-          <td class="bad">Measurable reasoning degradation</td>
+          <td class="bad">可测量的推理能力下降</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <h3>Rotary positions: from 1D RoPE to 3D MRoPE</h3>
-  <p>Before MRoPE comes RoPE itself. Rotary Position Embedding encodes position not by adding a bias but by <em>rotating</em> each query and key. The 256-dim head is split into 128 dim-pairs, and pair $j$ at token position $m$ is rotated by angle $m \cdot \omega_j$, where the frequencies $\omega_j = 10^{7 \cdot (-2j/d_{\text{rot}})}$ range from slow (long-wavelength, capturing distant structure) to fast (short-wavelength, capturing local order). The decisive property is that the query–key inner product after rotation depends only on the <em>relative</em> position $m_q - m_k$, not on either absolute position: rotating both vectors by their positions makes their dot product a function of the angle between them. RoPE extrapolates: a model trained at 32k can still attend coherently at 262k, because the relative-position geometry is unchanged.</p>
-  <p>One-dimensional RoPE has a single position index $m$, which is fine for text but breaks for images and video. A pixel at row $h$, column $w$ in frame $t$ does not have a single natural 1D position; forcing it onto one flattens the 2D/3D structure the model needs to reason about. Multimodal RoPE (MRoPE) solves this by splitting the rotary dim-pairs into three disjoint sections and rotating each section by an <em>independent</em> position axis. The config <code>mrope_section: [11, 11, 10]</code> assigns 11 dim-pairs to the temporal axis $t$, 11 to the height axis $h$, and 10 to the width axis $w$: 32 pairs in total, i.e. 64 of the 256 head dimensions, matching the partial rotary ratio of 0.25.</p>
-  <p>The three axes cooperate to place any modality on one position space. A text token has a temporal position and a trivial spatial one, so it rotates mainly along the $t$ section. An image patch has a row and column, so it rotates along the $h$ and $w$ sections with $t$ held fixed. A video frame's patches rotate along all three. Because the sections are disjoint, the axes never interfere: the $h$-rotation of an image patch is identical whether the patch is in frame 1 or frame 100, which is what lets one position embedding serve text, images, and video without retraining. The remaining 192 dims stay position-independent, so content similarity is not entirely overwritten by positional structure. The dial below shows the per-pair rotation this produces.</p>
+  <h3>旋转位置编码：从 1D RoPE 到 3D MRoPE</h3>
+  <p>要理解 MRoPE，先看 RoPE 本身。旋转位置嵌入（Rotary Position Embedding）不是通过添加偏置，而是通过<em>旋转</em>每个查询和键来编码位置。256 维头被拆分为 128 个维度对，词元位置 $m$ 处的第 $j$ 对会旋转角度 $m \cdot \omega_j$，其中频率 $\omega_j = 10^{7 \cdot (-2j/d_{\text{rot}})}$ 从慢速（长波长，捕捉远距离结构）到快速（短波长，捕捉局部顺序）排列。关键性质是，旋转后的查询—键内积只取决于<em>相对</em>位置 $m_q - m_k$，而不取决于任一绝对位置：按各自位置旋转两个向量后，它们的点积成为二者夹角的函数。RoPE 可以外推：在 32k 上训练的模型仍能在 262k 处保持连贯的注意力，因为相对位置几何关系没有改变。</p>
+  <p>一维 RoPE 只有一个位置索引 $m$，这对文本没有问题，但无法适配图像和视频。帧 $t$ 中第 $h$ 行、第 $w$ 列的像素并不存在唯一自然的一维位置；强行将其映射到一维，会压平模型推理所需的 2D/3D 结构。多模态 RoPE（MRoPE）把旋转维度对拆分为三个互不重叠的区段，并让每个区段按一个<em>独立</em>位置轴旋转，从而解决这一问题。配置 <code>mrope_section: [11, 11, 10]</code> 将 11 个维度对分配给时间轴 $t$，11 个分配给高度轴 $h$，10 个分配给宽度轴 $w$：共 32 对，即 256 个头维度中的 64 维，与 0.25 的部分旋转比例相符。</p>
+  <p>三个轴协同工作，把任意模态置于统一的位置空间。文本词元有时间位置，而空间位置无实质意义，因此主要沿 $t$ 区段旋转。图像块有行和列，因此在保持 $t$ 不变时沿 $h$ 和 $w$ 区段旋转。视频帧中的图像块则沿三个轴旋转。由于这些区段互不重叠，各轴绝不会相互干扰：无论图像块位于第 1 帧还是第 100 帧，其 $h$ 旋转都完全相同，这使同一种位置嵌入无需重新训练即可服务于文本、图像和视频。其余 192 维保持与位置无关，因此内容相似度不会被位置结构完全覆盖。下方转盘展示了由此产生的逐对旋转。</p>
 
   <!-- Widget 2: 3D MRoPE Phase Visualizer (#w-rope) -->
   <div class="widget" id="w-rope">
-    <div class="w-head"><span class="w-title">3D MRoPE phase angle &amp; frequency visualizer</span><span class="w-tag">rotary geometry</span></div>
-    <div class="w-desc">Rotary Position Embeddings rotate query/key pairs by angle $\theta_j = 10^{7 \cdot (-2j/d_{\text{rot}})}$. Only 64 of the 256 head dimensions rotate (partial rotary factor 0.25), divided into $[11, 11, 10]$ interleaved pairs across Temporal ($T$), Height ($H$), and Width ($W$) axes.</div>
+    <div class="w-head"><span class="w-title">3D MRoPE 相位角与频率可视化器</span><span class="w-tag">旋转几何</span></div>
+    <div class="w-desc">旋转位置嵌入以角度 $\theta_j = 10^{7 \cdot (-2j/d_{\text{rot}})}$ 旋转查询/键对。256 个头维度中只有 64 维参与旋转（部分旋转系数为 0.25），并按 $[11, 11, 10]$ 个交错维度对分配到时间轴（$T$）、高度轴（$H$）和宽度轴（$W$）。</div>
     
     <div class="w-controls">
       <div class="w-ctl">
-        <label for="ropePos">token position index (m)</label>
+        <label for="ropePos">词元位置索引（m）</label>
         <input type="range" id="ropePos" min="0" max="512" step="1" value="64">
       </div>
       <div class="w-ctl">
-        <label for="ropeDim">rotary dim-pair index (j = 0..31)</label>
+        <label for="ropeDim">旋转维度对索引（j = 0..31）</label>
         <input type="range" id="ropeDim" min="0" max="31" step="1" value="0">
       </div>
       <div class="w-ctl">
-        <label for="mropeAxis">MRoPE spatial-temporal axis</label>
+        <label for="mropeAxis">MRoPE 时空轴</label>
         <select id="mropeAxis">
-          <option value="time" selected>Section 1: Temporal Axis T (11 pairs)</option>
-          <option value="height">Section 2: Vertical Axis H (11 pairs)</option>
-          <option value="width">Section 3: Horizontal Axis W (10 pairs)</option>
+          <option value="time" selected>区段 1：时间轴 T（11 对）</option>
+          <option value="height">区段 2：垂直轴 H（11 对）</option>
+          <option value="width">区段 3：水平轴 W（10 对）</option>
         </select>
       </div>
     </div>
 
     <div class="widget-visual">
-      <svg id="ropeSvg" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dial showing the rotation angle of RoPE dim-pair j at token position m"></svg>
+      <svg id="ropeSvg" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="显示词元位置 m 处 RoPE 维度对 j 旋转角度的转盘"></svg>
     </div>
-    <div class="fig-cap"><b>Fig. 2</b> — MRoPE rotation dial: dim-pair j at position m receives a phase θ = m·ωⱼ, with the section (T/H/W) determining which frequency band it draws from.</div>
+    <div class="fig-cap"><b>图 2</b> — MRoPE 旋转转盘：位置 m 处的维度对 j 获得相位 θ = m·ωⱼ，其区段（T/H/W）决定所采用的频带。</div>
     <div class="w-out" id="ropeOut" aria-live="polite"></div>
   </div>
 
-  <h3>The output σ-gate: filtering before the residual write</h3>
-  <p>Equation (7) is the "Gated" in Gated Attention, and it sits between the softmax retrieval and the residual stream. The attention output $\text{Attn}(Q,K,V)$ is element-wise multiplied by $\sigma(x W_g)$ <em>before</em> the output projection $W_o$ adds it back into the stream. The gate is a per-channel scalar in $(0,1)$ computed from the layer's input $x$, so it is data-dependent, not a fixed mask. When the retrieved context is relevant, the gate opens toward $1$ and the attention output passes through to the residual; when the retrieved context is irrelevant or noisy, the gate falls toward $0$ and the attention contribution is suppressed before it can pollute the stream.</p>
-  <p>This is the mechanism that lets the model run only 4 KV heads without losing quality. Aggressive KV-head reduction (GQA-4) saves the cache but means each retrieval reads a coarser shared representation, which can surface loose matches; the σ-gate discards those loose matches at the output rather than letting them propagate. In effect the gate gives each attention layer a learned on/off switch for its own contribution: a layer that finds nothing useful for the current token can near-silence itself, contributing almost nothing to the residual, while a layer that retrieves a key fact passes it through at full strength. That is the "compensated by σ-gate" note in the GQA table, and it is what closes the quality gap to full MHA at a sixth of the cache cost.</p>
+  <h3>输出 σ 门控：在写入残差前过滤</h3>
+  <p>公式 (7) 体现了门控注意力中的“门控”，它位于 softmax 检索与残差流之间。在输出投影 $W_o$ 把注意力输出加回信息流<em>之前</em>，注意力输出 $\text{Attn}(Q,K,V)$ 会与 $\sigma(x W_g)$ 逐元素相乘。该门控是根据层输入 $x$ 计算出的、取值在 $(0,1)$ 内的逐通道标量，因此它依赖数据，并非固定掩码。检索到的上下文相关时，门控趋近 $1$ 而打开，使注意力输出传入残差；检索到的上下文无关或含有噪声时，门控趋近 $0$，在注意力贡献污染信息流之前将其抑制。</p>
+  <p>正是这种机制让模型只使用 4 个 KV 头也不会损失质量。激进精简 KV 头（GQA-4）节省了缓存，但也意味着每次检索读取的是更粗粒度的共享表示，可能出现不够紧密的匹配；σ 门控会在输出端丢弃这些松散匹配，而不是让它们继续传播。实际上，门控为每个注意力层提供了一个已学习的自身贡献开关：若某层找不到对当前词元有用的内容，它可以近乎静默，对残差几乎不作贡献；若某层检索到关键事实，则会全强度放行。这就是 GQA 表中“由 σ 门控补偿”的含义，它以六分之一的缓存成本弥合了与完整 MHA 的质量差距。</p>
 
   <!-- Widget 3: Output Sigmoid Gate Noise Filtering (#w-attn-gate) -->
   <div class="widget" id="w-attn-gate">
-    <div class="w-head"><span class="w-title">Learned output σ-gate &amp; attention noise suppressor</span><span class="w-tag">gate dynamics</span></div>
-    <div class="w-desc">The output sigmoid gate $\sigma(x W_g)$ attenuates retrieved context before down-projection into the residual stream: when retrieved material is irrelevant or noisy, gate values fall toward zero and suppress those activations.</div>
+    <div class="w-head"><span class="w-title">已学习的输出 σ 门控与注意力噪声抑制器</span><span class="w-tag">门控动态</span></div>
+    <div class="w-desc">输出 sigmoid 门控 $\sigma(x W_g)$ 会在检索到的上下文降维投影至残差流之前将其衰减：当检索内容无关或含有噪声时，门控值趋近于零并抑制这些激活。</div>
     
     <div class="packing-ctl">
-      <div class="seg" id="attnGateModeSeg" role="group" aria-label="Attention gating mode">
-        <button data-gate="active" class="on" aria-pressed="true">Relevant Context (Gate Open σ = 0.94)</button>
-        <button data-gate="filtered" aria-pressed="false">Noisy Distractor Context (Gate Clamped σ = 0.08)</button>
+      <div class="seg" id="attnGateModeSeg" role="group" aria-label="注意力门控模式">
+        <button data-gate="active" class="on" aria-pressed="true">相关上下文（门控打开 σ = 0.94）</button>
+        <button data-gate="filtered" aria-pressed="false">含噪干扰上下文（门控钳制 σ = 0.08）</button>
       </div>
     </div>
 
     <div class="calc-readout" id="attnGateVisual" aria-live="polite"></div>
   </div>
 
-  <p>The 16 Gated Attention layers are the backbone's exact-retrieval path: GQA-4 keeps their cache servable at 17.18 GB, MRoPE lets them position text and vision on one axis, and the σ-gate ensures their contributions are signal, not noise. But attention only routes information between positions. It does not change what a position can <em>represent</em>. That transformation is the job of the FFN, which sits in every one of the 64 layers and is the subject of §06: the 17,408-wide SwiGLU that holds the majority of the model's parameters, and the Pre-RMSNorm residual bus that the mixer and FFN both write into.</p>
+  <p>16 个门控注意力层构成骨干网络的精确检索路径：GQA-4 将其缓存控制在可部署的 17.18 GB，MRoPE 让它们在统一坐标系中定位文本与视觉内容，而 σ 门控确保其贡献是信号而非噪声。但注意力只负责在位置之间路由信息，并不会改变一个位置能够<em>表示</em>的内容。这种变换由 FFN 完成；它存在于全部 64 层中，也是 §06 的主题：宽度为 17,408、承载模型大多数参数的 SwiGLU，以及混合器和 FFN 都会写入的 Pre-RMSNorm 残差总线。</p>
 </section>

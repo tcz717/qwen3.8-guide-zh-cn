@@ -1,86 +1,86 @@
-<!-- ============================================================ 13 BENCHMARKS -->
+<!-- ============================================================ 13 基准测试 -->
 <section id="benchmarks">
-  <div class="sec-tag">13 · Benchmarks</div>
-  <h2>Empirical capability &amp; benchmarks</h2>
-  <p class="lead">Benchmarks are not the point of this walkthrough (the architecture is), but the empirical record is the external check that the mechanisms of §§03–11 actually compound into capability. Read architecturally, each benchmark domain is a probe of a different substrate built earlier in the document: knowledge probes retrieve from the §06 FFN key–value memory, long-horizon agents lean on the §04 recurrent state held across thousands of steps, multimodal tasks route through the §07 SigLIP tower and §05 MRoPE, and reasoning tasks spend §11 thinking tokens to surface what pretraining stored. The four headline deltas below are where the hybrid Gated DeltaNet backbone, the native vision front-end, and the GRPO reasoning RL show up as double-digit jumps, most sharply in long-horizon software engineering and autonomous computer use.</p>
+  <div class="sec-tag">13 · 基准测试</div>
+  <h2>实证能力与基准测试</h2>
+  <p class="lead">基准测试并非本篇导览的重点（架构才是），但实证结果是外部检验，用来确认 §§03–11 的机制确实能叠加形成能力。从架构角度看，每个基准测试领域都在探测本文前面构建的一种不同基础：知识测试从 §06 的 FFN 键值记忆中检索，长时程智能体依赖 §04 跨数千步保持的循环状态，多模态任务经由 §07 SigLIP 塔和 §05 MRoPE 路由，而推理任务则消耗 §11 的思考词元，以显现预训练存储的内容。下面四项最醒目的增幅，体现了混合门控 DeltaNet 骨干网络、原生视觉前端与 GRPO 推理强化学习带来的两位数跃升，其中长时程软件工程和自主计算机操作的提升最为显著。</p>
 
-  <!-- Executive Scoreboard / KPI Dashboard -->
-  <div class="bench-dash" aria-label="Executive benchmark summary scorecard">
+  <!-- 综合计分板 / KPI 仪表板 -->
+  <div class="bench-dash" aria-label="基准测试综合摘要计分板">
     <div class="dash-kpi">
-      <div class="kpi-label">Win rate vs referee</div>
+      <div class="kpi-label">对比参照模型的胜率</div>
       <div class="kpi-val" id="dashWinRate">100%</div>
-      <div class="kpi-sub" id="dashWinCount">16W · 0L · 0P vs 3.6-27B</div>
+      <div class="kpi-sub" id="dashWinCount">对比 3.6-27B：16 胜 · 0 负 · 0 平</div>
     </div>
     <div class="dash-kpi">
-      <div class="kpi-label">Mean net margin</div>
-      <div class="kpi-val good" id="dashAvgMargin">+12.8 pts</div>
-      <div class="kpi-sub" id="dashAvgSub">across 16 suites</div>
+      <div class="kpi-label">平均净领先</div>
+      <div class="kpi-val good" id="dashAvgMargin">+12.8 分</div>
+      <div class="kpi-sub" id="dashAvgSub">覆盖 16 个测试套件</div>
     </div>
     <div class="dash-kpi">
-      <div class="kpi-label">Agentic SWE gain</div>
-      <div class="kpi-val good" id="dashSweGain">+29.7 pts</div>
-      <div class="kpi-sub">QwenSWEBench (79.0 vs 49.3)</div>
+      <div class="kpi-label">智能体软件工程增益</div>
+      <div class="kpi-val good" id="dashSweGain">+29.7 分</div>
+      <div class="kpi-sub">QwenSWEBench（79.0 对 49.3）</div>
     </div>
     <div class="dash-kpi">
-      <div class="kpi-label">Computer use gain</div>
-      <div class="kpi-val good" id="dashGuiGain">+20.4 pts</div>
-      <div class="kpi-sub">OSWorld (84.3 vs 63.9)</div>
+      <div class="kpi-label">计算机操作增益</div>
+      <div class="kpi-val good" id="dashGuiGain">+20.4 分</div>
+      <div class="kpi-sub">OSWorld（84.3 对 63.9）</div>
     </div>
   </div>
 
-  <p>The detailed vendor scorecards that filled this section (radar, parity scatter, margin waterfall, Pareto frontier, and the master catalog) have been removed: for an architectural walkthrough they were comparison shopping, not instruction. What remains is the one view that earns its place, the mapping from each capability domain to the architectural component that delivers it.</p>
+  <p>此前占据本节的详细厂商计分图（雷达图、对等散点图、差值瀑布图、帕累托前沿和总目录）已被移除：对于架构导览而言，它们更像选购比较，而非教学。保留下来的唯一视图确有其价值：它把每个能力领域映射到实现该能力的架构组件。</p>
 
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 12 — Capability mapped to architecture:</strong> each benchmark domain probes a different substrate built earlier in the document; scores are vendor-published (Claude Code harness for agentic suites, temp 1.0, top_p 0.95), Δ is the gain over the dense 3.6-27B baseline.</caption>
+      <caption><strong>表 12 — 能力与架构的映射：</strong>每个基准测试领域探测本文前面构建的一种不同基础；分数由厂商发布（智能体测试套件使用 Claude Code 测试框架，温度 1.0，top_p 0.95），Δ 表示相对稠密 3.6-27B 基线的增益。</caption>
       <thead>
         <tr>
-          <th scope="col">Capability domain</th>
-          <th scope="col">Architectural substrate exercised</th>
-          <th scope="col">Representative suite</th>
+          <th scope="col">能力领域</th>
+          <th scope="col">所检验的架构基础</th>
+          <th scope="col">代表性测试套件</th>
           <th scope="col" class="r">3.8-27B</th>
-          <th scope="col" class="r">Δ vs 3.6-27B</th>
+          <th scope="col" class="r">相对 3.6-27B 的 Δ</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Agentic SWE</td>
-          <td>§11 agentic RL surfaces + §06 FFN retrieval held across a long horizon by the §04 recurrent state</td>
+          <td>智能体软件工程</td>
+          <td>§11 智能体强化学习显现能力 + §06 FFN 检索，由 §04 循环状态在长时程内保持</td>
           <td>QwenSWEBench</td>
           <td class="r"><strong>79.0</strong></td>
           <td class="r good">+29.7</td>
         </tr>
         <tr>
-          <td>Computer use</td>
-          <td>§07 SigLIP vision tower reading GUI pixels + §11 agentic RL closing the perception–action loop</td>
+          <td>计算机操作</td>
+          <td>§07 SigLIP 视觉塔读取 GUI 像素 + §11 智能体强化学习闭合感知—行动回路</td>
           <td>OSWorld-Verified</td>
           <td class="r"><strong>84.3</strong></td>
           <td class="r good">+20.4</td>
         </tr>
         <tr>
-          <td>Competitive code</td>
-          <td>§09 verifier-gated synthetic code + §06 formal-reasoning key–value slots</td>
+          <td>竞赛编程</td>
+          <td>§09 验证器门控的合成代码 + §06 形式推理键值槽位</td>
           <td>LiveCodeBench v6</td>
           <td class="r"><strong>90.3</strong></td>
           <td class="r good">+6.4</td>
         </tr>
         <tr>
-          <td>STEM &amp; reasoning</td>
-          <td>§06 knowledge slots surfaced by §11 test-time thinking tokens</td>
+          <td>STEM 与推理</td>
+          <td>§06 知识槽位，由 §11 测试时思考词元显现</td>
           <td>GPQA Diamond</td>
           <td class="r"><strong>89.2</strong></td>
           <td class="r good">+1.4</td>
         </tr>
         <tr>
-          <td>Vision &amp; UI</td>
-          <td>§07 ViT + MLP projector + §05 3D MRoPE carrying the spatial height/width axes</td>
+          <td>视觉与 UI</td>
+          <td>§07 ViT + MLP 投影器 + §05 承载空间高度/宽度轴的 3D MRoPE</td>
           <td>RecreationBench</td>
           <td class="r"><strong>47.1</strong></td>
           <td class="r good">+17.3</td>
         </tr>
         <tr>
-          <td>Instruction following</td>
-          <td>§11 alignment (cold-start install + GRPO amplification)</td>
+          <td>指令遵循</td>
+          <td>§11 对齐（冷启动注入 + GRPO 放大）</td>
           <td>IFBench</td>
           <td class="r"><strong>79.5</strong></td>
           <td class="r good">+10.4</td>
@@ -90,64 +90,64 @@
   </div>
 
   <div class="callout note">
-    <div class="co-title">Evaluation methodology &amp; reproducibility</div>
-    <p>All benchmarks were conducted using the standard Claude Code test harness for agentic suites (temperature 1.0, top_p 0.95, maximum 50 multi-turn iterations per prompt). Decontamination protocols used 13-gram exact matches and semantic embedding similarity filters against pretraining and SFT shards. Weights are distributed under the permissive Apache 2.0 license with GGUF, vLLM, and SGLang inference support ready out of the box.</p>
+    <div class="co-title">评测方法与可复现性</div>
+    <p>所有基准测试均使用智能体测试套件的标准 Claude Code 测试框架完成（温度 1.0、top_p 0.95、每条提示最多 50 轮多轮迭代）。去污染流程针对预训练与 SFT 分片，采用 13-gram 精确匹配和语义嵌入相似度过滤器。权重以宽松的 Apache 2.0 许可证发布，并开箱即用地支持 GGUF、vLLM 和 SGLang 推理。</p>
   </div>
 </section>
 
-<!-- ============================================================ 14 PSEUDOCODE -->
+<!-- ============================================================ 14 伪代码 -->
 <section id="pseudocode">
-  <div class="sec-tag">14 · From scratch, as code</div>
-  <h2>The whole hybrid architecture in standalone PyTorch</h2>
-  <p class="lead">Every equation from §02–08 assembled into clean, standalone, fully runnable PyTorch code. Features zero opaque dependencies, explicit tensor shape annotations throughout, and an interactive tensor tracer that computes memory buffers and FLOPs for any batch size or sequence length.</p>
+  <div class="sec-tag">14 · 从零开始，以代码呈现</div>
+  <h2>用独立 PyTorch 实现完整混合架构</h2>
+  <p class="lead">将 §02–08 的每个方程组装成简洁、独立且完全可运行的 PyTorch 代码。没有任何不透明依赖，全程明确标注张量形状，并提供交互式张量追踪器，可计算任意批量大小或序列长度下的内存缓冲区与 FLOP。</p>
 
-  <h3>A verifiability artifact, not a serving kernel</h3>
-  <p>The code below is deliberately small (roughly 340 lines hold the whole 27.6-billion-parameter architecture) because it is a <em>read-through</em> of the model, not a deployment. Every line maps to an equation from §§02–08; nothing is hidden inside a fused kernel, a CUDA graph, or a library call whose internals the reader cannot see. That choice buys total verifiability at a well-defined price: the code is correct about <em>what</em> the model computes and <em>how</em> the tensors flow, but it is intentionally naïve about <em>how fast</em> that compute runs. The DeltaNet layer steps its recurrent state in a Python <code>for t in range(T)</code> loop; the attention layer calls <code>F.scaled_dot_product_attention</code> without tiling its own KV; the rotary path falls back to one-dimensional positions. Each of these is a production shortcut removed, and each omission points back to the section that owns the real kernel.</p>
-  <p>Read the two widgets as a pair. The tracer above walks one subsystem's tensors shape-by-shape and reports the memory and FLOP bill the code actually incurs; the studio below gives the source itself, file by file, with each module cross-linked to its derivation. The contract table that closes the section lists the invariants the code is bound by, and the prose between the studio and the table walks the source so that each one is derived from the config.</p>
+  <h3>可验证性工件，而非服务内核</h3>
+  <p>下面的代码刻意保持精简（约 340 行就容纳了完整的 276 亿参数架构），因为它用于<em>通读</em>模型，而非部署。每一行都映射到 §§02–08 的某个方程；没有任何内容藏在融合内核、CUDA 图或读者无法查看内部实现的库调用里。这一选择以明确的代价换来了完全可验证性：代码准确体现模型计算<em>什么</em>以及张量<em>如何</em>流动，但有意不追求计算运行得<em>多快</em>。DeltaNet 层在 Python 的 <code>for t in range(T)</code> 循环中逐步更新循环状态；注意力层调用 <code>F.scaled_dot_product_attention</code>，但不自行对 KV 分块；旋转路径则回退到一维位置。这里逐一移除了生产环境的捷径，而每项省略都指回负责真实内核的对应章节。</p>
+  <p>请将两个小组件配合阅读。上方追踪器逐一遍历某个子系统的张量形状，并报告代码实际产生的内存与 FLOP 开销；下方工作室则逐文件给出源代码，每个模块都交叉链接到其推导。节末的契约表列出代码必须遵守的不变量，而工作室与表格之间的说明会逐段讲解源码，展示每个不变量如何由配置推导出来。</p>
 
-  <!-- Widget 1: Interactive Tensor Dimension & Memory Trace Inspector (#w-code-tracer) -->
+  <!-- 小组件 1：交互式张量维度与内存轨迹检查器 (#w-code-tracer) -->
   <div class="widget" id="w-code-tracer">
-    <div class="w-head"><span class="w-title">Live tensor dimension &amp; memory tracer</span><span class="w-tag">tensor pipeline</span></div>
-    <div class="w-desc">Exact shape transformations and memory allocations across the forward pass: how intermediate activations and recurrent states scale between linear DeltaNet and full attention. Adjust batch size, sequence length, and precision to compare footprints.</div>
+    <div class="w-head"><span class="w-title">实时张量维度与内存追踪器</span><span class="w-tag">张量流水线</span></div>
+    <div class="w-desc">精确展示前向传播中的形状变换与内存分配：中间激活和循环状态在线性 DeltaNet 与全注意力之间如何缩放。调整批量大小、序列长度和精度即可比较占用。</div>
     
     <div class="tracer-ctl">
       <div class="w-ctl">
-        <label for="traceBatch">batch size (B)</label>
+        <label for="traceBatch">批量大小 (B)</label>
         <select id="traceBatch">
-          <option value="1" selected>B = 1 (Single stream)</option>
-          <option value="2">B = 2 (Pair)</option>
-          <option value="4">B = 4 (Small batch)</option>
-          <option value="8">B = 8 (Serving batch)</option>
-          <option value="16">B = 16 (Throughput batch)</option>
+          <option value="1" selected>B = 1（单流）</option>
+          <option value="2">B = 2（成对）</option>
+          <option value="4">B = 4（小批量）</option>
+          <option value="8">B = 8（服务批量）</option>
+          <option value="16">B = 16（吞吐批量）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="traceCtx">sequence length (T)</label>
+        <label for="traceCtx">序列长度 (T)</label>
         <select id="traceCtx">
-          <option value="1">T = 1 (Single decode token)</option>
-          <option value="512">T = 512 (Short prompt)</option>
-          <option value="2048" selected>T = 2,048 (Standard prompt)</option>
-          <option value="8192">T = 8,192 (Code repo file)</option>
-          <option value="32768">T = 32,768 (Long context)</option>
-          <option value="262144">T = 262,144 (Full 262k window)</option>
+          <option value="1">T = 1（单个解码词元）</option>
+          <option value="512">T = 512（短提示）</option>
+          <option value="2048" selected>T = 2,048（标准提示）</option>
+          <option value="8192">T = 8,192（代码仓库文件）</option>
+          <option value="32768">T = 32,768（长上下文）</option>
+          <option value="262144">T = 262,144（完整 262k 窗口）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="traceDtype">precision dtype</label>
+        <label for="traceDtype">精度数据类型</label>
         <select id="traceDtype">
-          <option value="2" selected>BF16 / FP16 (2 bytes/elem)</option>
-          <option value="1">FP8 (1 byte/elem)</option>
-          <option value="4">FP32 (4 bytes/elem)</option>
+          <option value="2" selected>BF16 / FP16（2 字节/元素）</option>
+          <option value="1">FP8（1 字节/元素）</option>
+          <option value="4">FP32（4 字节/元素）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="traceModule">subsystem module</label>
+        <label for="traceModule">子系统模块</label>
         <select id="traceModule">
-          <option value="deltanet" selected>Gated DeltaNet Layer (§04)</option>
-          <option value="attention">Gated Full Attention Layer (§05)</option>
-          <option value="swiglu">SwiGLU FFN Block (§06)</option>
-          <option value="mtp">MTP Speculative Head (§08)</option>
-          <option value="superblock">Hybrid Super-Block [ΔΔΔA]</option>
+          <option value="deltanet" selected>门控 DeltaNet 层 (§04)</option>
+          <option value="attention">门控全注意力层 (§05)</option>
+          <option value="swiglu">SwiGLU FFN 块 (§06)</option>
+          <option value="mtp">MTP 推测头 (§08)</option>
+          <option value="superblock">混合超级块 [ΔΔΔA]</option>
         </select>
       </div>
     </div>
@@ -158,29 +158,29 @@
     </div>
   </div>
 
-  <!-- Widget 2: Interactive PyTorch Studio (#w-code-lab) -->
+  <!-- 小组件 2：交互式 PyTorch 工作室 (#w-code-lab) -->
   <div class="widget" id="w-code-lab">
-    <div class="w-head"><span class="w-title">PyTorch implementation studio</span><span class="w-tag">code studio</span></div>
-    <div class="w-desc">The complete architecture across modular source files and a unified 342-line reference; each module links directly to its mathematical derivation. Copy code to the clipboard or download standalone Python files to run locally.</div>
+    <div class="w-head"><span class="w-title">PyTorch 实现工作室</span><span class="w-tag">代码工作室</span></div>
+    <div class="w-desc">完整架构分布在模块化源文件和一份统一的 342 行参考实现中；每个模块都直接链接到其数学推导。可将代码复制到剪贴板，或下载独立 Python 文件在本地运行。</div>
     
     <div class="code-studio-bar">
-      <div class="code-tabs" id="codeStudioTabs" role="tablist" aria-label="Source code module tabs">
-        <button class="code-tab on" data-file="full" role="tab" aria-selected="true">qwen38_full.py <span class="tab-badge">Unified</span></button>
-        <button class="code-tab" data-file="deltanet" role="tab" aria-selected="false">01_deltanet.py <span class="tab-badge">Linear Attn</span></button>
+      <div class="code-tabs" id="codeStudioTabs" role="tablist" aria-label="源代码模块标签页">
+        <button class="code-tab on" data-file="full" role="tab" aria-selected="true">qwen38_full.py <span class="tab-badge">统一版</span></button>
+        <button class="code-tab" data-file="deltanet" role="tab" aria-selected="false">01_deltanet.py <span class="tab-badge">线性注意力</span></button>
         <button class="code-tab" data-file="attention" role="tab" aria-selected="false">02_attention.py <span class="tab-badge">MRoPE GQA</span></button>
-        <button class="code-tab" data-file="swiglu" role="tab" aria-selected="false">03_swiglu_block.py <span class="tab-badge">Hybrid Block</span></button>
-        <button class="code-tab" data-file="mtp" role="tab" aria-selected="false">04_mtp_head.py <span class="tab-badge">MTP Head</span></button>
-        <button class="code-tab" data-file="verify" role="tab" aria-selected="false">05_run_verify.py <span class="tab-badge">Test Harness</span></button>
+        <button class="code-tab" data-file="swiglu" role="tab" aria-selected="false">03_swiglu_block.py <span class="tab-badge">混合块</span></button>
+        <button class="code-tab" data-file="mtp" role="tab" aria-selected="false">04_mtp_head.py <span class="tab-badge">MTP 头</span></button>
+        <button class="code-tab" data-file="verify" role="tab" aria-selected="false">05_run_verify.py <span class="tab-badge">测试框架</span></button>
       </div>
       <div class="code-actions">
-        <button class="code-btn" id="btnToggleAnnot" title="Toggle inline mathematical equation annotations">
-          <span class="btn-icon">§</span> Annotations: <b id="annotState">ON</b>
+        <button class="code-btn" id="btnToggleAnnot" title="切换行内数学方程标注">
+          <span class="btn-icon">§</span> 标注：<b id="annotState">开</b>
         </button>
-        <button class="code-btn" id="btnCopyCode" title="Copy active code file to clipboard">
-          <span class="btn-icon">📋</span> <span id="copyBtnText">Copy Code</span>
+        <button class="code-btn" id="btnCopyCode" title="将当前代码文件复制到剪贴板">
+          <span class="btn-icon">📋</span> <span id="copyBtnText">复制代码</span>
         </button>
-        <button class="code-btn primary" id="btnDownloadCode" title="Download standalone Python script">
-          <span class="btn-icon">⬇</span> Download .py
+        <button class="code-btn primary" id="btnDownloadCode" title="下载独立 Python 脚本">
+          <span class="btn-icon">⬇</span> 下载 .py
         </button>
       </div>
     </div>
@@ -189,21 +189,21 @@
       <div class="code-file-header">
         <div class="cf-info">
           <span class="cf-filename" id="cfFilename">qwen38_full.py</span>
-          <span class="cf-desc" id="cfDesc">Complete self-contained hybrid architecture with 16×[ΔΔΔA] super-blocks and MTP head.</span>
+          <span class="cf-desc" id="cfDesc">完整自包含混合架构，包含 16×[ΔΔΔA] 超级块和 MTP 头。</span>
         </div>
-          <div class="cf-meta" id="cfMeta">342 lines · Python 3.10+ · PyTorch 2.0+</div>
+          <div class="cf-meta" id="cfMeta">342 行 · Python 3.10+ · PyTorch 2.0+</div>
       </div>
       <pre class="code code-studio-pre" id="codeStudioPre"><code id="codeStudioContent"></code></pre>
     </div>
   </div>
 
-  <!-- Code Studio Python sources: read once by the CODE_FILES bootstrap in js/app.js. -->
-  <!-- type=text/plain is never executed by browsers; closing tag sits flush-left so textContent is exact. -->
+  <!-- 代码工作室 Python 源码：由 js/app.js 中的 CODE_FILES 引导程序读取一次。 -->
+  <!-- type=text/plain 不会被浏览器执行；结束标签顶格放置，以确保 textContent 精确无误。 -->
   <script type="text/plain" data-py="full">
 """
-Qwen 3.8-27B — Complete Hybrid Architecture From Scratch (PyTorch)
-64-Layer Hybrid Backbone (16 super-blocks of 3x Gated DeltaNet + 1x Gated Attention)
-Apache 2.0 Reference Implementation · August 2026
+Qwen 3.8-27B — 从零实现的完整混合架构（PyTorch）
+64 层混合骨干网络（16 个超级块，每块含 3 个门控 DeltaNet + 1 个门控注意力）
+Apache 2.0 参考实现 · 2026 年 8 月
 """
 
 import math
@@ -215,28 +215,28 @@ import torch.nn.functional as F
 class Qwen38Config:
     d_model: int = 5120
     n_layers: int = 64
-    hybrid_pattern: str = "3:1"        # 3 DeltaNet : 1 Gated Attention
-    # DeltaNet specs (48 layers)
+    hybrid_pattern: str = "3:1"        # 3 个 DeltaNet：1 个门控注意力
+    # DeltaNet 规格（48 层）
     dn_qk_heads: int = 16
     dn_v_heads: int = 48
     dn_head_dim: int = 128
-    # Gated Attention specs (16 layers)
+    # 门控注意力规格（16 层）
     attn_q_heads: int = 24
-    attn_kv_heads: int = 4            # Grouped-Query Attention (GQA 6:1)
+    attn_kv_heads: int = 4            # 分组查询注意力（GQA 6:1）
     attn_head_dim: int = 256
-    rotary_dim: int = 64              # Partial RoPE
-    mrope_sections: Tuple[int, int, int] = (11, 11, 10)  # [Time, Height, Width]
-    # Feed-Forward specs
-    d_ff: int = 17408                 # SwiGLU intermediate dimension
-    # Vocab & Context
-    vocab_size: int = 248320          # 248k vocab with 32-multiple padding
-    max_context: int = 262144         # 262k native context window
+    rotary_dim: int = 64              # 部分 RoPE
+    mrope_sections: Tuple[int, int, int] = (11, 11, 10)  # [时间, 高度, 宽度]
+    # 前馈网络规格
+    d_ff: int = 17408                 # SwiGLU 中间维度
+    # 词表与上下文
+    vocab_size: int = 248320          # 248k 词表，以 32 的倍数填充
+    max_context: int = 262144         # 262k 原生上下文窗口
     rms_norm_eps: float = 1e-6
-    # Multi-Token Prediction
-    mtp_k: int = 2                    # 2-step speculative prediction heads
+    # 多词元预测
+    mtp_k: int = 2                    # 两步推测预测头
 
 class RMSNorm(nn.Module):
-    """Root Mean Square Layer Normalization (eq. 9)"""
+    """均方根层归一化（方程 9）"""
     def __init__(self, dim: int, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
@@ -248,7 +248,7 @@ class RMSNorm(nn.Module):
         return norm * self.weight
 
 class SwiGLU(nn.Module):
-    """Swish-Gated Linear Unit Feed-Forward Network (eq. 8)"""
+    """Swish 门控线性单元前馈网络（方程 8）"""
     def __init__(self, d_model: int, d_ff: int):
         super().__init__()
         self.w_gate = nn.Linear(d_model, d_ff, bias=False)
@@ -261,9 +261,9 @@ class SwiGLU(nn.Module):
 
 class GatedDeltaNet(nn.Module):
     """
-    Gated DeltaNet Linear Attention Layer (eq. 3–4)
-    Features L2 key/query normalization, input-dependent write gate β_t,
-    learned decay rate α_t, and associative memory state update.
+    门控 DeltaNet 线性注意力层（方程 3–4）
+    包含 L2 键/查询归一化、依赖输入的写入门 β_t、
+    学习到的衰减率 α_t，以及联想记忆状态更新。
     """
     def __init__(self, cfg: Qwen38Config):
         super().__init__()
@@ -272,13 +272,13 @@ class GatedDeltaNet(nn.Module):
         self.n_v = cfg.dn_v_heads
         self.d_h = cfg.dn_head_dim
         
-        # Single fused input projection for Q, K, V
+        # Q、K、V 的单个融合输入投影
         self.in_proj = nn.Linear(self.d_model, (self.n_qk * 2 + self.n_v) * self.d_h, bias=False)
-        # Input-dependent write gate beta_t (eq. 4)
+        # 依赖输入的写入门 beta_t（方程 4）
         self.b_proj = nn.Linear(self.d_model, self.n_v, bias=True)
-        # Log-parameterized learned decay rate alpha
+        # 采用对数参数化的学习衰减率 alpha
         self.a_log = nn.Parameter(torch.zeros(self.n_v))
-        # Output projection
+        # 输出投影
         self.out_proj = nn.Linear(self.n_v * self.d_h, self.d_model, bias=False)
 
     def forward(
@@ -295,30 +295,30 @@ class GatedDeltaNet(nn.Module):
             dim=-1
         )
         
-        # Reshape to multi-head format: [B, T, H, d_h]
+        # 重塑为多头格式：[B, T, H, d_h]
         q = q_raw.view(B, T, self.n_qk, self.d_h)
         k = k_raw.view(B, T, self.n_qk, self.d_h)
         v = v.view(B, T, self.n_v, self.d_h)
         
-        # L2-Normalization across head dimension (§04 invariant)
+        # 沿头维度进行 L2 归一化（§04 不变量）
         q = F.normalize(q, p=2, dim=-1)
         k = F.normalize(k, p=2, dim=-1)
         
-        # Expand Q/K from 16 to 48 heads to match V (1:3 GQA mapping)
+        # 将 Q/K 从 16 头扩展到 48 头以匹配 V（1:3 GQA 映射）
         if self.n_v != self.n_qk:
             q = q.repeat_interleave(self.n_v // self.n_qk, dim=2)
             k = k.repeat_interleave(self.n_v // self.n_qk, dim=2)
             
-        # Gates: write strength beta in (0, 2), decay alpha in (0, 1)
+        # 门：写入强度 beta 位于 (0, 2)，衰减 alpha 位于 (0, 1)
         beta = 2.0 * torch.sigmoid(self.b_proj(x)).view(B, T, self.n_v, 1, 1)
         alpha = torch.exp(-F.softplus(self.a_log).exp()).view(1, 1, self.n_v, 1, 1)
         
-        # Initialize recurrent associative state: S in R^[B, H_v, d_h, d_h]
+        # 初始化循环联想状态：S ∈ R^[B, H_v, d_h, d_h]
         if state is None:
             state = torch.zeros(B, self.n_v, self.d_h, self.d_h, device=x.device, dtype=x.dtype)
             
         outputs = []
-        # Stepwise / Chunked delta-rule associative scan (eq. 3-4)
+        # 逐步/分块的 delta 规则联想扫描（方程 3–4）
         for t in range(T):
             q_t = q[:, t].unsqueeze(-1)          # [B, H, d_h, 1]
             k_t = k[:, t].unsqueeze(-1)          # [B, H, d_h, 1]
@@ -326,14 +326,14 @@ class GatedDeltaNet(nn.Module):
             b_t = beta[:, t]                     # [B, H, 1, 1]
             a_t = alpha                          # [1, H, 1, 1]
             
-            # Error prediction: e_t = (S_{t-1} @ k_t) - v_t
+            # 误差预测：e_t = (S_{t-1} @ k_t) - v_t
             pred_v = torch.matmul(state, k_t)
             err = pred_v - v_t
             
-            # Delta state update: S_t = a_t * S_{t-1} - b_t * (err @ k_t^T)
+            # Delta 状态更新：S_t = a_t * S_{t-1} - b_t * (err @ k_t^T)
             state = a_t * state - b_t * torch.matmul(err, k_t.transpose(-1, -2))
             
-            # Readout: y_t = S_t^T @ q_t -> [B, H, d_h]
+            # 读出：y_t = S_t^T @ q_t -> [B, H, d_h]
             y_t = torch.matmul(state.transpose(-1, -2), q_t).squeeze(-1)
             outputs.append(y_t)
             
@@ -343,7 +343,7 @@ class GatedDeltaNet(nn.Module):
 
 class GatedAttention(nn.Module):
     """
-    Gated Full Self-Attention with 3D MRoPE and Sigmoid Output Gate (eq. 5–7)
+    带 3D MRoPE 和 Sigmoid 输出门的门控全自注意力（方程 5–7）
     """
     def __init__(self, cfg: Qwen38Config):
         super().__init__()
@@ -366,13 +366,13 @@ class GatedAttention(nn.Module):
         k: torch.Tensor, 
         positions_3d: Optional[torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Partial rotary embedding across 3D coordinates [Time, Height, Width]
-        # Channels 0..63 receive rotary phase; channels 64..255 remain unmodified
+        # 跨 3D 坐标 [时间, 高度, 宽度] 的部分旋转嵌入
+        # 通道 0..63 接收旋转相位；通道 64..255 保持不变
         B, T, H_q, D_h = q.shape
         _, _, H_kv, _ = k.shape
         
         if positions_3d is None:
-            # Fallback 1D linear positions
+            # 回退到一维线性位置
             pos = torch.arange(T, device=q.device).unsqueeze(0).repeat(B, 1)
             freqs = 1.0 / (10000000.0 ** (torch.arange(0, self.rotary_dim, 2, device=q.device).float() / self.rotary_dim))
             angles = torch.einsum("bt,f->btf", pos, freqs)
@@ -404,20 +404,20 @@ class GatedAttention(nn.Module):
         v = self.v_proj(x).view(B, T, self.n_kv, self.d_h)
         gate = torch.sigmoid(self.gate_proj(x)).view(B, T, self.n_q, self.d_h)
         
-        # Apply 3D Multimodal Rotary Position Embedding
+        # 应用 3D 多模态旋转位置嵌入
         q, k = self._apply_mrope(q, k, positions_3d)
         
-        # Handle KV-cache concatenation for autoregressive inference
+        # 处理自回归推理中的 KV 缓存拼接
         if kv_cache is not None:
             k = torch.cat([kv_cache[0], k], dim=1)
             v = torch.cat([kv_cache[1], v], dim=1)
         new_cache = (k, v)
         
-        # Grouped-Query Attention (GQA 24:4 -> 6:1 repeat)
+        # 分组查询注意力（GQA 24:4 -> 6:1 重复）
         k_rep = k.repeat_interleave(self.n_q // self.n_kv, dim=2)
         v_rep = v.repeat_interleave(self.n_q // self.n_kv, dim=2)
         
-        # Transpose to [B, H, T, d_h] for Scaled Dot-Product Attention
+        # 转置为 [B, H, T, d_h]，供缩放点积注意力使用
         q_t = q.transpose(1, 2)
         k_t = k_rep.transpose(1, 2)
         v_t = v_rep.transpose(1, 2)
@@ -426,18 +426,18 @@ class GatedAttention(nn.Module):
             q_t, k_t, v_t, is_causal=(kv_cache is None and T > 1)
         ).transpose(1, 2)
         
-        # Output Sigmoid Gate modulation (eq. 7)
+        # 输出 Sigmoid 门调制（方程 7）
         gated_out = (attn_out * gate).reshape(B, T, self.n_q * self.d_h)
         return self.out_proj(gated_out), new_cache
 
 class HybridSuperBlock(nn.Module):
     """
-    1 of 16 Super-Blocks containing 3x Gated DeltaNet + 1x Gated Attention layers.
-    Total layers per super-block: 4. Total model layers: 16 * 4 = 64.
+    16 个超级块之一，包含 3 个门控 DeltaNet 层 + 1 个门控注意力层。
+    每个超级块共 4 层。模型总层数：16 * 4 = 64。
     """
     def __init__(self, cfg: Qwen38Config):
         super().__init__()
-        # 3 Linear-Attention DeltaNet sub-layers
+        # 3 个线性注意力 DeltaNet 子层
         self.delta_layers = nn.ModuleList([
             nn.ModuleDict({
                 "norm1": RMSNorm(cfg.d_model, cfg.rms_norm_eps),
@@ -446,7 +446,7 @@ class HybridSuperBlock(nn.Module):
                 "ffn": SwiGLU(cfg.d_model, cfg.d_ff)
             }) for _ in range(3)
         ])
-        # 1 Full-Attention Gated sub-layer
+        # 1 个门控全注意力子层
         self.attn_layer = nn.ModuleDict({
             "norm1": RMSNorm(cfg.d_model, cfg.rms_norm_eps),
             "mixer": GatedAttention(cfg),
@@ -462,7 +462,7 @@ class HybridSuperBlock(nn.Module):
         kv_cache: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
     ) -> Tuple[torch.Tensor, List[torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
         new_states = []
-        # Pass through 3 Gated DeltaNet layers
+        # 依次通过 3 个门控 DeltaNet 层
         for idx, sub in enumerate(self.delta_layers):
             st = states[idx] if states is not None else None
             m_out, new_st = sub["mixer"](sub["norm1"](x), state=st)
@@ -470,7 +470,7 @@ class HybridSuperBlock(nn.Module):
             x = x + sub["ffn"](sub["norm2"](x))
             new_states.append(new_st)
             
-        # Pass through 1 Gated Attention layer
+        # 通过 1 个门控注意力层
         m_out, new_kv = self.attn_layer["mixer"](
             self.attn_layer["norm1"](x), positions_3d=positions_3d, kv_cache=kv_cache
         )
@@ -480,10 +480,10 @@ class HybridSuperBlock(nn.Module):
 
 class MultiTokenPredictionHead(nn.Module):
     """
-    Multi-Token Prediction Speculative Decoding Head (eq. 12–13)
-    K lightweight draft blocks (norm + linear) share ONE dedicated vocab
-    projection: params ≈ K·d² + d·V ≈ 1.32B at full scale.
-    Predicts K future draft tokens in parallel during training and inference.
+    多词元预测推测解码头（方程 12–13）
+    K 个轻量草稿块（归一化 + 线性层）共享一个专用词表
+    投影：完整规模下参数量 ≈ K·d² + d·V ≈ 1.32B。
+    在训练和推理期间并行预测 K 个未来草稿词元。
     """
     def __init__(self, cfg: Qwen38Config):
         super().__init__()
@@ -501,27 +501,27 @@ class MultiTokenPredictionHead(nn.Module):
 
 class Qwen38ForCausalLM(nn.Module):
     """
-    Complete Qwen 3.8-27B Language Model
-    Assembled from 16 Hybrid Super-Blocks (64 layers total), RMSNorm,
-    Language Modeling Head, and MTP Speculative Prediction Modules.
+    完整 Qwen 3.8-27B 语言模型
+    由 16 个混合超级块（共 64 层）、RMSNorm、
+    语言建模头和 MTP 推测预测模块组装而成。
     """
     def __init__(self, cfg: Optional[Qwen38Config] = None):
         super().__init__()
         self.cfg = cfg or Qwen38Config()
         
-        # Token Embeddings (248,320 padded vocabulary)
+        # 词元嵌入（填充后的 248,320 词表）
         self.embed_tokens = nn.Embedding(self.cfg.vocab_size, self.cfg.d_model)
         
-        # n_layers/4 Super-blocks = 64 layers at full scale (48 DeltaNet + 16 Gated Attention)
+        # n_layers/4 个超级块 = 完整规模下 64 层（48 个 DeltaNet + 16 个门控注意力）
         self.super_blocks = nn.ModuleList([
             HybridSuperBlock(self.cfg) for _ in range(self.cfg.n_layers // 4)
         ])
         
-        # Final LayerNorm & Untied LM Head
+        # 最终 LayerNorm 与非绑定 LM 头
         self.norm_f = RMSNorm(self.cfg.d_model, self.cfg.rms_norm_eps)
         self.lm_head = nn.Linear(self.cfg.d_model, self.cfg.vocab_size, bias=False)
         
-        # Multi-Token Prediction Head (K=2 drafts)
+        # 多词元预测头（K=2 个草稿）
         self.mtp = MultiTokenPredictionHead(self.cfg)
 
     def forward(
@@ -533,7 +533,7 @@ class Qwen38ForCausalLM(nn.Module):
         B, T = input_ids.shape
         x = self.embed_tokens(input_ids)
         
-        # Pass through all 16 super-blocks (64 layers total)
+        # 依次通过全部 16 个超级块（共 64 层）
         for sb in self.super_blocks:
             x, _, _ = sb(x, positions_3d=positions_3d)
             
@@ -550,12 +550,12 @@ import torch.nn.functional as F
 
 class GatedDeltaNet(nn.Module):
     """
-    Gated DeltaNet Layer: O(T) associative linear attention (eq. 3–4)
-    Key Properties:
-      1. L2 normalization across Q and K prevents gradient explosions.
-      2. Input-dependent beta_t in (0, 2) controls associative write strength.
-      3. Parameterized alpha decay rate controls forgetting horizon.
-      4. Recurrent matrix state S in R^[B, H_v, d_h, d_h] remains constant in memory.
+    门控 DeltaNet 层：O(T) 联想线性注意力（方程 3–4）
+    关键特性：
+      1. 对 Q 和 K 进行 L2 归一化，防止梯度爆炸。
+      2. 位于 (0, 2) 的输入依赖 beta_t 控制联想写入强度。
+      3. 参数化的 alpha 衰减率控制遗忘时程。
+      4. 循环矩阵状态 S ∈ R^[B, H_v, d_h, d_h] 的内存占用保持恒定。
     """
     def __init__(self, d_model=5120, n_qk=16, n_v=48, d_h=128):
         super().__init__()
@@ -578,7 +578,7 @@ class GatedDeltaNet(nn.Module):
         k = k_raw.view(B, T, self.n_qk, self.d_h)
         v = v.view(B, T, self.n_v, self.d_h)
         
-        # L2-Normalization across feature dimension (§04 invariant)
+        # 沿特征维度进行 L2 归一化（§04 不变量）
         q = F.normalize(q, p=2, dim=-1)
         k = F.normalize(k, p=2, dim=-1)
         
@@ -599,14 +599,14 @@ class GatedDeltaNet(nn.Module):
             v_t = v[:, t].unsqueeze(-1)
             b_t = beta[:, t]
             
-            # Predict retrieved value: pred_v = S_{t-1} @ k_t
+            # 预测检索值：pred_v = S_{t-1} @ k_t
             pred_v = torch.matmul(state, k_t)
             err = pred_v - v_t
             
-            # Associative delta update: S_t = α S_{t-1} − β (err @ k_t^T)
+            # 联想 delta 更新：S_t = α S_{t-1} − β (err @ k_t^T)
             state = alpha * state - b_t * torch.matmul(err, k_t.transpose(-1, -2))
             
-            # Readout: y_t = S_t^T @ q_t
+            # 读出：y_t = S_t^T @ q_t
             y_t = torch.matmul(state.transpose(-1, -2), q_t).squeeze(-1)
             outputs.append(y_t)
             
@@ -620,12 +620,12 @@ import torch.nn.functional as F
 
 class GatedAttention(nn.Module):
     """
-    Gated Full Attention with 3D Multimodal RoPE and Sigmoid Gate (eq. 5–7)
-    Key Properties:
-      1. GQA (24 Q heads : 4 KV heads = 6:1 compression ratio).
-      2. MRoPE [11, 11, 10] splits rotary channels across Temporal/Height/Width coordinates.
-      3. Partial RoPE (channels 0..63 rotated, 64..255 untouched).
-      4. Sigmoid output gate σ(x W_g) softly suppresses attention artifacts.
+    带 3D 多模态 RoPE 和 Sigmoid 门的门控全注意力（方程 5–7）
+    关键特性：
+      1. GQA（24 个 Q 头：4 个 KV 头 = 6:1 压缩比）。
+      2. MRoPE [11, 11, 10] 将旋转通道分配到时间/高度/宽度坐标。
+      3. 部分 RoPE（旋转通道 0..63，通道 64..255 保持不变）。
+      4. Sigmoid 输出门 σ(x W_g) 柔和抑制注意力伪影。
     """
     def __init__(self, d_model=5120, n_q=24, n_kv=4, d_h=256, rotary_dim=64):
         super().__init__()
@@ -653,7 +653,7 @@ class GatedAttention(nn.Module):
         v = self.v_proj(x).view(B, T, self.n_kv, self.d_h)
         gate = torch.sigmoid(self.gate_proj(x)).view(B, T, self.n_q, self.d_h)
         
-        # 1D fallback or 3D MRoPE rotary frequencies
+        # 一维回退或 3D MRoPE 旋转频率
         pos = torch.arange(T, device=q.device).unsqueeze(0).repeat(B, 1)
         freqs = 1.0 / (10000000.0 ** (torch.arange(0, self.rotary_dim, 2, device=q.device).float() / self.rotary_dim))
         angles = torch.einsum("bt,f->btf", pos, freqs)
@@ -672,7 +672,7 @@ class GatedAttention(nn.Module):
             v = torch.cat([kv_cache[1], v], dim=1)
         new_cache = (k, v)
         
-        # GQA repeat
+        # GQA 重复
         k_rep = k.repeat_interleave(self.n_q // self.n_kv, dim=2).transpose(1, 2)
         v_rep = v.repeat_interleave(self.n_q // self.n_kv, dim=2).transpose(1, 2)
         q_t = q.transpose(1, 2)
@@ -687,7 +687,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class RMSNorm(nn.Module):
-    """RMSNorm with learned scale parameter (eq. 9)"""
+    """带学习缩放参数的 RMSNorm（方程 9）"""
     def __init__(self, dim, eps=1e-6):
         super().__init__()
         self.eps = eps
@@ -697,7 +697,7 @@ class RMSNorm(nn.Module):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps) * self.weight
 
 class SwiGLU(nn.Module):
-    """SwiGLU with 3.4× expansion ratio: d_ff = 17,408 (eq. 8)"""
+    """扩展比为 3.4× 的 SwiGLU：d_ff = 17,408（方程 8）"""
     def __init__(self, d_model=5120, d_ff=17408):
         super().__init__()
         self.w_gate = nn.Linear(d_model, d_ff, bias=False)
@@ -709,7 +709,7 @@ class SwiGLU(nn.Module):
 
 class HybridSuperBlock(nn.Module):
     """
-    1 of 16 Super-Blocks: 3 DeltaNet Layers + 1 Gated Attention Layer (eq. 2, 10)
+    16 个超级块之一：3 个 DeltaNet 层 + 1 个门控注意力层（方程 2、10）
     """
     def __init__(self, cfg):
         super().__init__()
@@ -744,10 +744,10 @@ import torch.nn as nn
 
 class MultiTokenPredictionHead(nn.Module):
     """
-    Multi-Token Prediction Heads for K-step speculation (eq. 12–13)
-    K lightweight draft blocks share ONE dedicated vocab projection
-    (params ≈ K·d² + d·V ≈ 1.32B at full scale). Allows generating 2–3
-    tokens per verification step during autoregressive decoding.
+    用于 K 步推测的多词元预测头（方程 12–13）
+    K 个轻量草稿块共享一个专用词表投影
+    （完整规模下参数量 ≈ K·d² + d·V ≈ 1.32B）。在自回归解码期间，
+    每个验证步骤可生成 2–3 个词元。
     """
     def __init__(self, d_model=5120, vocab_size=248320, k=2, eps=1e-6):
         super().__init__()
@@ -761,7 +761,7 @@ class MultiTokenPredictionHead(nn.Module):
         self.out_head = nn.Linear(d_model, vocab_size, bias=False)
 
     def forward(self, hidden_states):
-        # Returns [draft_1_logits, draft_2_logits]
+        # 返回 [draft_1_logits, draft_2_logits]
         return [self.out_head(block(hidden_states)) for block in self.blocks]
 </script>
   <script type="text/plain" data-py="verify">
@@ -771,13 +771,13 @@ from qwen38_full import Qwen38Config, Qwen38ForCausalLM
 
 def main():
     print("=" * 60)
-    print("Qwen 3.8-27B From Scratch Architecture Verification")
+    print("Qwen 3.8-27B 从零架构验证")
     print("=" * 60)
     
-    # Instantiate toy scale test configuration
+    # 实例化玩具规模测试配置
     cfg = Qwen38Config()
     cfg.d_model = 512
-    cfg.n_layers = 8        # 2 super-blocks
+    cfg.n_layers = 8        # 2 个超级块
     cfg.dn_qk_heads = 4
     cfg.dn_v_heads = 12
     cfg.dn_head_dim = 64
@@ -787,170 +787,170 @@ def main():
     cfg.d_ff = 1536
     cfg.vocab_size = 2048
     
-    print(f"\nInitializing model: {cfg.n_layers} layers ({cfg.hybrid_pattern} hybrid pattern)...")
+    print(f"\n正在初始化模型：{cfg.n_layers} 层（{cfg.hybrid_pattern} 混合模式）...")
     model = Qwen38ForCausalLM(cfg)
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"Model initialized successfully! Parameter count: {total_params:,} elements.")
+    print(f"模型初始化成功！参数量：{total_params:,} 个元素。")
     
-    # Test batch forward pass
+    # 测试批量前向传播
     B, T = 2, 32
     dummy_input = torch.randint(0, cfg.vocab_size, (B, T))
-    print(f"\nRunning forward pass with batch size B={B}, sequence length T={T}...")
+    print(f"\n正在运行前向传播，批量大小 B={B}，序列长度 T={T}...")
     
     t0 = time.perf_counter()
     with torch.no_grad():
         logits, mtp_logits = model(dummy_input)
     t1 = time.perf_counter()
     
-    print(f"Forward pass completed in {(t1 - t0)*1000:.2f} ms.")
-    print(f"Primary LM Logits shape: {logits.shape} -> Expected [2, 32, {cfg.vocab_size}]")
-    print(f"MTP Draft Logits shape:  {[m.shape for m in mtp_logits]} -> Expected 2 draft heads")
+    print(f"前向传播在 {(t1 - t0)*1000:.2f} 毫秒内完成。")
+    print(f"主 LM Logits 形状：{logits.shape} -> 预期 [2, 32, {cfg.vocab_size}]")
+    print(f"MTP 草稿 Logits 形状：{[m.shape for m in mtp_logits]} -> 预期 2 个草稿头")
     
-    assert logits.shape == (B, T, cfg.vocab_size), "Shape mismatch!"
-    print("\n[SUCCESS] All tensor shape assertions passed cleanly! Architecture is valid.")
+    assert logits.shape == (B, T, cfg.vocab_size), "形状不匹配！"
+    print("\n[成功] 所有张量形状断言均顺利通过！架构有效。")
 
 if __name__ == "__main__":
     main()
 </script>
 
-  <h3>Reading the config: one object, every constant sourced</h3>
-  <p><code>Qwen38Config</code> is the single source of truth for the entire codebase. Every dimension in the four modules below is read off it, and every number in the section's widgets and tables is a few multiplications of its fields. The backbone width <code>d_model = 5120</code> is the §01 residual bus made concrete; the hybrid ratio <code>"3:1"</code> and <code>n_layers = 64</code> are the §03 super-block tiling; the DeltaNet head geometry <code>(16, 48, 128)</code> is the §04 address/content split; the attention <code>(24, 4, 256)</code> is the §05 GQA compression; <code>d_ff = 17408</code> is the §06 3.4× expansion; <code>mtp_k = 2</code> is the §08 draft depth; <code>vocab_size = 248320</code> is the §02 tensor-core-aligned vocabulary. Nothing in the forward pass is a free parameter that the config does not already name.</p>
-  <p>The per-layer parameter budget falls directly out of these fields. A DeltaNet mixer carries one fused QKV projection, a small write-gate projection, and an output projection; an attention mixer carries Q, K, V, gate, and output projections; the SwiGLU FFN carries three matrices. Working the three costs out of the config gives the labor division in parameter units:</p>
-  <div class="math" aria-label="Per-layer parameter budget derived from the config: DeltaNet in/out projections sum to ~84.1M, attention Q/K/V/gate/out to ~104.9M, SwiGLU three matrices to ~267.4M — the FFN dominates every layer regardless of mixer.">
+  <h3>读取配置：一个对象，所有常量皆有来源</h3>
+  <p><code>Qwen38Config</code> 是整个代码库唯一的事实来源。下面四个模块中的每个维度都取自它，而本节小组件和表格里的每个数字，都只需对其字段做几次乘法即可得到。骨干网络宽度 <code>d_model = 5120</code> 是 §01 残差总线的具体实现；混合比例 <code>"3:1"</code> 和 <code>n_layers = 64</code> 是 §03 的超级块平铺；DeltaNet 的头几何 <code>(16, 48, 128)</code> 是 §04 的地址/内容拆分；注意力的 <code>(24, 4, 256)</code> 是 §05 的 GQA 压缩；<code>d_ff = 17408</code> 是 §06 的 3.4× 扩展；<code>mtp_k = 2</code> 是 §08 的草稿深度；<code>vocab_size = 248320</code> 是 §02 与张量核心对齐的词表。前向传播中不存在配置尚未命名的自由参数。</p>
+  <p>每层的参数预算直接由这些字段得出。DeltaNet 混合器包含一个融合 QKV 投影、一个小型写入门投影和一个输出投影；注意力混合器包含 Q、K、V、门与输出投影；SwiGLU FFN 则包含三个矩阵。根据配置算出这三项成本，就能得到以参数量衡量的分工：</p>
+  <div class="math" aria-label="由配置推导的每层参数预算：DeltaNet 输入/输出投影合计约 84.1M，注意力 Q/K/V/门/输出投影约 104.9M，SwiGLU 三个矩阵约 267.4M——无论使用哪种混合器，FFN 都在每层占主导。">
     P_{\Delta} = \underbrace{D \cdot (2n_{qk}+n_v)\,d_h}_{\text{in\_proj}} + \underbrace{D \cdot n_v}_{\beta\text{-gate}} + \underbrace{(n_v d_h) \cdot D}_{\text{out\_proj}} = 5120 \cdot 10240 + 5120 \cdot 48 + 6144 \cdot 5120 \approx 84.1\text{M}
     <br>
     P_{A} = D \cdot n_q d_h + 2D \cdot n_{kv} d_h + D \cdot n_q d_h + (n_q d_h) \cdot D \approx 104.9\text{M}, \qquad
     P_{\text{FFN}} = 2 \cdot D \cdot d_{ff} + d_{ff} \cdot D = 3 \cdot 5120 \cdot 17408 \approx 267.4\text{M}
   </div>
-  <p>Two things are already visible before any tensor moves. First, the mixer is the cheap part: even the wider attention layer costs 105 M parameters, less than half the FFN that sits beside it on every one of the 64 layers. Second, the DeltaNet layer is <em>cheaper</em> than the attention layer (84 M vs 105 M) despite doing the harder job of holding a recurrent state, so the 3:1 ratio is a parameter win as well as a memory win. Stacking one super-block (three DeltaNet, one attention, four FFNs) gives $3(84.1+267.4) + (104.9+267.4) \approx 1427\text{M}$, and sixteen super-blocks put $\approx 22.8\text{B}$ parameters in the 64 backbone layers. The embedding and untied LM head add $\approx 2.54\text{B}$ and the MTP module $\approx 1.32\text{B}$, taking the language model to $\approx 26.7\text{B}$; the §07 vision tower, absent from this code, closes the gap to the 27.6 B figure on the model card.</p>
+  <p>在任何张量开始流动之前，就能看出两点。第一，混合器是便宜的部分：即便较宽的注意力层也只需 105 M 参数，不到 64 层中每层与其并列的 FFN 的一半。第二，尽管 DeltaNet 层承担着保存循环状态这一更艰巨的任务，它仍比注意力层<em>更便宜</em>（84 M 对 105 M），因此 3:1 比例既节省参数，也节省内存。堆叠一个超级块（三个 DeltaNet、一个注意力、四个 FFN）得到 $3(84.1+267.4) + (104.9+267.4) \approx 1427\text{M}$，十六个超级块则让 64 层骨干网络拥有 $\approx 22.8\text{B}$ 参数。嵌入与非绑定 LM 头增加 $\approx 2.54\text{B}$，MTP 模块再增加 $\approx 1.32\text{B}$，使语言模型达到 $\approx 26.7\text{B}$；本代码未包含的 §07 视觉塔补足了与模型卡所列 27.6 B 之间的差额。</p>
 
-  <h3>The two mixers, one residual bus</h3>
-  <p><code>HybridSuperBlock.forward</code> is six lines that encode the whole §03 thesis. Each of the three DeltaNet sub-layers and the single attention sub-layer follows the same recipe: normalize the stream for the mixer (<code>norm1</code>), run the mixer, add its output back to the raw stream, then normalize for the FFN (<code>norm2</code>), run the FFN, and add that back. The mixer routes information <em>across positions</em>; the FFN transforms each position <em>independently</em>; both read from and write to the same 5120-wide residual channel through Pre-RMSNorm. This is the §06 bus-arithmetic contract in code: every reader sees a unit-scale view of the stream, and the unnormalized bus accumulates all of them additively with no contention.</p>
-  <p>The only asymmetry between the four sub-layers is which mixer they instantiate, and that single switch, repeated sixteen times, is the entire 3:1 hybrid pattern. There is no routing, no learned mixer selection, no per-layer flag; the motif is hard-wired by <code>hybrid_pattern = "3:1"</code> and tiled by <code>range(3)</code> followed by one attention layer. What looks like a loop is the §03 compression–anchor cycle in literal form: three layers of constant-space recurrence, then one layer of exact global attention to anchor what recurrence compressed.</p>
+  <h3>两种混合器，一条残差总线</h3>
+  <p><code>HybridSuperBlock.forward</code> 用六行代码编码了 §03 的完整论点。三个 DeltaNet 子层和一个注意力子层都遵循同一套流程：为混合器归一化数据流（<code>norm1</code>），运行混合器，将其输出加回原始数据流；随后为 FFN 归一化（<code>norm2</code>），运行 FFN，再将结果加回。混合器在<em>不同位置之间</em>路由信息；FFN <em>独立地</em>变换每个位置；二者都通过 Pre-RMSNorm 读写同一条宽度为 5120 的残差通道。这就是 §06 总线算术契约的代码形式：每个读取者看到的都是单位尺度的数据流视图，而未经归一化的总线以加法方式累积所有输出，彼此不会争用。</p>
+  <p>四个子层之间唯一的不对称，是它们实例化了哪种混合器；这个单一切换重复十六次，就构成了完整的 3:1 混合模式。没有路由，没有学习到的混合器选择，也没有逐层标志；该模体由 <code>hybrid_pattern = "3:1"</code> 硬编码，并通过 <code>range(3)</code> 后接一个注意力层来平铺。看似循环的结构，实际上就是 §03 压缩—锚定周期的字面形式：三层恒定空间循环，随后用一层精确的全局注意力锚定循环所压缩的内容。</p>
 
-  <h3>The delta-rule scan, read line by line</h3>
-  <p><code>GatedDeltaNet.forward</code> is the densest module and the one where the shapes matter most. The fused <code>in_proj</code> emits a single $[B, T, 10240]$ tensor that <code>torch.split</code> carves into Q, K (each $[B, T, 16, 128]$) and V ($[B, T, 48, 128]$). The 1:3 address-to-content asymmetry from §04 is then restored by <code>repeat_interleave(3, dim=2)</code>, which triples each of the 16 normalized key/query addresses to face the 48 value heads, so three content slots share one address without tripling the address space. <code>F.normalize(p=2, dim=-1)</code> applies the §04 stability invariant: every key and query is unit-norm before it touches the state, so no outer product can expand the state's spectrum.</p>
-  <p>The two gates are one-liners that carry the §04 mechanism. <code>beta = 2.0 * sigmoid(...)</code> bounds the write strength in $(0, 2]$, where the cap at 2 is the contraction bound that keeps $I - \beta k k^{\top}$ non-expanding when $k$ is unit-norm. <code>alpha = exp(-softplus(a_log).exp())</code> bounds the decay in $(0, 1)$, strictly dissipative, with the decay rate itself learned per value head so forgetting is content-aware rather than on a fixed schedule. The recurrent loop then reads as the §04 error-correcting write in three tensor ops per step: predict the stored value $\text{pred}_v = S_{t-1} k_t$, form the error $\text{err} = \text{pred}_v - v_t$, and overwrite $S_t = \alpha S_{t-1} - \beta\,(\text{err} \otimes k_t)$, a rank-one projection that removes the old slot and stamps the new one in the same operation.</p>
-  <p>That loop is correct and it is the whole point of the module, but it is also the place where the reference parts company with a serving kernel. A Python-level scan over $T$ steps gives the right recurrence but cannot use Tensor Cores, since each step is a $128\times128$ matmul launched from the interpreter. Production training replaces this loop with the chunked WY factorization of §04, which collapses $C$ rank-one updates into one block-triangular matmul and carries inter-chunk state in FP32. The reference keeps the loop because the loop <em>is</em> equation (3)–(4); the factorization is a §04 detail that would hide the very mechanism it exists to expose.</p>
+  <h3>逐行解读 delta 规则扫描</h3>
+  <p><code>GatedDeltaNet.forward</code> 是信息最密集、也最看重形状的模块。融合的 <code>in_proj</code> 输出单个 $[B, T, 10240]$ 张量，<code>torch.split</code> 将其切分为 Q、K（各为 $[B, T, 16, 128]$）和 V（$[B, T, 48, 128]$）。随后，<code>repeat_interleave(3, dim=2)</code> 恢复 §04 的 1:3 地址—内容不对称：它把 16 个归一化键/查询地址各复制三份，以对应 48 个值头，让三个内容槽位共享一个地址，而无需把地址空间扩大三倍。<code>F.normalize(p=2, dim=-1)</code> 施加 §04 的稳定性不变量：每个键和查询在接触状态之前都具有单位范数，因此任何外积都不会扩张状态的谱。</p>
+  <p>两个门各用一行代码承载 §04 的机制。<code>beta = 2.0 * sigmoid(...)</code> 将写入强度限制在 $(0, 2]$，上限 2 是收缩界；当 $k$ 为单位范数时，它确保 $I - \beta k k^{\top}$ 不会扩张。<code>alpha = exp(-softplus(a_log).exp())</code> 将衰减限制在 $(0, 1)$，保证严格耗散；衰减率本身按值头学习，因此遗忘能感知内容，而非遵循固定时间表。接着，循环状态更新以每步三个张量操作实现 §04 的纠错写入：预测已存值 $\text{pred}_v = S_{t-1} k_t$，形成误差 $\text{err} = \text{pred}_v - v_t$，再覆写 $S_t = \alpha S_{t-1} - \beta\,(\text{err} \otimes k_t)$；这个秩一投影在同一操作中移除旧槽位并写入新槽位。</p>
+  <p>该循环是正确的，也是这个模块的核心所在，但参考实现也在这里与服务内核分道扬镳。在 Python 层扫描 $T$ 步能得到正确的循环，却无法使用张量核心，因为每一步都是由解释器启动的 $128\times128$ 矩阵乘法。生产训练用 §04 的分块 WY 分解替代该循环，将 $C$ 次秩一更新折叠为一次块三角矩阵乘法，并以 FP32 传递块间状态。参考实现保留循环，是因为这个循环<em>就是</em>方程 (3)–(4)；分解属于 §04 的实现细节，反而会遮蔽它本应揭示的机制。</p>
 
-  <h3>MRoPE and the growing cache</h3>
-  <p><code>GatedAttention.forward</code> mirrors the DeltaNet structure up to the mixer. Q, K, V, and a gate are projected; K and V share only four heads ($[B, T, 4, 256]$) while Q has twenty-four, so <code>repeat_interleave(6, dim=2)</code> expands them into the §05 6:1 GQA compression, six query heads served from one cached key–value pair. The rotary path is the one place the reference simplifies in the open: <code>_apply_mrope</code> builds a one-dimensional frequency table and rotates the first 64 of 256 head channels, leaving the remaining 192 untouched, which is the partial-RoPE contract from §05. The full MRoPE [11, 11, 10] split that assigns independent time/height/width axes to those 64 rotary channels is a frequency-table construction, not a different rotation, so the 1D fallback shows the rotation math and the 3D path is left as the §05 table that reweights which channels belong to which axis.</p>
-  <p>The cache is the second half of the §05 story and the one the contract table weighs against the DeltaNet state. On every decode step <code>torch.cat([kv_cache[0], k], dim=1)</code> grows the K and V tensors by one position, so the per-layer buffer is $[B, 4, T, 256]$ and its cost is linear in $T$, unlike the DeltaNet state, which is a fixed $[B, 48, 128, 128]$ regardless of how long the sequence runs. The output gate <code>attn_out * gate</code> is the last line of the module and the §05 quality-compensation mechanism: a data-dependent sigmoid suppresses the noisy matches that four shared KV heads inevitably produce before the output projection ever sees them.</p>
+  <h3>MRoPE 与不断增长的缓存</h3>
+  <p><code>GatedAttention.forward</code> 在进入混合器之前都与 DeltaNet 结构相呼应。Q、K、V 和一个门经过投影；K 与 V 仅共享四个头（$[B, T, 4, 256]$），而 Q 有二十四个头，因此 <code>repeat_interleave(6, dim=2)</code> 将它们扩展为 §05 的 6:1 GQA 压缩：一个缓存的键值对服务六个查询头。旋转路径是参考实现公开简化的唯一位置：<code>_apply_mrope</code> 构建一维频率表，旋转 256 个头通道中的前 64 个，其余 192 个保持不变，这正是 §05 的部分 RoPE 契约。完整 MRoPE [11, 11, 10] 拆分为这 64 个旋转通道分别分配独立的时间/高度/宽度轴；它只是频率表的构造方式，并非不同的旋转。因此，一维回退路径展示旋转数学，而 3D 路径则留给 §05 的表格来说明如何重新加权各轴所属的通道。</p>
+  <p>缓存是 §05 叙述的另一半，也是契约表拿来与 DeltaNet 状态权衡的对象。每个解码步骤中，<code>torch.cat([kv_cache[0], k], dim=1)</code> 都会让 K、V 张量各增长一个位置，所以每层缓冲区为 $[B, 4, T, 256]$，成本随 $T$ 线性增长；相比之下，无论序列多长，DeltaNet 状态始终固定为 $[B, 48, 128, 128]$。模块最后一行的输出门 <code>attn_out * gate</code> 是 §05 的质量补偿机制：依赖数据的 sigmoid 会在输出投影看到结果之前，抑制四个共享 KV 头不可避免地产生的噪声匹配。</p>
 
-  <h3>MTP: one shared head for K drafts</h3>
-  <p><code>MultiTokenPredictionHead</code> is the smallest module and the one with the sharpest parameter accounting. Each of the $K=2$ draft blocks is a single <code>RMSNorm</code> plus a $5120\times5120$ linear, and all $K$ drafts share <em>one</em> $5120\times248320$ vocabulary projection rather than each owning a private copy. The cost is therefore $K\cdot D^2 + D\cdot V \approx 2\cdot 26.2\text{M} + 1.27\text{B} \approx 1.32\text{B}$ parameters, dominated by the shared head, which is why sharing it across drafts (and reusing the backbone's own LM head in production) is the §08 efficiency move. The forward pass returns a list of $K$ logit tensors, one per draft depth, all read from the same final hidden state; the §08 draft–verify–accept loop that consumes them is inference-harness code, not model code, so it correctly lives outside this module.</p>
+  <h3>MTP：K 个草稿共享一个头</h3>
+  <p><code>MultiTokenPredictionHead</code> 是最小的模块，也是参数核算最清晰的模块。$K=2$ 个草稿块各由一个 <code>RMSNorm</code> 加一个 $5120\times5120$ 线性层构成，而所有 $K$ 个草稿共享<em>一个</em> $5120\times248320$ 词表投影，并非各自持有私有副本。因此成本为 $K\cdot D^2 + D\cdot V \approx 2\cdot 26.2\text{M} + 1.27\text{B} \approx 1.32\text{B}$ 个参数，主要由共享头占据；这正是 §08 的效率手段为何要让草稿共享该头（并在生产中复用骨干网络自身的 LM 头）。前向传播返回 $K$ 个 logit 张量组成的列表，每个草稿深度对应一个，且都读取同一最终隐藏状态；消费这些张量的 §08 草稿—验证—接受循环属于推理测试框架代码，而非模型代码，因此理应放在本模块之外。</p>
 
-  <!-- Reference table: Architectural State Contract & Invariants Matrix (#w-code-contract) — not an interactive widget -->
+  <!-- 参考表：架构状态契约与不变量矩阵 (#w-code-contract) — 非交互式小组件 -->
   <div class="widget" id="w-code-contract">
-    <div class="w-head"><span class="w-title">Mixer state contract &amp; complexity invariants</span><span class="w-tag">contract matrix</span></div>
-    <div class="w-desc">Direct architectural comparison between the two attention primitives operating across Qwen 3.8-27B's 64 layers: Gated DeltaNet trades unbounded sequence history for constant-space associative state updates.</div>
+    <div class="w-head"><span class="w-title">混合器状态契约与复杂度不变量</span><span class="w-tag">契约矩阵</span></div>
+    <div class="w-desc">直接比较运行于 Qwen 3.8-27B 全部 64 层的两种注意力原语：门控 DeltaNet 以恒定空间的联想状态更新取代无界序列历史。</div>
     
     <div class="contract-matrix-wrap">
       <table class="contract-table">
-        <caption><strong>Table 13 — Mixer state contract &amp; complexity invariants:</strong> Gated DeltaNet vs Gated Full Attention across layer ratio, prefill/decode complexity, recurrent state, and routing precision.</caption>
+        <caption><strong>表 13 — 混合器状态契约与复杂度不变量：</strong>从层比例、预填充/解码复杂度、循环状态和路由精度等方面比较门控 DeltaNet 与门控全注意力。</caption>
         <thead>
           <tr>
-            <th scope="col">Dimension</th>
-            <th scope="col" style="color:var(--amber)">Gated DeltaNet (§04)</th>
-            <th scope="col" style="color:var(--mint)">Full Attention (§05)</th>
-            <th scope="col">Architectural Rationale</th>
+            <th scope="col">维度</th>
+            <th scope="col" style="color:var(--amber)">门控 DeltaNet (§04)</th>
+            <th scope="col" style="color:var(--mint)">全注意力 (§05)</th>
+            <th scope="col">架构依据</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="cm-dim">Layer Count &amp; Ratio</td>
-            <td><b style="color:var(--amber)">48 layers</b> (75% of backbone)</td>
-            <td><b style="color:var(--mint)">16 layers</b> (25% of backbone)</td>
-            <td>3:1 hybrid ratio cuts total KV cache memory by 75%</td>
+            <td class="cm-dim">层数与比例</td>
+            <td><b style="color:var(--amber)">48 层</b>（骨干网络的 75%）</td>
+            <td><b style="color:var(--mint)">16 层</b>（骨干网络的 25%）</td>
+            <td>3:1 混合比例将 KV 缓存总内存降低 75%</td>
           </tr>
           <tr>
-            <td class="cm-dim">Prefill Complexity</td>
-            <td><span class="cm-badge amber">O(T)</span> Chunked associative scan</td>
-            <td><span class="cm-badge mint">O(T²)</span> Scaled dot-product attention</td>
-            <td>Sub-quadratic prefill across long documents and code repos</td>
+            <td class="cm-dim">预填充复杂度</td>
+            <td><span class="cm-badge amber">O(T)</span> 分块联想扫描</td>
+            <td><span class="cm-badge mint">O(T²)</span> 缩放点积注意力</td>
+            <td>长文档与代码仓库的次二次预填充</td>
           </tr>
           <tr>
-            <td class="cm-dim">Decode Complexity</td>
-            <td><span class="cm-badge amber">O(1)</span> Constant-time state update</td>
-            <td><span class="cm-badge mint">O(T)</span> Linear scan over past KV tokens</td>
-            <td>Sustains 85+ tok/s autoregressive token generation</td>
+            <td class="cm-dim">解码复杂度</td>
+            <td><span class="cm-badge amber">O(1)</span> 恒定时间状态更新</td>
+            <td><span class="cm-badge mint">O(T)</span> 线性扫描历史 KV 词元</td>
+            <td>持续实现 85+ 词元/秒的自回归词元生成</td>
           </tr>
           <tr>
-            <td class="cm-dim">State Memory @ 262k</td>
-            <td><b style="color:var(--amber)">3.15 MB</b> per layer (FP32) · Invariant</td>
-            <td><b style="color:var(--mint)">17.18 GB</b> across 16 layers (BF16)</td>
-            <td>DeltaNet stays constant while full KV cache scales with context</td>
+            <td class="cm-dim">262k 下的状态内存</td>
+            <td>每层 <b style="color:var(--amber)">3.15 MB</b>（FP32）· 恒定</td>
+            <td>16 层合计 <b style="color:var(--mint)">17.18 GB</b>（BF16）</td>
+            <td>DeltaNet 保持恒定，而完整 KV 缓存随上下文缩放</td>
           </tr>
           <tr>
-            <td class="cm-dim">State Tensor</td>
+            <td class="cm-dim">状态张量</td>
             <td><code class="cm-code">S ∈ ℝ^[B,48,128,128]</code></td>
             <td><code class="cm-code">K,V ∈ ℝ^[B,4,T,256]</code></td>
-            <td>Fixed head matrix with delta error update: $S = \alpha S - \beta(Sk-v)k^T$</td>
+            <td>采用 delta 误差更新的固定头矩阵：$S = \alpha S - \beta(Sk-v)k^T$</td>
           </tr>
           <tr>
-            <td class="cm-dim">Positional Encoding</td>
-            <td>Decay rate $\alpha_t$ + causal chunk mask</td>
-            <td>3D MRoPE <code class="cm-code">[11,11,10]</code> sections</td>
-            <td>DeltaNet manages recency; GQA manages multimodal 3D coordinates</td>
+            <td class="cm-dim">位置编码</td>
+            <td>衰减率 $\alpha_t$ + 因果分块掩码</td>
+            <td>3D MRoPE <code class="cm-code">[11,11,10]</code> 分段</td>
+            <td>DeltaNet 管理近因性；GQA 管理多模态 3D 坐标</td>
           </tr>
           <tr>
-            <td class="cm-dim">Output Modulation</td>
-            <td>Head RMSNorm + Linear Proj</td>
-            <td>Elementwise Sigmoid <code class="cm-code">σ(xW_g)</code></td>
-            <td>Attention outputs are softly gated token-by-token to suppress noise</td>
+            <td class="cm-dim">输出调制</td>
+            <td>头 RMSNorm + 线性投影</td>
+            <td>逐元素 Sigmoid <code class="cm-code">σ(xW_g)</code></td>
+            <td>逐词元柔和门控注意力输出，以抑制噪声</td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <h3>The invariants, read off the code</h3>
-  <p>The contract matrix above is not an external claim about the architecture. It is a set of arithmetic facts the code already encodes. Worked out of the config, they line up with every earlier section without a single new assumption. The DeltaNet state is a fixed $n_v \cdot d_h^2$ matrix per layer, so its size is invariant in $T$ and the only question is the precision and how many layers one counts:</p>
-  <div class="math" aria-label="DeltaNet recurrent state: 48 value heads times 128 squared equals 786,432 elements per layer. In FP32 that is 3.15 MB per layer (the contract-table figure); summed across all 48 DeltaNet layers in BF16 it is 75.5 MB total — the same quantity the §12 VRAM budget counts.">
+  <h3>从代码中读出的不变量</h3>
+  <p>上面的契约矩阵并非对架构提出的外部主张，而是代码已经编码的一组算术事实。由配置推导后，它们无需任何新假设，就能与前面各节完全吻合。每层 DeltaNet 状态都是固定的 $n_v \cdot d_h^2$ 矩阵，因此其大小不随 $T$ 变化；唯一需要考虑的是精度以及计入多少层：</p>
+  <div class="math" aria-label="DeltaNet 循环状态：48 个值头乘以 128 的平方，每层共 786,432 个元素。FP32 下每层为 3.15 MB（契约表中的数字）；以 BF16 汇总全部 48 个 DeltaNet 层，共 75.5 MB——与 §12 显存预算统计的是同一数值。">
     |S|_{\text{per layer}} = n_v \cdot d_h^2 = 48 \cdot 128^2 = 786{,}432 \text{ elems} \;\;\Rightarrow\;\; \text{FP32/layer} = 786{,}432 \times 4 = 3.15\text{ MB}, \quad \text{BF16} \times 48\text{ layers} = 786{,}432 \times 2 \times 48 = 75.5\text{ MB}
   </div>
-  <p>The two state figures that appear elsewhere in the document, Table 13's "3.15 MB per layer (FP32)" and the §12 budget's "75.5 MB total (BF16)", are therefore the same number in two framings: per-layer versus all-layer, FP32 versus BF16. There is no discrepancy to reconcile; there is one invariant quantity reported at two scales.</p>
-  <p>The attention KV cache is the same calculation with a $T$ in it. Each attention layer stores two tensors, K and V, over four heads of width 256, so its footprint grows linearly with the context it has seen:</p>
-  <div class="math" aria-label="Attention KV cache per layer: 2 tensors times 4 KV heads times 256 head-dim times T tokens times bytes-per-element. At 262k BF16 that is 1.074 GB per layer, and across the 16 attention layers it is 17.18 GB — the figure that drives the §12 quantization decision.">
+  <p>因此，本文其他位置出现的两个状态数字——表 13 的“每层 3.15 MB（FP32）”和 §12 预算的“合计 75.5 MB（BF16）”——其实是同一个数值的两种表述：逐层与全部层、FP32 与 BF16。无需调和任何差异；这只是同一不变量在两种尺度下的报告。</p>
+  <p>注意力 KV 缓存采用同样的计算，只是其中多了一个 $T$。每个注意力层在四个宽度为 256 的头上存储 K、V 两个张量，因此其占用随已见上下文线性增长：</p>
+  <div class="math" aria-label="每层注意力 KV 缓存：2 个张量乘以 4 个 KV 头，乘以 256 的头维度，乘以 T 个词元，再乘以每元素字节数。262k BF16 下每层为 1.074 GB，16 个注意力层共 17.18 GB——这个数字推动了 §12 的量化决策。">
     |KV|_{\text{per layer}} = 2 \cdot n_{kv} \cdot d_h \cdot T \cdot b = 2 \cdot 4 \cdot 256 \cdot T \cdot b = 2048\,T\,b \text{ bytes} \;\;\xrightarrow{T=262144,\,b=2}\;\; 1.074\text{ GB/layer} \;\;\xrightarrow{\times 16}\;\; 17.18\text{ GB}
   </div>
-  <p>Set these two against each other and the whole hybrid thesis falls out of the config: at the full 262k context the sixteen attention layers cost 17.18 GB and the forty-eight DeltaNet layers cost 75.5 MB, a factor of $\approx 227\times$, over two orders of magnitude. That single ratio is why the architecture fits on a 24 GB consumer GPU (§12) and why the contract table lists DeltaNet decode as $O(1)$ against attention's $O(T)$:</p>
-  <div class="math" aria-label="Decode complexity: DeltaNet does two fixed 128x128 matmuls per token regardless of context length, so its decode is O(1); attention must dot the query against every past key, so its decode is O(T) in context length.">
+  <p>把二者放在一起比较，整个混合架构的论点便从配置中自然浮现：在完整 262k 上下文下，十六个注意力层耗费 17.18 GB，而四十八个 DeltaNet 层只耗费 75.5 MB，相差约 $\approx 227\times$，超过两个数量级。正是这一比例让架构能够装入 24 GB 消费级 GPU（§12），也解释了为何契约表将 DeltaNet 解码列为 $O(1)$，而注意力为 $O(T)$：</p>
+  <div class="math" aria-label="解码复杂度：无论上下文长度如何，DeltaNet 每个词元都执行两次固定的 128x128 矩阵乘法，因此解码为 O(1)；注意力必须将查询与每个历史键做点积，因此其解码复杂度随上下文长度为 O(T)。">
     \text{DeltaNet decode} = \underbrace{d_h^2}_{\text{state update}} + \underbrace{d_h^2}_{\text{readout}} = O(d_h^2) = O(1) \text{ (fixed, } d_h = 128\text{)} \qquad \text{Attention decode} = \underbrace{T \cdot d_h}_{\text{dot every past key}} = O(T) \text{ (grows with context)}
   </div>
-  <p>The prefill row tells the same story at the other end of the sequence. DeltaNet threads the recurrence for $T d_h^2$ work, linear in $T$, with the $d_h^2 = 16{,}384$ constant set by the fixed head matrix; attention builds the full $T \times T$ score matrix for $T^2 d_h$ work, quadratic in $T$. The two cross over at $T = d_h = 256$: below a few hundred tokens they are comparable, and above it the quadratic pulls away hard, which is exactly why the contract table lists DeltaNet prefill as $O(T)$ against attention's $O(T^2)$. The table's two complexity columns are this crossover, read off the config.</p>
+  <p>预填充一行在序列的另一端讲述同一个故事。DeltaNet 串行执行循环，共需 $T d_h^2$ 的工作量，与 $T$ 成线性关系，其中 $d_h^2 = 16{,}384$ 是由固定头矩阵决定的常数；注意力则构建完整的 $T \times T$ 分数矩阵，工作量为 $T^2 d_h$，与 $T$ 成二次关系。两者在 $T = d_h = 256$ 处交叉：低于几百个词元时二者相近，超过后，二次项便迅速拉开差距；这正是契约表将 DeltaNet 预填充列为 $O(T)$、注意力列为 $O(T^2)$ 的原因。表中两列复杂度，就是从配置读出的这一交叉关系。</p>
 
-  <h3>What the code deliberately omits</h3>
-  <p>The reference is a read-through, so each production feature it leaves out is a section it points back to. The DeltaNet scan is a Python loop, not the chunked WY factorization that lets the recurrence use Tensor Cores (§04). The attention path calls <code>F.scaled_dot_product_attention</code> rather than tiling its own KV, so the $O(T^2)$ memory the contract table records is the mathematical truth, while the $O(T)$ memory FlashAttention actually achieves is a §12 kernel fact. The MRoPE path builds a 1D frequency table and leaves the 3D [11, 11, 10] axis assignment as the §05 position construction. The KV cache is a plain tensor, not the 16-token paged blocks with radix-tree prefix dedup that §12 uses to share system-prompt state across requests. The MTP module emits draft logits but the draft–verify–accept loop that consumes them is §08 harness code. And the §07 SigLIP vision tower is absent entirely. This is the language backbone, the part of the model that runs after pixels have already become bus-native tokens.</p>
-  <p>None of these omissions weakens the code as a specification of the model; they strengthen it as a teaching artifact, because every removed shortcut is a place where production engineering, not architecture, does the work, and each is already documented in its own section. The result is a description of what Qwen 3.8-27B computes that runs on any machine with PyTorch installed.</p>
+  <h3>代码有意省略的内容</h3>
+  <p>参考实现用于通读，因此它省略的每项生产功能，都指向对应的章节。DeltaNet 扫描使用 Python 循环，而非让循环能够使用张量核心的分块 WY 分解（§04）。注意力路径调用 <code>F.scaled_dot_product_attention</code>，而不自行对 KV 分块，因此契约表记录的 $O(T^2)$ 内存是数学事实，FlashAttention 实际实现的 $O(T)$ 内存则是 §12 的内核事实。MRoPE 路径构建一维频率表，把 3D [11, 11, 10] 轴分配留给 §05 的位置构造。KV 缓存只是普通张量，而非 §12 用于跨请求共享系统提示状态、带基数树前缀去重的 16 词元分页块。MTP 模块输出草稿 logits，但消费它们的草稿—验证—接受循环属于 §08 测试框架代码。此外，§07 SigLIP 视觉塔被完全省略。这是语言骨干网络，也就是像素已经转化为总线原生词元之后运行的模型部分。</p>
+  <p>这些省略并未削弱代码作为模型规范的价值；反而强化了它作为教学工件的作用，因为每个被移除的捷径，都是生产工程而非架构发挥作用之处，且每项都已在各自章节中记录。最终得到的是一份对 Qwen 3.8-27B 计算内容的描述，可在任何安装了 PyTorch 的机器上运行。</p>
 
   <div class="callout why">
-    <div class="co-title">Why pure PyTorch establishes total verifiability</div>
-    <p>Roughly 340 lines capture every mathematical mechanism of Qwen 3.8-27B: two mixer types sharing one residual bus, gated writes, associative matrix updates, partial rotary positions across three spatial-temporal axes, SwiGLU activations, and self-speculative draft heads. Because the implementation relies strictly on standard PyTorch tensor primitives without opaque compiled kernels, it runs immediately on any CPU, Apple Silicon Mac, or CUDA GPU.</p>
+    <div class="co-title">为何纯 PyTorch 能建立完全可验证性</div>
+    <p>约 340 行代码涵盖 Qwen 3.8-27B 的每一种数学机制：两类混合器共享一条残差总线、门控写入、联想矩阵更新、跨三个时空轴的部分旋转位置、SwiGLU 激活，以及自推测草稿头。由于该实现严格依赖标准 PyTorch 张量原语，不使用不透明的编译内核，因此可立即运行于任何 CPU、Apple 芯片 Mac 或 CUDA GPU。</p>
   </div>
 </section>
 
-<!-- ============================================================ 15 TAKEAWAYS -->
+<!-- ============================================================ 15 要点 -->
 <section id="takeaways">
-  <div class="sec-tag">15 · Synthesis</div>
-  <h2>Conclusions</h2>
+  <div class="sec-tag">15 · 总结</div>
+  <h2>结论</h2>
   <div class="takeaways">
-    <div class="take"><span class="tk-num">01</span><div class="tk-title">The residual bus is the spine; the FFN is the memory</div><p>One 5120-wide stream runs through all 64 layers; Pre-RMSNorm holds it at variance 1 while every mixer and the 17.11 B SwiGLU FFN read from it and add to it. The mixers route across positions; the FFN's 1.11 M key–value records are where the facts live. Every other component exists to serve this substrate. See <a href="#orientation">§01</a> and <a href="#ffn">§06</a>.</p></div>
-    <div class="take"><span class="tk-num">02</span><div class="tk-title">Hybrid memory is a budget decision</div><p>The 3:1 DeltaNet-to-attention split converts a 68.7 GB cache problem into 17.2 GB. Forty-eight layers hold a fixed 75 MB recurrent state; only sixteen pay the context-growing KV bill. That single ratio is the difference between a datacenter and a single workstation. See <a href="#deltanet">§04</a> and <a href="#attention">§05</a>.</p></div>
-    <div class="take"><span class="tk-num">03</span><div class="tk-title">The delta rule is targeted forgetting</div><p>Gated DeltaNet overwrites a key-bound trace instead of accumulating forever (linear attention) or truncating a window (sliding attention). The α decay gate and β write gate make forgetting content-aware and bounded: associative-memory theory shipped at 27.6 B scale. See <a href="#deltanet">§04 eq. 3–4</a>.</p></div>
-    <div class="take"><span class="tk-num">04</span><div class="tk-title">Positions are multi-dimensional; modality is a data-layout concern</div><p>MRoPE's [11,11,10] split gives text, images, and video one shared position system. After the §07 projector a vision token is bus-native and indistinguishable from a text token, so multimodality costs no architecture change. See <a href="#attention">§05</a> and <a href="#vision">§07</a>.</p></div>
-    <div class="take"><span class="tk-num">05</span><div class="tk-title">Data and training set the ceiling; inference features are bought at pretraining</div><p>The 120 PB → 36 T funnel and the 1304:1 over-train ratio fix what the FFN can store, and RL can only reveal it. MTP trained-in means speculation with no second model; long-context annealing means YaRN extension with no retraining. See <a href="#mtp">§08</a>, <a href="#data">§09</a>, <a href="#pretraining">§10</a>, and <a href="#posttraining">§11</a>.</p></div>
-    <div class="take"><span class="tk-num">06</span><div class="tk-title">Serving is a memory-bus problem, and the architecture fits one GPU</div><p>Decode is bandwidth-bound, with intensity ≈ 4 FLOP/byte against a ridge near 1000. NVFP4, MTP amortization, and chunked prefill, not faster compute, are what make 27.6 B at 262 k servable on a 24 GB consumer GPU. The benchmarks confirm the quantized model keeps its accuracy. See <a href="#optimizations">§12</a> and <a href="#benchmarks">§13</a>.</p></div>
+    <div class="take"><span class="tk-num">01</span><div class="tk-title">残差总线是脊柱；FFN 是记忆</div><p>一条宽度为 5120 的数据流贯穿全部 64 层；Pre-RMSNorm 将其方差维持在 1，同时每个混合器和拥有 17.11 B 参数的 SwiGLU FFN 都从中读取并向其累加。混合器在位置之间路由；FFN 的 1.11 M 条键值记录才是事实所在。其他所有组件都为这一基础服务。参见 <a href="#orientation">§01</a> 和 <a href="#ffn">§06</a>。</p></div>
+    <div class="take"><span class="tk-num">02</span><div class="tk-title">混合记忆是一项预算决策</div><p>DeltaNet 与注意力的 3:1 拆分，将 68.7 GB 的缓存问题缩减为 17.2 GB。四十八层持有固定的 75 MB 循环状态；只有十六层承担随上下文增长的 KV 开销。这一个比例，决定了需要数据中心还是只需一台工作站。参见 <a href="#deltanet">§04</a> 和 <a href="#attention">§05</a>。</p></div>
+    <div class="take"><span class="tk-num">03</span><div class="tk-title">Delta 规则是定向遗忘</div><p>门控 DeltaNet 会覆写与键绑定的痕迹，而非永久累积（线性注意力）或截断窗口（滑动注意力）。α 衰减门与 β 写入门让遗忘能够感知内容且受到约束：联想记忆理论以 27.6 B 规模落地。参见 <a href="#deltanet">§04 方程 3–4</a>。</p></div>
+    <div class="take"><span class="tk-num">04</span><div class="tk-title">位置是多维的；模态是数据布局问题</div><p>MRoPE 的 [11,11,10] 拆分为文本、图像和视频提供一套共享位置系统。经过 §07 投影器后，视觉词元成为总线原生词元，与文本词元无法区分，因此多模态无需付出架构变更的代价。参见 <a href="#attention">§05</a> 和 <a href="#vision">§07</a>。</p></div>
+    <div class="take"><span class="tk-num">05</span><div class="tk-title">数据与训练决定上限；推理功能在预训练时购得</div><p>120 PB → 36 T 的漏斗和 1304:1 的过度训练比例，决定了 FFN 能存储什么，而强化学习只能将其显现出来。训练内置 MTP，意味着无需第二个模型即可推测；长上下文退火，则意味着无需重新训练即可进行 YaRN 扩展。参见 <a href="#mtp">§08</a>、<a href="#data">§09</a>、<a href="#pretraining">§10</a> 和 <a href="#posttraining">§11</a>。</p></div>
+    <div class="take"><span class="tk-num">06</span><div class="tk-title">服务是内存总线问题，而该架构能装入单张 GPU</div><p>解码受带宽限制，计算强度约为 4 FLOP/字节，而屋脊线接近 1000。让 262 k 上下文的 27.6 B 模型能够在 24 GB 消费级 GPU 上提供服务的，是 NVFP4、MTP 摊销和分块预填充，而非更快的计算。基准测试确认量化模型仍能保持准确率。参见 <a href="#optimizations">§12</a> 和 <a href="#benchmarks">§13</a>。</p></div>
   </div>
 
   <div class="refs">
-    <div class="sec-tag">References</div>
+    <div class="sec-tag">参考文献</div>
     <ol class="refs">
-      <li>Yang et al. 2024 — "Gated DeltaNet: Sequence Modeling with Linear Attention under Selective Forgetting." Authors and venue: see upstream paper.</li>
-      <li>Bai et al. 2023 — "Qwen-VL: A Versatile Vision-Language Model via Multi-Modal Rotary Position Embedding (MRoPE)" (Qwen2-VL paper).</li>
-      <li>DeepSeek-AI. 2024 — "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model" (multi-token prediction, MTP).</li>
-      <li>Shao et al. 2024 — "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models" (GRPO).</li>
-      <li>Qwen Team. 2025 — "Qwen3 Technical Report." <a href="https://arxiv.org/abs/2505.09388" rel="noopener" target="_blank">arXiv:2505.09388</a>.</li>
+      <li>Yang 等，2024 —《Gated DeltaNet：选择性遗忘下采用线性注意力的序列建模》。作者与发表场所：参见上游论文。</li>
+      <li>Bai 等，2023 —《Qwen-VL：通过多模态旋转位置嵌入（MRoPE）实现的通用视觉语言模型》（Qwen2-VL 论文）。</li>
+      <li>DeepSeek-AI，2024 —《DeepSeek-V2：强大、经济且高效的专家混合语言模型》（多词元预测，MTP）。</li>
+      <li>Shao 等，2024 —《DeepSeekMath：突破开放语言模型数学推理的极限》（GRPO）。</li>
+      <li>Qwen 团队，2025 —《Qwen3 技术报告》。<a href="https://arxiv.org/abs/2505.09388" rel="noopener" target="_blank">arXiv:2505.09388</a>。</li>
     </ol>
   </div>
 </section>
@@ -959,9 +959,10 @@ if __name__ == "__main__":
 
 <footer>
   <div class="wrap">
-    <div><b>Qwen 3.8-27B — The Architecture, From Scratch.</b> An independent engineering walkthrough; not affiliated with Alibaba/Qwen.</div>
-    <div>Specs: official <a href="https://huggingface.co/Qwen/Qwen3.8-27B" rel="noopener" target="_blank">HF model card</a> (Aug 2026). Pipeline methodology: Qwen3 technical report (<a href="https://arxiv.org/abs/2505.09388" rel="noopener" target="_blank">arXiv:2505.09388</a>). All derivations and widgets computed client-side from the published configuration.</div>
-    <div>Built as a single static page · no build step · fonts via Google Fonts · <a href="#top">Back to top ↑</a></div>
+    <div><b>Qwen 3.8-27B — 从零理解其架构。</b>独立工程导览；与阿里巴巴/Qwen 无隶属关系。</div>
+    <div>规格：官方 <a href="https://huggingface.co/Qwen/Qwen3.8-27B" rel="noopener" target="_blank">HF 模型卡</a>（2026 年 8 月）。流水线方法：Qwen3 技术报告（<a href="https://arxiv.org/abs/2505.09388" rel="noopener" target="_blank">arXiv:2505.09388</a>）。所有推导与小组件均依据已发布配置在客户端计算。</div>
+    <div>原作者：<a href="https://github.com/atandra2000" rel="noopener" target="_blank">Atandra Bharati</a> · <a href="https://atandra2000.github.io/qwen3.8-guide/" rel="noopener" target="_blank">英文原版</a> · 网站许可证：<a href="LICENSE">MIT</a>（模型：Apache-2.0）</div>
+    <div>构建为单个静态页面 · 无构建步骤 · 字体来自 Google Fonts · <a href="#top">返回顶部 ↑</a></div>
   </div>
 </footer>
 

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Qwen 3.8-27B — 从零解析架构</title>
+  <desc id="desc">简体中文架构指南：64 层混合骨干网络、262k 上下文、门控 DeltaNet、GQA、MRoPE 与 MTP。</desc>
+  <rect width="1200" height="630" fill="#f3ede0"/>
+  <rect x="28" y="28" width="1144" height="574" fill="none" stroke="#aaa294"/>
+  <rect x="101" y="165" width="170" height="340" rx="36" fill="#b8341f"/>
+  <rect x="165" y="237" width="170" height="268" rx="36" fill="#1d6e6b"/>
+  <rect x="229" y="309" width="170" height="196" rx="36" fill="#2b3a8a"/>
+  <g font-family="Georgia, 'Noto Serif CJK SC', serif">
+    <text x="465" y="214" font-size="88" font-weight="700" fill="#1a1612">Qwen 3.8-27B</text>
+    <text x="465" y="298" font-size="46" fill="#b8341f">从零解析架构 · 简体中文版</text>
+  </g>
+  <g font-family="'Noto Sans CJK SC', sans-serif" font-size="25" fill="#1a1612">
+    <text x="465" y="386">64 层 · 16 × [ΔΔΔA] · 262k 上下文</text>
+    <text x="465" y="432">门控 DeltaNet + GQA · MRoPE · MTP</text>
+    <text x="465" y="493" font-size="23" fill="#5a5046">Apache-2.0 · 55.2 GB BF16 模型权重</text>
+  </g>
+</svg>

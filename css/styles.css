@@ -27,9 +27,9 @@
   --sky:#8a5610;        /* cadmium amber — info (kept warm) */
 
   /* type — serif = argument, mono = evidence */
-  --sans:"STIX Two Text","Iowan Old Style",Georgia,"Times New Roman",serif;
-  --display:"STIX Two Text","Iowan Old Style",Georgia,"Times New Roman",serif;
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"STIX Two Text","Iowan Old Style",Georgia,"Times New Roman","Noto Serif CJK SC","Songti SC","SimSun",serif;
+  --display:"STIX Two Text","Iowan Old Style",Georgia,"Times New Roman","Noto Serif CJK SC","Songti SC","SimSun",serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans CJK SC","PingFang SC","Microsoft YaHei",monospace;
 
   /* spacing scale (8px) */
   --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px;

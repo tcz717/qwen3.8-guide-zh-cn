@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Qwen 3.8-27B — The Architecture, From Scratch</title>
-<meta name="description" content="A ground-up engineering walkthrough of Qwen 3.8-27B: hybrid Gated DeltaNet + Gated Attention backbone, vision front-end, MTP, data pipeline, three-stage pretraining, four-stage post-training, and inference optimizations.">
+<title>Qwen 3.8-27B — 从零解析架构</title>
+<meta name="description" content="从工程基础出发详解 Qwen 3.8-27B：门控 DeltaNet + 门控注意力混合骨干网络、视觉前端、MTP、数据流水线、三阶段预训练、四阶段后训练与推理优化。">
 <meta name="theme-color" content="#f3ede0">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f3ede0'/%3E%3Crect x='11' y='13' width='10' height='38' rx='5' fill='%23b8341f'/%3E%3Crect x='27' y='21' width='10' height='30' rx='5' fill='%231d6e6b'/%3E%3Crect x='43' y='29' width='10' height='22' rx='5' fill='%232b3a8a'/%3E%3C/svg%3E">
 <meta property="og:type" content="article">
-<meta property="og:site_name" content="Qwen 3.8-27B — Reference">
-<meta property="og:title" content="Qwen 3.8-27B — The Architecture, From Scratch">
-<meta property="og:description" content="Every component derived from first principles: the hybrid DeltaNet+GQA backbone, MRoPE vision front-end, MTP self-speculation, training curriculum, and the inference math that makes 262k context servable.">
+<meta property="og:site_name" content="Qwen 3.8-27B — 参考指南">
+<meta property="og:title" content="Qwen 3.8-27B — 从零解析架构">
+<meta property="og:description" content="从第一性原理推导每个组件：DeltaNet+GQA 混合骨干网络、MRoPE 视觉前端、MTP 自推测、训练课程，以及让 262k 上下文可服务化的推理数学。">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="og-image.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Title card for the Qwen 3.8-27B architecture reference: three stacked color bars beside the heading “Qwen 3.8-27B — the architecture, from scratch.” and a spec line listing layers, context, and license.">
+<meta property="og:image:alt" content="Qwen 3.8-27B 架构参考指南的标题卡：标题“Qwen 3.8-27B — 从零解析架构”旁有三条叠放的彩色条，下方规格行列出层数、上下文与许可证。">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,54 +29,54 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
 </head>
 <body id="top">
-<a class="skip-link" href="#main">Skip to content ↓</a>
+<a class="skip-link" href="#main">跳至正文 ↓</a>
 <div class="progress" id="progress"></div>
-<button class="totop" id="totop" type="button" aria-label="Back to top" title="Back to top ↑">
+<button class="totop" id="totop" type="button" aria-label="返回顶部" title="返回顶部 ↑">
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 14l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 
-<nav class="topnav" aria-label="Section navigation">
+<nav class="topnav" aria-label="章节导航">
   <div class="topnav-inner">
-    <div class="nav-brand"><span class="nb-name">Qwen 3.8-27B</span><span class="nb-tag">Reference</span></div>
+    <div class="nav-brand"><span class="nb-name">Qwen 3.8-27B</span><span class="nb-tag">参考指南</span></div>
     <div class="nav-right">
       <span class="nav-current" id="navCurrent" aria-hidden="true"></span>
       <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="navPanel">
-        Contents
+        目录
         <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
   </div>
   <div class="nav-panel" id="navPanel">
     <div class="nav-grid" id="navLinks">
-      <a href="#orientation" data-num="01" data-label="Orientation"><span class="n">01</span>Orientation</a>
-      <a href="#tokenizer" data-num="02" data-label="Tokenizer"><span class="n">02</span>Tokenizer</a>
-      <a href="#backbone" data-num="03" data-label="Backbone"><span class="n">03</span>Hybrid backbone</a>
-      <a href="#deltanet" data-num="04" data-label="DeltaNet"><span class="n">04</span>Gated DeltaNet</a>
-      <a href="#attention" data-num="05" data-label="Attention"><span class="n">05</span>Gated Attention</a>
-      <a href="#ffn" data-num="06" data-label="FFN"><span class="n">06</span>FFN &amp; residual stream</a>
-      <a href="#vision" data-num="07" data-label="Vision"><span class="n">07</span>Vision front-end</a>
-      <a href="#mtp" data-num="08" data-label="MTP"><span class="n">08</span>Multi-Token Prediction</a>
-      <a href="#data" data-num="09" data-label="Data"><span class="n">09</span>Data pipeline</a>
-      <a href="#pretraining" data-num="10" data-label="Pretraining"><span class="n">10</span>Pretraining</a>
-      <a href="#posttraining" data-num="11" data-label="Post-Training"><span class="n">11</span>Post-training</a>
-      <a href="#optimizations" data-num="12" data-label="Optimizations"><span class="n">12</span>Inference optimizations</a>
-      <a href="#benchmarks" data-num="13" data-label="Benchmarks"><span class="n">13</span>Benchmarks</a>
-      <a href="#pseudocode" data-num="14" data-label="Code"><span class="n">14</span>From scratch, as code</a>
-      <a href="#takeaways" data-num="15" data-label="Synthesis"><span class="n">15</span>Synthesis</a>
+      <a href="#orientation" data-num="01" data-label="导览"><span class="n">01</span>导览</a>
+      <a href="#tokenizer" data-num="02" data-label="分词器"><span class="n">02</span>分词器</a>
+      <a href="#backbone" data-num="03" data-label="骨干网络"><span class="n">03</span>混合骨干网络</a>
+      <a href="#deltanet" data-num="04" data-label="门控 DeltaNet"><span class="n">04</span>门控 DeltaNet</a>
+      <a href="#attention" data-num="05" data-label="注意力"><span class="n">05</span>门控注意力</a>
+      <a href="#ffn" data-num="06" data-label="FFN 与残差流"><span class="n">06</span>FFN 与残差流</a>
+      <a href="#vision" data-num="07" data-label="视觉"><span class="n">07</span>视觉前端</a>
+      <a href="#mtp" data-num="08" data-label="多词元预测"><span class="n">08</span>多词元预测</a>
+      <a href="#data" data-num="09" data-label="数据"><span class="n">09</span>数据流水线</a>
+      <a href="#pretraining" data-num="10" data-label="预训练"><span class="n">10</span>预训练</a>
+      <a href="#posttraining" data-num="11" data-label="后训练"><span class="n">11</span>后训练</a>
+      <a href="#optimizations" data-num="12" data-label="优化"><span class="n">12</span>推理优化</a>
+      <a href="#benchmarks" data-num="13" data-label="基准测试"><span class="n">13</span>基准测试</a>
+      <a href="#pseudocode" data-num="14" data-label="代码"><span class="n">14</span>从零编写代码</a>
+      <a href="#takeaways" data-num="15" data-label="总结"><span class="n">15</span>总结</a>
     </div>
   </div>
 </nav>
 
 <header class="hero wrap">
-  <div class="hero-telemetry" aria-label="Architecture telemetry and rapid subsystem passport">
+  <div class="hero-telemetry" aria-label="架构遥测与子系统速览">
     <div class="telemetry-lead">
       <span class="telemetry-beacon" aria-hidden="true"></span>
-      <span class="telemetry-title">Hybrid Recurrent Core</span>
+      <span class="telemetry-title">混合循环核心</span>
       <span class="telemetry-divider" aria-hidden="true">/</span>
-      <span class="telemetry-badge">64L Dense</span>
+      <span class="telemetry-badge">64 层稠密模型</span>
     </div>
 
-    <div class="telemetry-stream" aria-label="Hybrid attention stream rhythm: 3 DeltaNet linear recurrent layers to 1 Gated Attention layer">
+    <div class="telemetry-stream" aria-label="混合注意力流节奏：3 个 DeltaNet 线性循环层对应 1 个门控注意力层">
       <svg viewBox="0 0 160 22" class="telemetry-wave" aria-hidden="true">
         <path d="M0,11 Q10,4 20,11 T40,11 T60,11 L60,3 L60,19 L60,11 Q70,4 80,11 T100,11 T120,11 L120,3 L120,19 L120,11 Q130,4 140,11 T160,11" fill="none" stroke="currentColor" stroke-width="1.3" class="wave-track"/>
         <circle cx="60" cy="3" r="2.5" class="wave-node attn"/>
@@ -83,75 +84,75 @@
         <circle cx="120" cy="3" r="2.5" class="wave-node attn"/>
         <circle cx="120" cy="19" r="2.5" class="wave-node attn"/>
       </svg>
-      <span class="telemetry-wave-label">3Δ : 1A stream</span>
+      <span class="telemetry-wave-label">3Δ : 1A 流</span>
     </div>
 
     <div class="telemetry-chips">
-      <a href="#deltanet" class="t-chip" title="Explore Gated DeltaNet linear attention (48 layers)"><span class="t-k">Δ-net</span><span class="t-v">48L · O(1) state</span></a>
-      <a href="#attention" class="t-chip" title="Explore Gated Attention & 3D MRoPE (16 layers)"><span class="t-k">GQA</span><span class="t-v">16L · 24Q/4KV</span></a>
-      <a href="#mtp" class="t-chip" title="Explore Multi-Token Prediction speculative engine"><span class="t-k">MTP</span><span class="t-v">3-draft</span></a>
-      <a href="#pseudocode" class="t-chip highlight" title="Jump to §14 From scratch, 342-line PyTorch reference"><span class="t-k">Code</span><span class="t-v">§14 PyTorch →</span></a>
+      <a href="#deltanet" class="t-chip" title="探索门控 DeltaNet 线性注意力（48 层）"><span class="t-k">Δ-net</span><span class="t-v">48 层 · O(1) 状态</span></a>
+      <a href="#attention" class="t-chip" title="探索门控注意力与 3D MRoPE（16 层）"><span class="t-k">GQA</span><span class="t-v">16 层 · 24Q/4KV</span></a>
+      <a href="#mtp" class="t-chip" title="探索多词元预测推测引擎"><span class="t-k">MTP</span><span class="t-v">3 个草稿词元</span></a>
+      <a href="#pseudocode" class="t-chip highlight" title="跳至 §14：从零实现的 342 行 PyTorch 参考代码"><span class="t-k">代码</span><span class="t-v">§14 PyTorch →</span></a>
     </div>
   </div>
 
-  <h1>Qwen 3.8-27B<br><span class="grad">the architecture, from scratch.</span></h1>
-  <p class="hero-sub">An implementation-level reference for Alibaba's 27-billion-parameter hybrid vision-language model: the attention mathematics, tokenizer, data pipeline, training curriculum, and inference optimizations, each derived from the published config and implemented in full.</p>
+  <h1>Qwen 3.8-27B<br><span class="grad">从零解析架构。</span></h1>
+  <p class="hero-sub">阿里巴巴 270 亿参数混合视觉语言模型的实现级参考指南：依据已发布配置，完整推导并实现注意力数学、分词器、数据流水线、训练课程与推理优化。</p>
 
-  <div class="spec-band" aria-label="Document and model specification">
+  <div class="spec-band" aria-label="文档与模型规格">
     <div class="band-head">
-      <div class="kicker" aria-label="64-layer hybrid architecture: 16 super-blocks of three Gated DeltaNet layers and one Gated Attention layer. Apache 2.0, August 2026.">
+      <div class="kicker" aria-label="64 层混合架构：16 个超级块，每块包含三个门控 DeltaNet 层和一个门控注意力层。Apache 2.0，2026 年 8 月。">
         <span class="bits" id="heroBits" aria-hidden="true"></span>
-        <span class="bits-label">16 × <b>[ Δ Δ Δ A ]</b> <i>·</i> apache-2.0 <i>·</i> aug 2026</span>
+        <span class="bits-label">16 × <b>[ Δ Δ Δ A ]</b> <i>·</i> Apache-2.0 <i>·</i> 2026 年 8 月</span>
       </div>
-      <div class="meta-strip" aria-label="Page meta">
-      <span><b>15</b> sections</span>
+      <div class="meta-strip" aria-label="页面元信息">
+      <span><b>15</b> 个章节</span>
       <span class="sep" aria-hidden="true">·</span>
-      <span><b>~120 min</b> read</span>
+      <span>阅读约 <b>120 分钟</b></span>
       <span class="sep" aria-hidden="true">·</span>
-      <span><b>31</b> widgets</span>
+      <span><b>31</b> 个交互组件</span>
       <span class="sep" aria-hidden="true">·</span>
-      <span><b>16</b> equations</span>
+      <span><b>16</b> 个方程</span>
       <span class="sep" aria-hidden="true">·</span>
-      <span><b>342</b>-line PyTorch §14</span>
+      <span>§14：<b>342</b> 行 PyTorch</span>
       </div>
     </div>
 
     <dl class="spec-grid">
       <div class="spec-cell hot">
-        <dt>Parameters</dt>
-        <dd><span class="sv" id="statParams">27.58B</span><span class="sn">dense, every parameter active on every token</span></dd>
+        <dt>参数量</dt>
+        <dd><span class="sv" id="statParams">27.58B</span><span class="sn">稠密模型，每个词元都会激活全部参数</span></dd>
       </div>
       <div class="spec-cell">
-        <dt>Layers</dt>
-        <dd><span class="sv">64</span><span class="sn">48 linear-attention + 16 full-attention layers, 3:1</span></dd>
+        <dt>层数</dt>
+        <dd><span class="sv">64</span><span class="sn">48 个线性注意力层 + 16 个全注意力层，比例 3:1</span></dd>
       </div>
       <div class="spec-cell">
-        <dt>Native context</dt>
-        <dd><span class="sv">262k</span><span class="sn">extensible to 1M tokens via YaRN (Yet another RoPE extensioN)</span></dd>
+        <dt>原生上下文</dt>
+        <dd><span class="sv">262k</span><span class="sn">可通过 YaRN（Yet another RoPE extensioN）扩展至 1M 词元</span></dd>
       </div>
       <div class="spec-cell">
-        <dt>Vocabulary</dt>
-        <dd><span class="sv">248,320</span><span class="sn">padded BPE · 55.2 GB of BF16 weights</span></dd>
+        <dt>词表</dt>
+        <dd><span class="sv">248,320</span><span class="sn">填充后的 BPE · 55.2 GB BF16 权重</span></dd>
       </div>
     </dl>
   </div>
-  <p style="font-size:12.5px;color:var(--faint)">Specs sourced from the official model card <code><a href="https://huggingface.co/Qwen/Qwen3.8-27B" rel="noopener" target="_blank">Qwen/Qwen3.8-27B</a></code> (Aug 14, 2026) and the Qwen3.8 release notes. Training-pipeline details follow the Qwen3 technical report methodology (<a href="https://arxiv.org/abs/2505.09388" rel="noopener" target="_blank">arXiv:2505.09388</a>), the most recent published recipe. The 3.8 report has not been released.</p>
+  <p style="font-size:12.5px;color:var(--faint)">规格取自官方模型卡 <code><a href="https://huggingface.co/Qwen/Qwen3.8-27B" rel="noopener" target="_blank">Qwen/Qwen3.8-27B</a></code>（2026 年 8 月 14 日）及 Qwen3.8 发布说明。训练流水线细节遵循 Qwen3 技术报告的方法（<a href="https://arxiv.org/abs/2505.09388" rel="noopener" target="_blank">arXiv:2505.09388</a>），这是最近发布的训练方案。3.8 报告尚未发布。</p>
 </header>
 
 <main class="wrap" id="main">
 
 <!-- ============================================================ 01 ORIENTATION -->
 <section id="orientation">
-  <div class="sec-tag">01 · Orientation</div>
-  <h2>System overview</h2>
-  <p class="lead">Qwen 3.8-27B is a decoder-only transformer with four departures from the textbook design: a hybrid attention backbone, multimodal rotary position encoding, trained-in multi-token prediction, and a native vision front-end. The remainder of this document derives each departure and the engineering decisions it implies.</p>
+  <div class="sec-tag">01 · 导览</div>
+  <h2>系统概览</h2>
+  <p class="lead">Qwen 3.8-27B 是一种仅解码器 Transformer，与教科书式设计有四处不同：混合注意力骨干网络、多模态旋转位置编码、训练内置的多词元预测，以及原生视觉前端。本文余下部分将逐一推导这些变化及其蕴含的工程决策。</p>
 
-  <h3>The three pressures that shape the architecture</h3>
-  <p>Every constant in this model is a response to three simultaneous pressures, and holding them in mind makes the rest of the document legible. The first is <strong>long context</strong>: the model must attend over 262k tokens natively and stretch to 1M, which makes the attention key-value cache the dominant cost (a 262k-token softmax layer holds an $O(T)$ cache that, multiplied across 64 layers, would alone consume tens of gigabytes of VRAM per active request). The second is <strong>multimodality</strong>: image and video tokens must enter the same residual stream as text without a separate decoder or a retrained position embedding, so that one set of layers handles every modality. The third is <strong>serving economics</strong>: at 27B parameters the model is sized to fit a single 80 GB device, so every constant (head counts, FFN width, KV precision, the ratio of linear to full-attention layers) is tuned against a fixed memory ceiling rather than against quality alone.</p>
-  <p>The central tension is that softmax attention is the only component with perfect recall but the only component whose memory grows with sequence length. Linear attention and state-space models collapse the per-token cost to a constant by writing each token into a fixed-size recurrent state, but that compression is lossy: a needle buried in a 200k-token haystack is not guaranteed to survive the write. Qwen 3.8 resolves the tension not by choosing a side but by <em>interleaving</em> the two regimes: compressing the bulk of the sequence with linear layers and periodically re-reading the raw context with a full-attention layer. The architecture is, in this sense, a schedule for when to remember exactly and when to remember approximately.</p>
+  <h3>塑造架构的三重压力</h3>
+  <p>模型中的每个常量都是对三重并行压力的回应；牢记它们，后文便更易理解。第一是<strong>长上下文</strong>：模型原生必须处理 262k 词元，并可扩展至 1M，这使注意力键值缓存成为主要开销（一个 262k 词元的 softmax 层持有 $O(T)$ 缓存，乘以 64 层后，仅此一项就会让每个活跃请求消耗数十 GB 显存）。第二是<strong>多模态</strong>：图像和视频词元必须与文本进入同一残差流，无需独立解码器或重新训练位置嵌入，从而由同一组层处理所有模态。第三是<strong>服务经济性</strong>：270 亿参数的模型被设计为可装入单台 80 GB 设备，因此每个常量（头数、FFN 宽度、KV 精度、线性注意力层与全注意力层之比）都针对固定内存上限调优，而非只追求质量。</p>
+  <p>核心矛盾在于：softmax 注意力是唯一能完美回忆的组件，也是唯一内存随序列长度增长的组件。线性注意力与状态空间模型把每个词元写入固定大小的循环状态，将单词元成本压至常量，但这种压缩有损：埋在 200k 词元“干草堆”中的“针”不一定能在写入后留存。Qwen 3.8 不偏向任何一方，而是通过<em>交错</em>两种机制化解矛盾：用线性层压缩序列主体，并定期用全注意力层重新读取原始上下文。从这个意义上说，该架构规定了何时精确记忆、何时近似记忆。</p>
 
   <div class="diagram">
-    <svg viewBox="0 0 880 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full model dataflow diagram">
+    <svg viewBox="0 0 880 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="完整模型数据流图">
       <defs>
         <linearGradient id="gAmber" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stop-color="rgba(184,52,31,0.22)"/>
@@ -180,72 +181,72 @@
       <!-- =============== COL 1: INPUTS =============== -->
       <!-- Vision Encoder -->
       <rect x="30" y="40" width="210" height="120" rx="10" fill="url(#gMint)" stroke="rgba(29,110,107,0.6)" stroke-width="1.2"/>
-      <text x="135" y="66" text-anchor="middle" class="dg-title" fill="#1d6e6b">Vision Encoder</text>
+      <text x="135" y="66" text-anchor="middle" class="dg-title" fill="#1d6e6b">视觉编码器</text>
       <line x1="60" y1="76" x2="210" y2="76" stroke="rgba(29,110,107,0.25)"/>
-      <text x="135" y="96" text-anchor="middle" class="dg-label">SigLIP-style ViT</text>
-      <text x="135" y="114" text-anchor="middle" class="dg-label">images · video frames</text>
-      <text x="135" y="132" text-anchor="middle" class="dg-label">→ patch embeddings</text>
-      <text x="135" y="150" text-anchor="middle" class="dg-sub">~333 weight tensors · 0.9B params</text>
+      <text x="135" y="96" text-anchor="middle" class="dg-label">SigLIP 风格 ViT</text>
+      <text x="135" y="114" text-anchor="middle" class="dg-label">图像 · 视频帧</text>
+      <text x="135" y="132" text-anchor="middle" class="dg-label">→ 图块嵌入</text>
+      <text x="135" y="150" text-anchor="middle" class="dg-sub">约 333 个权重张量 · 0.9B 参数</text>
 
       <!-- Text tokens -->
       <rect x="30" y="220" width="210" height="90" rx="10" class="dg-box"/>
-      <text x="135" y="246" text-anchor="middle" class="dg-title">Text tokens</text>
+      <text x="135" y="246" text-anchor="middle" class="dg-title">文本词元</text>
       <line x1="60" y1="256" x2="210" y2="256" stroke="rgba(255,255,255,0.08)"/>
-      <text x="135" y="276" text-anchor="middle" class="dg-label">BPE · vocab 248,320</text>
+      <text x="135" y="276" text-anchor="middle" class="dg-label">BPE · 词表 248,320</text>
       <text x="135" y="294" text-anchor="middle" class="dg-label">id ∈ [0, 248,320)</text>
 
       <!-- =============== COL 2: MERGE =============== -->
       <!-- Projector + Merge -->
       <rect x="290" y="105" width="180" height="80" rx="10" fill="url(#gSky)" stroke="rgba(168,106,23,0.6)" stroke-width="1.2"/>
-      <text x="380" y="129" text-anchor="middle" class="dg-title" fill="#a86a17">Projector + 2×2 Merge</text>
+      <text x="380" y="129" text-anchor="middle" class="dg-title" fill="#a86a17">投影器 + 2×2 合并</text>
       <line x1="320" y1="139" x2="440" y2="139" stroke="rgba(168,106,23,0.25)"/>
-      <text x="380" y="159" text-anchor="middle" class="dg-label">vision feats → d = 5120</text>
-      <text x="380" y="175" text-anchor="middle" class="dg-sub">4× token reduction</text>
+      <text x="380" y="159" text-anchor="middle" class="dg-label">视觉特征 → d = 5120</text>
+      <text x="380" y="175" text-anchor="middle" class="dg-sub">词元数量降至 1/4</text>
 
       <!-- Token Embedding -->
       <rect x="290" y="220" width="180" height="80" rx="10" class="dg-box"/>
-      <text x="380" y="246" text-anchor="middle" class="dg-title">Token Embedding</text>
+      <text x="380" y="246" text-anchor="middle" class="dg-title">词元嵌入</text>
       <line x1="320" y1="256" x2="440" y2="256" stroke="rgba(255,255,255,0.08)"/>
-      <text x="380" y="294" text-anchor="middle" class="dg-sub">2.54 GB in BF16</text>
+      <text x="380" y="294" text-anchor="middle" class="dg-sub">BF16 下为 2.54 GB</text>
 
       <!-- =============== COL 3: UNIFIED STREAM =============== -->
       <rect x="520" y="100" width="140" height="220" rx="10" class="dg-box" stroke="rgba(255,255,255,0.22)" stroke-width="1.2"/>
-      <text x="590" y="126" text-anchor="middle" class="dg-title">Unified stream</text>
+      <text x="590" y="126" text-anchor="middle" class="dg-title">统一流</text>
       <line x1="545" y1="136" x2="635" y2="136" stroke="rgba(255,255,255,0.1)"/>
       <text x="590" y="158" text-anchor="middle" class="dg-label">x ∈ ℝ^(T × 5120)</text>
-      <text x="590" y="180" text-anchor="middle" class="dg-label">text + vision</text>
-      <text x="590" y="198" text-anchor="middle" class="dg-label">tokens, one</text>
-      <text x="590" y="216" text-anchor="middle" class="dg-label">residual</text>
-      <text x="590" y="234" text-anchor="middle" class="dg-label">sequence</text>
+      <text x="590" y="180" text-anchor="middle" class="dg-label">文本 + 视觉词元</text>
+      <text x="590" y="198" text-anchor="middle" class="dg-label">汇入同一个</text>
+      <text x="590" y="216" text-anchor="middle" class="dg-label">残差</text>
+      <text x="590" y="234" text-anchor="middle" class="dg-label">序列</text>
       <line x1="545" y1="252" x2="635" y2="252" stroke="rgba(255,255,255,0.06)"/>
-      <text x="590" y="272" text-anchor="middle" class="dg-sub">all paths converge</text>
-      <text x="590" y="290" text-anchor="middle" class="dg-sub">into a single bus</text>
+      <text x="590" y="272" text-anchor="middle" class="dg-sub">所有路径汇聚到</text>
+      <text x="590" y="290" text-anchor="middle" class="dg-sub">同一条总线</text>
 
       <!-- =============== COL 4: HYBRID STACK =============== -->
       <rect x="710" y="30" width="140" height="380" rx="10" fill="url(#gAmber)" stroke="rgba(184,52,31,0.6)" stroke-width="1.4"/>
-      <text x="780" y="56" text-anchor="middle" class="dg-title" fill="#b8341f">64 layers</text>
+      <text x="780" y="56" text-anchor="middle" class="dg-title" fill="#b8341f">64 层</text>
       <line x1="735" y1="66" x2="825" y2="66" stroke="rgba(184,52,31,0.3)"/>
       <text x="780" y="90" text-anchor="middle" class="dg-label">16 × [ Δ Δ Δ A ]</text>
 
-      <text x="780" y="120" text-anchor="middle" class="dg-label" fill="#b8341f">Δ Gated DeltaNet</text>
-      <text x="780" y="136" text-anchor="middle" class="dg-sub">(48 layers, linear)</text>
+      <text x="780" y="120" text-anchor="middle" class="dg-label" fill="#b8341f">Δ 门控 DeltaNet</text>
+      <text x="780" y="136" text-anchor="middle" class="dg-sub">（48 层，线性）</text>
 
-      <text x="780" y="166" text-anchor="middle" class="dg-label" fill="#1d6e6b">A Gated Attention</text>
-      <text x="780" y="182" text-anchor="middle" class="dg-sub">(16 layers, full SDPA)</text>
+      <text x="780" y="166" text-anchor="middle" class="dg-label" fill="#1d6e6b">A 门控注意力</text>
+      <text x="780" y="182" text-anchor="middle" class="dg-sub">（16 层，完整 SDPA）</text>
 
       <line x1="735" y1="200" x2="825" y2="200" stroke="rgba(255,255,255,0.08)"/>
 
-      <text x="780" y="222" text-anchor="middle" class="dg-sub">each layer:</text>
-      <text x="780" y="240" text-anchor="middle" class="dg-sub">attn → RMSNorm</text>
+      <text x="780" y="222" text-anchor="middle" class="dg-sub">每层：</text>
+      <text x="780" y="240" text-anchor="middle" class="dg-sub">注意力 → RMSNorm</text>
       <text x="780" y="258" text-anchor="middle" class="dg-sub">→ SwiGLU FFN</text>
-      <text x="780" y="276" text-anchor="middle" class="dg-sub">+ residuals</text>
+      <text x="780" y="276" text-anchor="middle" class="dg-sub">+ 残差</text>
 
       <line x1="735" y1="294" x2="825" y2="294" stroke="rgba(255,255,255,0.08)"/>
 
-      <text x="780" y="316" text-anchor="middle" class="dg-sub">MRoPE on the</text>
-      <text x="780" y="332" text-anchor="middle" class="dg-sub">16 full layers</text>
-      <text x="780" y="354" text-anchor="middle" class="dg-sub">recurrent state in</text>
-      <text x="780" y="370" text-anchor="middle" class="dg-sub">the 48 linear layers</text>
+      <text x="780" y="316" text-anchor="middle" class="dg-sub">16 个全注意力层</text>
+      <text x="780" y="332" text-anchor="middle" class="dg-sub">使用 MRoPE</text>
+      <text x="780" y="354" text-anchor="middle" class="dg-sub">48 个线性层</text>
+      <text x="780" y="370" text-anchor="middle" class="dg-sub">使用循环状态</text>
 
       <!-- =============== ARROWS =============== -->
       <!-- vision → projector -->
@@ -263,50 +264,50 @@
 
       <!-- =============== LM HEAD =============== -->
       <rect x="520" y="340" width="140" height="80" rx="10" fill="url(#gIris)" stroke="rgba(43,58,138,0.6)" stroke-width="1.2"/>
-      <text x="590" y="364" text-anchor="middle" class="dg-title" fill="#2b3a8a">LM head</text>
+      <text x="590" y="364" text-anchor="middle" class="dg-title" fill="#2b3a8a">LM 头</text>
       <line x1="545" y1="374" x2="635" y2="374" stroke="rgba(43,58,138,0.3)"/>
-      <text x="590" y="392" text-anchor="middle" class="dg-label">→ logits (248,320)</text>
-      <text x="590" y="408" text-anchor="middle" class="dg-sub">+ MTP heads</text>
+      <text x="590" y="392" text-anchor="middle" class="dg-label">→ 逻辑值（248,320）</text>
+      <text x="590" y="408" text-anchor="middle" class="dg-sub">+ MTP 头</text>
     </svg>
-    <div class="fig-cap"><b>Fig. 1</b> — Full dataflow: two input modalities merge into one residual stream, pass through the 64-layer hybrid stack, and exit through a 248,320-way LM head with auxiliary MTP heads.</div>
+    <div class="fig-cap"><b>图 1</b> — 完整数据流：两种输入模态合并为一个残差流，经过 64 层混合堆栈，再从具有 248,320 路输出及辅助 MTP 头的 LM 头输出。</div>
   </div>
 
-  <h3>Reading the dataflow, stage by stage</h3>
-  <p>The diagram reads left to right as a convergence into a single bus and then a vertical stack. Two input paths enter on the left: a <strong>SigLIP-style vision encoder</strong> that turns images and video frames into patch embeddings (~0.9B parameters, §07), and a <strong>text tokenizer</strong> that maps raw bytes to integer IDs in a 248,320-symbol vocabulary (§02). The vision path is narrower in the diagram but heavier per token, since a single image can cost thousands of tokens, so before merging it passes through a <strong>projector and 2×2 spatial merge</strong> that folds each 2×2 block of patches into one token, a 4× reduction that trades spatial resolution for sequence length. Text needs no such reduction; it is already discrete.</p>
-  <p>Both paths converge into the <strong>unified stream</strong>, a single tensor $x \in \mathbb{R}^{T \times 5120}$ carrying text and vision tokens on equal footing. From here on, no layer distinguishes a text token from an image token: the modality boundary lives only in the position encoding (MRoPE, §07) and the embedding path, never in the backbone. The stream enters the <strong>64-layer hybrid stack</strong>, the amber column, arranged as 16 repetitions of $[3 \times \text{DeltaNet} + 1 \times \text{Attention}]$. The stack's output returns to an <strong>LM head</strong> that projects the final hidden state back to a 248,320-way distribution over the vocabulary, plus auxiliary <strong>MTP heads</strong> that predict several tokens ahead for self-speculative decoding (§08).</p>
+  <h3>逐阶段解读数据流</h3>
+  <p>该图从左向右阅读：数据先汇聚到一条总线，再进入纵向堆栈。左侧有两条输入路径：<strong>SigLIP 风格视觉编码器</strong>把图像和视频帧转为图块嵌入（约 0.9B 参数，§07）；<strong>文本分词器</strong>则把原始字节映射为 248,320 符号词表中的整数 ID（§02）。图中视觉路径较窄，但每个输入的词元成本更高，因为一张图像可能占用数千词元。因此在合并之前，它会经过<strong>投影器与 2×2 空间合并</strong>，把每个 2×2 图块折叠为一个词元，以牺牲空间分辨率换取序列长度缩短至四分之一。文本本身已离散化，无需这种缩减。</p>
+  <p>两条路径汇入<strong>统一流</strong>，即单个张量 $x \in \mathbb{R}^{T \times 5120}$，平等承载文本与视觉词元。从这里开始，任何层都不区分文本词元和图像词元：模态边界只存在于位置编码（MRoPE，§07）和嵌入路径中，从不进入骨干网络。该流进入琥珀色的<strong>64 层混合堆栈</strong>，其结构为重复 16 次的 $[3 \times \text{DeltaNet} + 1 \times \text{Attention}]$。堆栈输出回到 <strong>LM 头</strong>，将最终隐藏状态投影回词表上的 248,320 路分布；辅助 <strong>MTP 头</strong>则向前预测多个词元，用于自推测解码（§08）。</p>
 
-  <h3>The residual stream as the central bus</h3>
-  <p>The single most important structural fact about this model is that every layer is <em>additive</em> into one residual stream. A layer does not overwrite its input; it computes a correction and adds it, which is what makes the architecture composable: each of the 64 layers is a small residual function whose output is summed back into the bus, so the hidden state at layer $l$ is the input plus the accumulated contributions of every preceding layer. The norm-before-residual convention (Pre-RMSNorm) means each layer normalizes a <em>copy</em> of the stream for its own computation but writes its un-normalized update back, so the stream's magnitude grows steadily rather than exploding.</p>
-  <div class="math" aria-label="Pre-RMSNorm residual update: each layer normalizes the stream for its mixer and its FFN, then adds the raw outputs back into the un-normalized residual bus.">
-    \mathbf{x}_{l+1} = \mathbf{x}_l \;+\; \text{Mixer}_l\!\big(\text{RMSNorm}(\mathbf{x}_l)\big) \;+\; \text{FFN}_l\!\big(\text{RMSNorm}(\mathbf{x}_l)\big)
+  <h3>作为中央总线的残差流</h3>
+  <p>该模型最重要的结构事实是：每一层都以<em>加法</em>方式写入同一个残差流。层不会覆盖输入，而是计算修正量并将其相加，由此架构才可组合：64 层中的每一层都是小型残差函数，其输出被加回总线，因此第 $l$ 层的隐藏状态等于输入加上之前所有层贡献的累积。先归一化后残差（Pre-RMSNorm）约定意味着，每层为自身计算归一化残差流的一个<em>副本</em>，但将未经归一化的更新写回，因此残差流幅度会稳定增长而非爆炸。</p>
+  <div class="math" aria-label="Pre-RMSNorm 残差更新：每层为混合器和 FFN 归一化残差流，再将原始输出加回未经归一化的残差总线。">
+    \mathbf{x}_{l+1} = \mathbf{x}_l \;+\; \text{混合器}_l\!\big(\text{RMSNorm}(\mathbf{x}_l)\big) \;+\; \text{FFN}_l\!\big(\text{RMSNorm}(\mathbf{x}_l)\big)
   </div>
-  <p>Two consequences follow and recur throughout the document. First, the mixer (DeltaNet or attention) and the FFN each read a normalized view of the same stream but contribute independent updates, so they specialize: the mixer routes information <em>across positions</em> while the FFN transforms the representation <em>at a single position</em>. Second, because the stream is never reset, the model's effective depth is the full 64-layer sum. A token's final representation is its embedding plus a layered set of corrections, and removing or reordering layers changes the sum. That is why the 3:1 schedule (§03) is not cosmetic: the order in which approximate and exact memory layers are stacked changes what the stream converges to.</p>
+  <p>由此产生两项贯穿全文的结果。第一，混合器（DeltaNet 或注意力）与 FFN 各自读取同一残差流的归一化视图，却贡献彼此独立的更新，因此会形成分工：混合器在<em>不同位置之间</em>路由信息，FFN 则转换<em>单一位置上</em>的表示。第二，由于残差流从不重置，模型的有效深度是完整 64 层之和。词元的最终表示是其嵌入加上逐层修正；移除或重新排序层都会改变总和。因此 3:1 调度（§03）绝非表面安排：近似记忆层与精确记忆层的堆叠顺序会改变残差流的收敛结果。</p>
 
-  <p>The four departures from the textbook transformer, each of which gets its own section:</p>
+  <p>与教科书式 Transformer 的四处不同之处如下，每项均有专章讲解：</p>
   <ul>
-    <li><strong>1. A hybrid attention backbone</strong>: 64 layers arranged as 16 identical super-blocks of <code>[3 × (Gated DeltaNet + FFN)] + [1 × (Gated Attention + FFN)]</code>. 75% of layers use <em>linear attention</em> with a constant-size recurrent state, so their per-token cost does not grow with context; 25% use full softmax attention, whose KV cache grows with sequence length but which guarantees exact retrieval. The two are not interchangeable: the linear layers compress the stream cheaply and the full-attention layers periodically re-anchor it against the raw context, preventing the associative drift that a pure linear stack accumulates. This is the single most important design decision in the model (§03–05).</li>
-    <li><strong>2. Interleaved multimodal RoPE (MRoPE)</strong>: rotary position encoding normally assigns each token a single 1D position, which breaks for images that have a 2D layout and video that has a 2D+time layout. MRoPE splits the rotary phases into three sections (<code>mrope_section: [11, 11, 10]</code>) that carry the temporal, height, and width axes independently, so a 2D image grid or a video timeline slots into the same 1D token sequence as text without retraining tricks or separate position tables (§07).</li>
-    <li><strong>3. Trained-in Multi-Token Prediction</strong>: the model ships with extra heads that predict several tokens ahead in one forward pass. At inference these heads act as a <em>draft model that is the same model</em>: the backbone proposes multiple continuations, verifies them in a single pass, and accepts the longest prefix that checks out, amortizing the per-token cost of long autoregressive generation. Because the heads were trained jointly with the backbone rather than distilled afterward, their predictions share the backbone's distribution and reject rarely (§08).</li>
-    <li><strong>4. A native vision front-end</strong>: a SigLIP-style vision tower turns images and video frames into patch embeddings, which a projector then maps into the LM's 5120-wide residual stream. The backbone therefore never sees "vision" as a special case: image tokens are tokens, processed by the same 64 layers as text, which is why the model can interleave reasoning over figures and prose without a separate vision decoder. This is a first-class input path, not a bolt-on adapter (§07).</li>
+    <li><strong>1. 混合注意力骨干网络</strong>：64 层排列为 16 个相同的超级块：<code>[3 ×（门控 DeltaNet + FFN）] + [1 ×（门控注意力 + FFN）]</code>。75% 的层采用具有固定大小循环状态的<em>线性注意力</em>，因此单词元成本不随上下文增长；25% 采用完整 softmax 注意力，其 KV 缓存随序列长度增长，但保证精确检索。两者不可互换：线性层低成本压缩残差流，全注意力层则定期依据原始上下文重新锚定，避免纯线性堆栈累积联想漂移。这是模型最重要的一项设计决策（§03–05）。</li>
+    <li><strong>2. 交错多模态 RoPE（MRoPE）</strong>：旋转位置编码通常为每个词元分配单一 1D 位置，但无法适应具有 2D 布局的图像和具有 2D+时间布局的视频。MRoPE 将旋转相位拆为三个区段（<code>mrope_section: [11, 11, 10]</code>），分别承载时间、高度和宽度轴，使 2D 图像网格或视频时间线无需重新训练技巧或独立位置表，就能嵌入与文本相同的 1D 词元序列（§07）。</li>
+    <li><strong>3. 训练内置的多词元预测</strong>：模型附带额外预测头，在一次前向传播中向前预测多个词元。推理时，这些头充当<em>与主模型同源的草稿模型</em>：骨干网络提出多个后续候选，一次性验证它们，并接受通过校验的最长前缀，从而摊薄长篇自回归生成的单词元成本。由于这些头与骨干网络联合训练，而非事后蒸馏，其预测与骨干网络共享分布，因而很少被拒绝（§08）。</li>
+    <li><strong>4. 原生视觉前端</strong>：SigLIP 风格视觉塔将图像和视频帧转为图块嵌入，再由投影器映射至 LM 宽度为 5120 的残差流。因此骨干网络从不把“视觉”视为特例：图像词元就是词元，由与文本相同的 64 层处理，模型因而能交错推理图形与文字，无需独立视觉解码器。这是一条一等输入路径，而非外挂适配器（§07）。</li>
   </ul>
 
   <div class="callout why">
-    <div class="co-title">Scope</div>
-    <p>Most treatments stop at "a transformer with linear attention." That phrase conceals the engineering decisions: why <em>delta-rule</em> linear attention rather than a plain SSM, why 3:1 rather than 7:1, why the full-attention layers carry 4 KV heads rather than 24, why the FFN is 17,408 wide rather than 20,480. Each constant is a trade, memory against quality and throughput against retrieval precision, and each is derived in the section noted.</p>
+    <div class="co-title">范围</div>
+    <p>大多数介绍止步于“带线性注意力的 Transformer”。这句话掩盖了背后的工程决策：为何采用<em>增量规则</em>线性注意力而非普通 SSM，为何比例为 3:1 而非 7:1，为何全注意力层使用 4 个而非 24 个 KV 头，为何 FFN 宽度是 17,408 而非 20,480。每个常量都体现一种权衡：内存与质量、吞吐量与检索精度；各项均在所注明章节中推导。</p>
   </div>
 
-  <h3>Parameter budget</h3>
-  <p>Before reading a single equation, account for where the 27 billion parameters actually live. The audit below is computed live from the config; every number in §03–06 derives from this breakdown.</p>
-  <p>The budget breaks into three tiers of very different size. The <strong>per-layer FFN</strong> is the largest single sink: a 17,408-wide SwiGLU has three projections over the 5120-wide hidden state (§06), costing roughly 269M parameters per layer and, across 64 layers, the majority of the model. FFN width is the primary lever on per-token capacity. The <strong>mixer</strong> (DeltaNet or Gated Attention projections, §04–05) is surprisingly small by comparison, because attention parameters scale with head dimension and head count rather than with sequence length, and the linear layers reuse a fixed recurrent state instead of growing a projection. The <strong>vocabulary</strong> is the third tier and the most top-heavy single object: the embedding matrix alone is 2.54 GB in BF16, and with an untied LM head the input and output boundaries each carry that cost, so they outweigh any single backbone layer. Toggle the vision tower (~0.9B) and the MTP module (~1.3B) below to see how much the auxiliary paths add on top of the dense core.</p>
+  <h3>参数预算</h3>
+  <p>在阅读任何方程之前，先弄清 270 亿参数究竟分布在哪里。下方审计依据配置实时计算；§03–06 的每个数字均源于这一分解。</p>
+  <p>预算分为规模差异显著的三个层级。<strong>逐层 FFN</strong> 是最大的单项去向：宽度为 17,408 的 SwiGLU 对宽度 5120 的隐藏状态进行三次投影（§06），每层约耗费 269M 参数，64 层合计占模型大头。FFN 宽度是调节单词元容量的主要杠杆。相比之下，<strong>混合器</strong>（DeltaNet 或门控注意力投影，§04–05）出人意料地小，因为注意力参数随头维度和头数扩展，而非随序列长度扩展；线性层则复用固定循环状态，而不增长投影。<strong>词表</strong>是第三层级，也是最为头重脚轻的单个对象：仅嵌入矩阵在 BF16 下就占 2.54 GB；由于 LM 头不共享权重，输入与输出边界各自承担该成本，因此都超过任一骨干层。切换下方视觉塔（约 0.9B）和 MTP 模块（约 1.3B），即可查看辅助路径在稠密核心之上增加多少参数。</p>
   <div class="widget" id="w-param">
-    <div class="w-head"><span class="w-title">Parameter accounting audit</span><span class="w-tag">live widget</span></div>
-    <div class="w-desc">Computed from the official config: hidden d=5120, 64 layers, FFN 17,408, vocab 248,320 (padded), DeltaNet heads 16QK/48V×128, GQA 24Q/4KV×256, vision tower ≈0.9B. Toggle components to see what each subsystem costs.</div>
+    <div class="w-head"><span class="w-title">参数核算审计</span><span class="w-tag">实时组件</span></div>
+    <div class="w-desc">依据官方配置计算：隐藏维度 d=5120、64 层、FFN 17,408、词表 248,320（填充后）、DeltaNet 头 16QK/48V×128、GQA 24Q/4KV×256、视觉塔约 0.9B。切换组件可查看各子系统的成本。</div>
     <div class="w-controls">
-      <div class="w-ctl"><label id="lblVis">include vision tower</label>
-        <div class="seg" id="paramVisionSeg" role="group" aria-labelledby="lblVis"><button data-v="1" class="on" aria-pressed="true">yes</button><button data-v="0" aria-pressed="false">no</button></div>
+      <div class="w-ctl"><label id="lblVis">包含视觉塔</label>
+        <div class="seg" id="paramVisionSeg" role="group" aria-labelledby="lblVis"><button data-v="1" class="on" aria-pressed="true">是</button><button data-v="0" aria-pressed="false">否</button></div>
       </div>
-      <div class="w-ctl"><label id="lblMtp">include MTP module</label>
-        <div class="seg" id="paramMtpSeg" role="group" aria-labelledby="lblMtp"><button data-v="1" class="on" aria-pressed="true">yes</button><button data-v="0" aria-pressed="false">no</button></div>
+      <div class="w-ctl"><label id="lblMtp">包含 MTP 模块</label>
+        <div class="seg" id="paramMtpSeg" role="group" aria-labelledby="lblMtp"><button data-v="1" class="on" aria-pressed="true">是</button><button data-v="0" aria-pressed="false">否</button></div>
       </div>
     </div>
     <div class="w-out" id="paramOut" aria-live="polite"></div>
@@ -315,40 +316,40 @@
 
 <!-- ============================================================ 02 TOKENIZER -->
 <section id="tokenizer">
-  <div class="sec-tag">02 · Tokenizer &amp; the input contract</div>
-  <h2>From raw Unicode bytes to 248,320-dimensional discrete spaces</h2>
-  <p class="lead">Everything downstream in the 64-layer backbone consumes a discrete sequence of integer token IDs $\mathbf{x} \in [0, 248320)^{T}$. The byte-level BPE tokenizer defines the model's vocabulary contract, compressed sequence length, and structured protocol format across 119 languages.</p>
+  <div class="sec-tag">02 · 分词器与输入约定</div>
+  <h2>从原始 Unicode 字节到 248,320 维离散空间</h2>
+  <p class="lead">64 层骨干网络下游的一切都接收整数词元（token）ID 的离散序列 $\mathbf{x} \in [0, 248320)^{T}$。字节级 BPE 分词器定义了模型面向 119 种语言的词表约定、压缩后序列长度与结构化协议格式。</p>
 
-  <h3>Byte-level BPE, from the bottom up</h3>
-  <p>Byte-pair encoding builds the vocabulary bottom-up rather than assigning one token per word. The algorithm starts from the smallest possible alphabet (raw UTF-8 bytes, 256 symbols) and scans the training corpus for the most frequent adjacent pair of symbols, merges that pair into a single new token, adds it to the vocabulary, and repeats. Each iteration shrinks the corpus by one merge and grows the vocabulary by one token; after roughly 248,064 merges the vocabulary reaches its working size. Because the base alphabet is bytes, every possible Unicode string is representable: there is no <code>&lt;unk&gt;</code> token and no out-of-vocabulary fallback, which is what lets one tokenizer serve 119 languages, source code, and mathematical notation simultaneously.</p>
-  <p>The merge sequence is fixed at training time and baked into the tokenizer file, so the same string always segments identically at inference. Two consequences matter for the rest of the architecture. First, the tokenizer, not the model, decides the sequence length $T$ for a given input, so its compression rate directly sets the attention FLOPs and KV cache the backbone must pay. Second, the vocabulary size fixes the dimension of the embedding lookup and the final LM-head projection, two of the largest single tensors in the model.</p>
+  <h3>自底向上的字节级 BPE</h3>
+  <p>字节对编码从底层构建词表，而非为每个单词分配一个词元。算法从尽可能小的字母表（原始 UTF-8 字节，共 256 个符号）开始，在训练语料中扫描最高频的相邻符号对，将该对合并成一个新词元并加入词表，然后重复。每次迭代通过一次合并缩短语料，同时让词表增加一个词元；经过约 248,064 次合并，词表达到工作规模。由于基础字母表由字节组成，任何 Unicode 字符串都可表示：不存在 <code>&lt;unk&gt;</code> 词元，也不需要词表外回退机制，因此一个分词器便可同时服务 119 种语言、源代码和数学符号。</p>
+  <p>合并序列在训练时固定并写入分词器文件，因此同一字符串在推理时始终以相同方式切分。这对后续架构有两项重要影响。第一，给定输入的序列长度 $T$ 由分词器而非模型决定，因此其压缩率直接决定骨干网络承担的注意力 FLOPs 和 KV 缓存。第二，词表大小固定了嵌入查找与最终 LM 头投影的维度，而它们是模型中最大的两个单一张量。</p>
 
   <!-- BPE Mathematical Foundations & GEMM Alignment Formalism -->
-  <div class="math" aria-label="Equation 1: BPE merge rule expanding 248,064 merges into a 248,320-token vocabulary padded to 3,880 by 64 for tensor-core alignment, yielding a 2.54 GB BF16 embedding matrix and 1.27 billion MACs per token.">
-    \tau^* = \arg\max_{(u, v) \in V \times V} \text{Freq}(u, v) \quad \implies \quad V_{k+1} = V_k \cup \{ u \circ v \} \quad \text{for } k = 1 \dots 248,064&nbsp;&nbsp;<span class="eq-no">(1)</span><br>
-    |V_{\text{padded}}| = 248,320 = 3,880 \times 64 \quad (\text{Exact NVIDIA Tensor Core MMA Tile Alignment})<br>
-    \text{Embedding Matrix} = W_{\text{emb}} \in \mathbb{R}^{248320 \times 5120} \implies 248,320 \times 5,120 \times 2\text{ bytes} = \mathbf{2.54\text{ GB (BF16)}}<br>
-    \text{LM Head Logits} = \mathbf{z} = \mathbf{h}_L W_{\text{head}}^T \in \mathbb{R}^{B \times T \times 248320} \implies \mathbf{1.27\text{ Billion MACs / Token}}
+  <div class="math" aria-label="方程 1：BPE 合并规则通过 248,064 次合并得到 248,320 词元的词表，并填充为 3,880 乘 64 以对齐 Tensor Core，由此产生 2.54 GB 的 BF16 嵌入矩阵和每词元 12.7 亿次 MAC。">
+    \tau^* = \arg\max_{(u, v) \in V \times V} \text{Freq}(u, v) \quad \implies \quad V_{k+1} = V_k \cup \{ u \circ v \} \quad k = 1 \dots 248,064&nbsp;&nbsp;<span class="eq-no">(1)</span><br>
+    |V_{\text{padded}}| = 248,320 = 3,880 \times 64 \quad (\text{精确对齐 NVIDIA Tensor Core MMA 图块})<br>
+    \text{嵌入矩阵} = W_{\text{emb}} \in \mathbb{R}^{248320 \times 5120} \implies 248,320 \times 5,120 \times 2\text{ 字节} = \mathbf{2.54\text{ GB（BF16）}}<br>
+    \text{LM 头逻辑值} = \mathbf{z} = \mathbf{h}_L W_{\text{head}}^T \in \mathbb{R}^{B \times T \times 248320} \implies \mathbf{1.27\text{ 十亿次 MAC / 词元}}
   </div>
 
-  <h3>Why 248,320 and not 248,064: padding for the Tensor Core</h3>
-  <p>The merge schedule produces 248,064 learned tokens, but the vocabulary is declared as 248,320, a padded size chosen as $3{,}880 \times 64$. The 256 extra rows are never used as tokens; they exist so the vocabulary dimension is an exact multiple of the Tensor Core matrix-multiply-accumulate (MMA) tile. The embedding lookup and the LM-head projection are GEMMs with the vocabulary as their contracting dimension, and on modern NVIDIA Tensor Cores a matmul only hits peak throughput when that dimension is a clean multiple of the tile (64 for BF16); a partial tail forces either masked lanes or a separate epilogue, both of which waste bandwidth on a tensor this large. Padding costs 256 unused rows (~2.6 MB of BF16) and buys peak embedding and head throughput on every forward pass, so the trade is overwhelmingly in favor of padding.</p>
-  <p>The embedding matrix $W_{\text{emb}} \in \mathbb{R}^{248320 \times 5120}$ is the model's only bridge from discrete integers to continuous geometry: each token ID selects one row, and that 5120-vector is the initial residual-stream value before any layer runs. The LM head is its mirror, a projection from the 5120-wide residual stream back to a 248,320-way distribution, and in Qwen 3.8 it is <em>untied</em>: a separate learned matrix rather than the transposed embedding. Input and output boundaries are therefore symmetric and together hold roughly 5 GB of BF16, more than any single backbone layer. The widget below shows the segmentation that feeds this lookup.</p>
+  <h3>为何是 248,320 而非 248,064：为 Tensor Core 填充</h3>
+  <p>合并调度会产生 248,064 个已学习词元，但词表声明为 248,320，其填充大小选为 $3{,}880 \times 64$。额外 256 行从不作为词元使用；它们的作用是让词表维度恰好成为 Tensor Core 矩阵乘加（MMA）图块的整数倍。嵌入查找和 LM 头投影都是以词表为收缩维度的 GEMM；在现代 NVIDIA Tensor Core 上，只有该维度是图块大小（BF16 下为 64）的整数倍时，矩阵乘法才能达到峰值吞吐量。尾部不完整会迫使硬件使用掩码通道或单独的收尾阶段，对如此大的张量都会浪费带宽。填充只付出 256 个未使用行（约 2.6 MB BF16）的成本，却能让每次前向传播中的嵌入和输出头都达到峰值吞吐量，因此这项权衡显然有利于填充。</p>
+  <p>嵌入矩阵 $W_{\text{emb}} \in \mathbb{R}^{248320 \times 5120}$ 是模型从离散整数通往连续几何空间的唯一桥梁：每个词元 ID 选择一行，该 5120 维向量就是任何层运行前的初始残差流值。LM 头是它的镜像，将宽度为 5120 的残差流投影回 248,320 路分布；在 Qwen 3.8 中二者<em>不共享权重</em>，即使用独立学习矩阵，而非嵌入矩阵的转置。因此输入和输出边界对称，合计占用约 5 GB BF16，超过任一骨干层。下方组件展示送入该查找过程的分词结果。</p>
 
   <!-- Widget 1: Live Interactive Tokenizer & BPE Segmenter (#w-tokenizer-lab) -->
   <div class="widget" id="w-tokenizer-lab">
-    <div class="w-head"><span class="w-title">Interactive BPE token segmenter &amp; fertility inspector</span><span class="w-tag">live tokenizer</span></div>
-    <div class="w-desc">Token segmentation for preset and custom inputs across modalities: tokenization badges, live integer IDs, and character-to-token fertility compression under the 248,320-token vocabulary.</div>
+    <div class="w-head"><span class="w-title">交互式 BPE 词元切分器与繁衍率检查器</span><span class="w-tag">实时分词器</span></div>
+    <div class="w-desc">对跨模态预设及自定义输入进行词元切分：展示分词标签、实时整数 ID，以及在 248,320 词元词表下字符到词元的繁衍率压缩。</div>
     
     <div class="calc-ctl">
       <div class="w-ctl" style="flex:1">
-        <label for="tokPresetSel">modality / language test preset</label>
+        <label for="tokPresetSel">模态／语言测试预设</label>
         <select id="tokPresetSel">
-          <option value="code" selected>Python Code: Def &amp; Matrix Multiplication</option>
-          <option value="math">Reasoning Prompt: &lt;think&gt; Let S_t = α·S_{t-1} &lt;/think&gt;</option>
-          <option value="multilingual">Multilingual Text: English · 中文 · हिन्दी · العربية</option>
-          <option value="agent">Agentic Tool Call: &lt;|tool_call_start|&gt; { "tool": "search" } &lt;|tool_call_end|&gt;</option>
-          <option value="lowresource">Low-Resource Script: ภาษาไทย · தமிழ் · ភាសាខ្មែរ</option>
+          <option value="code" selected>Python 代码：函数定义与矩阵乘法</option>
+          <option value="math">推理提示：&lt;think&gt; 令 S_t = α·S_{t-1} &lt;/think&gt;</option>
+          <option value="multilingual">多语言文本：英语 · 中文 · हिन्दी · العربية</option>
+          <option value="agent">智能体工具调用：&lt;|tool_call_start|&gt; { "tool": "search" } &lt;|tool_call_end|&gt;</option>
+          <option value="lowresource">低资源文字：ภาษาไทย · தமிழ் · ភាសាខ្មែរ</option>
         </select>
       </div>
     </div>
@@ -356,23 +357,23 @@
     <div class="calc-readout" id="tokLiveTokens" aria-live="polite" style="margin-top:var(--s-3)"></div>
   </div>
 
-  <h3>Fertility: why vocabulary size is a serving lever</h3>
-  <p>Fertility is the number of tokens a tokenizer emits per word, and it is the single number that ties the tokenizer to the backbone's cost. Sequence length $T$ enters attention as $O(T^2)$ compute and the KV cache as $O(T)$ memory, so a script that tokenizes at 2.5 tokens/word rather than 1.3 multiplies attention FLOPs by roughly $2.5^2 / 1.3^2 \approx 3.7$ and the KV cache by $2.5 / 1.3 \approx 1.9$. A small vocabulary forces high fertility on non-Latin scripts because their graphemes cannot share merges with Latin text; a large vocabulary dedicates merge budget to those scripts and compresses them toward Latin rates.</p>
-  <p>The 32k → 151k → 248k vocabulary progression across Qwen generations is an economic argument. Each step costs a larger embedding and LM-head tensor but buys lower fertility on Chinese, Hindi, Arabic, Thai, and Khmer, which in turn cuts the quadratic attention cost and the KV cache footprint at long context, exactly the regime Qwen 3.8 is built for. The matrix below measures that compression directly across the three vocabulary sizes.</p>
+  <h3>繁衍率：词表大小为何是服务成本的杠杆</h3>
+  <p>繁衍率是分词器为每个单词生成的词元数，也是将分词器与骨干网络成本联系起来的关键数值。序列长度 $T$ 在注意力中带来 $O(T^2)$ 计算，在 KV 缓存中带来 $O(T)$ 内存；因此，某种文字若以每词 2.5 个而非 1.3 个词元进行分词，会让注意力 FLOPs 增至约 $2.5^2 / 1.3^2 \approx 3.7$ 倍，KV 缓存增至 $2.5 / 1.3 \approx 1.9$ 倍。小词表会迫使非拉丁文字具有较高繁衍率，因为其字素无法与拉丁文本共享合并；大词表则为这些文字分配合并预算，将其压缩率拉近拉丁文字。</p>
+  <p>Qwen 各代词表从 32k → 151k → 248k 的演进体现了一项经济性论证。每一步都以更大的嵌入和 LM 头张量为代价，却降低了中文、印地语、阿拉伯语、泰语和高棉语的繁衍率，进而减少长上下文下的二次方注意力成本与 KV 缓存占用——这正是 Qwen 3.8 的目标场景。下方矩阵直接衡量三种词表大小的压缩效果。</p>
 
   <!-- Widget 2: Multilingual Fertility & Vocabulary Scaling Matrix (#w-fertility-matrix) -->
   <div class="widget" id="w-fertility-matrix">
-    <div class="w-head"><span class="w-title">Multilingual fertility &amp; serving cost reduction matrix</span><span class="w-tag">token economics</span></div>
-    <div class="w-desc">Fertility (tokens emitted per word) across the 32k, 151k (Qwen 2.5), and 248k (Qwen 3.8) vocabularies. Larger vocabularies compress non-Latin scripts by up to 64%, reducing quadratic-attention FLOPs and KV cache footprint.</div>
+    <div class="w-head"><span class="w-title">多语言繁衍率与服务成本降幅矩阵</span><span class="w-tag">词元经济性</span></div>
+    <div class="w-desc">32k、151k（Qwen 2.5）和 248k（Qwen 3.8）词表下的繁衍率（每词生成的词元数）。更大的词表可将非拉丁文字压缩多达 64%，从而降低二次方注意力 FLOPs 与 KV 缓存占用。</div>
     
     <div class="packing-ctl">
-      <div class="seg" id="fertLangSeg" role="group" aria-label="Language selector">
-        <button data-lang="en" class="on" aria-pressed="true">English Prose</button>
-        <button data-lang="code" aria-pressed="false">Python / C++ Code</button>
-        <button data-lang="zh" aria-pressed="false">Mandarin Chinese</button>
-        <button data-lang="hi" aria-pressed="false">Hindi (Devanagari)</button>
-        <button data-lang="ar" aria-pressed="false">Arabic</button>
-        <button data-lang="th" aria-pressed="false">Thai / Khmer</button>
+      <div class="seg" id="fertLangSeg" role="group" aria-label="语言选择器">
+        <button data-lang="en" class="on" aria-pressed="true">英语散文</button>
+        <button data-lang="code" aria-pressed="false">Python / C++ 代码</button>
+        <button data-lang="zh" aria-pressed="false">现代汉语</button>
+        <button data-lang="hi" aria-pressed="false">印地语（天城文）</button>
+        <button data-lang="ar" aria-pressed="false">阿拉伯语</button>
+        <button data-lang="th" aria-pressed="false">泰语／高棉语</button>
       </div>
     </div>
 
@@ -380,128 +381,128 @@
   </div>
 
   <!-- Special Token Inventory Catalog -->
-  <h3>Special token protocol catalog: boundary &amp; agentic contracts</h3>
-  <p>The upper address space of the vocabulary, IDs near 248,000, is reserved for control tokens, and these are exempt from BPE merging. That exemption is the point: a delimiter like <code>&lt;|im_start|&gt;</code> or a boundary like <code>&lt;|vision_start|&gt;</code> must be a single atomic symbol that the tokenizer never splits or merges with its neighbors, or the protocol it carries would be corrupted by segmentation. Reserving them as fixed, single-token IDs guarantees that atomicity for free.</p>
-  <p>Read together, the control tokens are the protocol layer the model speaks: they mark chat roles for post-training, bracket test-time reasoning traces that serving backends parse and strip, anchor visual patch tokens in the MRoPE coordinate system, and wrap structured tool-call JSON for agentic execution. Each entry below maps a token to the downstream subsystem that consumes it:</p>
+  <h3>特殊词元协议目录：边界与智能体约定</h3>
+  <p>词表的高位地址空间（接近 248,000 的 ID）保留给控制词元，且不参与 BPE 合并。这一豁免正是关键所在：像 <code>&lt;|im_start|&gt;</code> 这样的分隔符或 <code>&lt;|vision_start|&gt;</code> 这样的边界必须是单个原子符号，分词器绝不能将其拆分或与相邻内容合并，否则切分会破坏它所承载的协议。将其保留为固定的单词元 ID，便可直接保证原子性。</p>
+  <p>整体来看，控制词元构成模型使用的协议层：它们标记用于后训练的聊天角色，包围由服务后端解析并剥离的测试时推理轨迹，在 MRoPE 坐标系中锚定视觉图块词元，并封装用于智能体执行的结构化工具调用 JSON。下方每一项都将一个词元映射到使用它的下游子系统：</p>
 
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 1 — Special token protocol:</strong> reserved control tokens for chat delimiters, reasoning channels, vision anchors, tool/agent RPC, and packing boundaries.</caption>
+      <caption><strong>表 1 — 特殊词元协议：</strong>为聊天分隔符、推理通道、视觉锚点、工具／智能体 RPC 与打包边界保留的控制词元。</caption>
       <thead>
         <tr>
-          <th scope="col">Protocol Control Token</th>
-          <th scope="col">Token ID / Syntax</th>
-          <th scope="col">Downstream Subsystem</th>
-          <th scope="col">Execution Role &amp; Semantics</th>
+          <th scope="col">协议控制词元</th>
+          <th scope="col">词元 ID／语法</th>
+          <th scope="col">下游子系统</th>
+          <th scope="col">执行角色与语义</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Chat Role Delimiters</strong></td>
+          <td><strong>聊天角色分隔符</strong></td>
           <td><code>&lt;|im_start|&gt;</code> / <code>&lt;|im_end|&gt;</code></td>
-          <td>Post-training supervised fine-tuning (SFT), chat template (§11)</td>
-          <td>Delineates system instructions, user queries, and model responses without format leakage.</td>
+          <td>后训练监督微调（SFT）、聊天模板（§11）</td>
+          <td>划分系统指令、用户查询与模型回复，避免格式泄漏。</td>
         </tr>
         <tr>
-          <td><strong>Reasoning Channel</strong></td>
+          <td><strong>推理通道</strong></td>
           <td><code>&lt;think&gt;</code> … <code>&lt;/think&gt;</code></td>
-          <td>Critic-Free GRPO Engine (§11 Stage 3)</td>
-          <td>Encapsulates step-by-step test-time compute; parsed and stripped by serving backends.</td>
+          <td>无评论器 GRPO 引擎（§11 阶段 3）</td>
+          <td>封装逐步测试时计算；由服务后端解析并剥离。</td>
         </tr>
         <tr>
-          <td><strong>Vision Anchors</strong></td>
+          <td><strong>视觉锚点</strong></td>
           <td><code>&lt;|vision_start|&gt;</code> … <code>&lt;|vision_end|&gt;</code></td>
-          <td>Multimodal SigLIP Front-End (§07)</td>
-          <td>Surrounds interleaved 2D/3D visual patch tokens mapped into MRoPE coordinates.</td>
+          <td>多模态 SigLIP 前端（§07）</td>
+          <td>包围映射至 MRoPE 坐标的交错 2D/3D 视觉图块词元。</td>
         </tr>
         <tr>
-          <td><strong>Structured Tool Call</strong></td>
+          <td><strong>结构化工具调用</strong></td>
           <td><code>&lt;|tool_call_start|&gt;</code> … <code>&lt;|tool_call_end|&gt;</code></td>
-          <td>General RL Agentic Pipeline (§11 Stage 4)</td>
-          <td>Encapsulates strict JSON function arguments for tool invocation and environment step responses.</td>
+          <td>通用 RL 智能体流水线（§11 阶段 4）</td>
+          <td>封装用于工具调用和环境步骤响应的严格 JSON 函数参数。</td>
         </tr>
         <tr>
-          <td><strong>Sequence Terminator</strong></td>
+          <td><strong>序列终止符</strong></td>
           <td><code>&lt;|endoftext|&gt;</code> (ID: 248000)</td>
-          <td>Data Packing &amp; Causal Masking (§09)</td>
-          <td>Defines document boundaries for FlashAttention varlen sequence packing.</td>
+          <td>数据打包与因果掩码（§09）</td>
+          <td>为 FlashAttention 变长序列打包定义文档边界。</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>The output of this section is a fixed contract: a raw input of any modality becomes an integer sequence $\mathbf{x} \in [0, 248320)^T$, which the embedding lookup turns into the initial residual stream. From here the backbone takes over, and the first question it faces is how to mix 48 constant-cost linear layers with 16 exact-retrieval attention layers without the stream drifting. That is the subject of §03.</p>
+  <p>本节的输出是一项固定约定：任意模态的原始输入都变为整数序列 $\mathbf{x} \in [0, 248320)^T$，再由嵌入查找转为初始残差流。此后由骨干网络接手，它面对的第一个问题是：如何混合 48 个恒定成本的线性层与 16 个精确检索注意力层，同时避免残差流漂移。这正是 §03 的主题。</p>
 </section>
 
 <!-- ============================================================ 03 BACKBONE -->
 <section id="backbone">
-  <div class="sec-tag">03 · The hybrid backbone</div>
-  <h2>64 layers, two complementary memory regimes</h2>
-  <p class="lead">The fundamental structural innovation of Qwen 3.8 is the $16 \times [3\times \Delta + 1\times A]$ periodic super-block: three Gated DeltaNet linear-attention layers for constant-memory bulk compression, followed by one Gated Attention layer for lossless exact recall, each accompanied by a 17,408-width SwiGLU FFN.</p>
+  <div class="sec-tag">03 · 混合骨干网络</div>
+  <h2>64 层，两种互补的记忆机制</h2>
+  <p class="lead">Qwen 3.8 的根本结构创新是 $16 \times [3\times \Delta + 1\times A]$ 周期性超级块：三个门控 DeltaNet 线性注意力层以恒定内存进行大规模压缩，随后一个门控注意力层执行无损精确回忆；每层均配有宽度为 17,408 的 SwiGLU FFN。</p>
 
-  <h3>Two memory regimes, one stream</h3>
-  <p>The "hybrid" in the backbone is a pairing of two ways a layer can remember the past, each with an opposite cost curve. A <strong>linear-attention</strong> (DeltaNet) layer writes each incoming token into a fixed-size recurrent state (a matrix $S$ of constant shape) and reads from that same state. Its memory is $O(1)$ per layer regardless of sequence length, and its per-token compute is constant; the price is that the state is a compression of history, so old or low-weight information is gradually overwritten and cannot be recalled verbatim. A <strong>full softmax attention</strong> layer instead stores every token's key and value in a cache of size $O(T)$, and a query reads any past token exactly by softmax-weighted lookup. Its memory grows with context and its compute with $T^2$, but it retrieves perfectly.</p>
-  <p>No single regime is correct at 262k tokens. Pure linear attention is cheap but loses needles in the haystack; pure attention recalls everything but its cache alone would dominate an 80 GB device. The backbone's answer is to run the cheap, compressive regime on most layers and slot the exact regime in periodically, so the stream is usually being integrated cheaply and is occasionally re-anchored against the raw context. The next equation fixes that schedule.</p>
-  <p>To see why "compression" is the right word, look at what the recurrent state actually holds. Full attention stores $T$ separate key–value pairs and retrieves one by inner product; a DeltaNet layer instead accumulates their <em>summed outer product</em> into a single fixed matrix $S \approx \sum_t v_t k_t^{\top}$, and a query reads back $q^{\top} S$. The $T$ rank-one pairs have been collapsed into one $d \times d$ matrix of constant size, and that is the compression. It is why memory is $O(1)$, and why recall is lossy: a sum of outer products cannot be inverted back into the individual pairs, so a query that should match one specific past token instead retrieves a weighted blend of everything that shared its key direction. §04 shows how the <em>delta rule</em> and learned gates make that blend far more selective than a plain sum; here the point is just the structural trade: fixed size, irreversible compression.</p>
+  <h3>两种记忆机制，一条残差流</h3>
+  <p>骨干网络中的“混合”是指将层记忆过去的两种方式配对，二者的成本曲线相反。<strong>线性注意力</strong>（DeltaNet）层把每个传入词元写入固定大小的循环状态（形状恒定的矩阵 $S$），并从同一状态读取。无论序列多长，每层内存均为 $O(1)$，单词元计算量恒定；代价是状态仅为历史的压缩表示，陈旧或低权重信息会逐渐被覆盖，无法逐字回忆。相反，<strong>完整 softmax 注意力</strong>层将每个词元的键和值存入大小为 $O(T)$ 的缓存，查询通过 softmax 加权查找精确读取任意历史词元。其内存随上下文增长，计算量随 $T^2$ 增长，但可实现完美检索。</p>
+  <p>面对 262k 词元，没有任何单一机制是正确答案。纯线性注意力成本低，却会丢失“干草堆中的针”；纯注意力能回忆一切，但仅缓存就会占满 80 GB 设备。骨干网络的答案是在多数层运行低成本的压缩机制，并周期性插入精确机制，使残差流通常以低成本整合，偶尔再依据原始上下文重新锚定。下一个方程规定了这一调度。</p>
+  <p>要理解为何“压缩”一词准确，可观察循环状态实际保存的内容。全注意力存储 $T$ 个独立键值对，并通过内积检索其中一个；DeltaNet 层则将其<em>外积之和</em>累积到单个固定矩阵 $S \approx \sum_t v_t k_t^{\top}$ 中，查询通过 $q^{\top} S$ 读回。$T$ 个秩一对被折叠为一个大小恒定的 $d \times d$ 矩阵，这就是压缩。它解释了内存为何是 $O(1)$，也解释了回忆为何有损：外积之和无法逆向还原为各个独立键值对，所以本应匹配某个特定历史词元的查询，实际会检索与其共享键方向的所有内容的加权混合。§04 将说明<em>增量规则</em>与学习门如何让这种混合比简单求和更有选择性；此处重点只是结构权衡：固定大小、不可逆压缩。</p>
 
   <!-- Mathematical Formalism of the Hybrid Motif -->
-  <div class="math" aria-label="Equation 2: Backbone stacks 16 blocks of 4 sub-blocks (3 DeltaNet plus 1 Attention), with each layer adding mixer and FFN outputs after RMSNorm; the mixer is GatedDeltaNet on 3 of every 4 layers and GatedAttention on every fourth layer.">
-    \text{Backbone} = \bigotimes_{k=1}^{16} \Big( \text{Block}_{\Delta}^{(k,1)} \circ \text{Block}_{\Delta}^{(k,2)} \circ \text{Block}_{\Delta}^{(k,3)} \circ \text{Block}_{\text{Attn}}^{(k,4)} \Big)&nbsp;&nbsp;<span class="eq-no">(2)</span><br>
-    \mathbf{x}_{l+1} = \mathbf{x}_l + \text{Mixer}_l\left(\text{RMSNorm}(\mathbf{x}_l)\right) + \text{FFN}\left(\text{RMSNorm}(\mathbf{x}_l')\right) \quad \text{where } \text{Mixer}_l = \begin{cases} \text{GatedDeltaNet} & l \not\equiv 0 \pmod 4 \\ \text{GatedAttention} & l \equiv 0 \pmod 4 \end{cases}
+  <div class="math" aria-label="方程 2：骨干网络堆叠 16 个由 4 个子块组成的块（3 个 DeltaNet 加 1 个注意力）；每层在 RMSNorm 后加入混合器与 FFN 输出；每四层中前三层的混合器为门控 DeltaNet，第四层为门控注意力。">
+    \text{骨干网络} = \bigotimes_{k=1}^{16} \Big( \text{块}_{\Delta}^{(k,1)} \circ \text{块}_{\Delta}^{(k,2)} \circ \text{块}_{\Delta}^{(k,3)} \circ \text{块}_{\text{注意力}}^{(k,4)} \Big)&nbsp;&nbsp;<span class="eq-no">(2)</span><br>
+    \mathbf{x}_{l+1} = \mathbf{x}_l + \text{混合器}_l\left(\text{RMSNorm}(\mathbf{x}_l)\right) + \text{FFN}\left(\text{RMSNorm}(\mathbf{x}_l')\right) \quad \text{其中 } \text{混合器}_l = \begin{cases} \text{门控 DeltaNet} & l \not\equiv 0 \pmod 4 \\ \text{门控注意力} & l \equiv 0 \pmod 4 \end{cases}
   </div>
 
-  <h3>The super-block as a compression–anchor cycle</h3>
-  <p>Equation (2) reads as a schedule, not a one-off layout. The $\bigotimes_{k=1}^{16}$ means the same 4-layer block is repeated 16 times: a periodic tiling, not 64 independently chosen layers. Inside each block the mixer switch $l \bmod 4$ pins three of every four layers to GatedDeltaNet and the fourth to GatedAttention, and the residual update is the one from §01: each layer adds a normalized mixer output and a normalized FFN output back into the stream. The only thing that changes between a DeltaNet layer and an attention layer is which mixer reads the stream; the FFN and the residual bus are identical.</p>
-  <p>Mechanistically, one block is a compress-then-anchor cycle. Layers 1–3 (DeltaNet) fold the stream's recent tokens into their recurrent states, integrating local context at constant memory; the fourth layer (attention) re-reads the raw embedded sequence and pulls forward anything the compression dropped, anchoring the stream against the drift that three compressive layers would otherwise accumulate. Because this 4-layer cycle repeats every four layers, drift can never build up for more than three steps before an attention layer corrects it, which is why the <em>periodic repetition</em> of the motif matters, not just the 3:1 count.</p>
-  <p>Stepped through, the four layers play distinct roles (the motif visualizer below labels them Compression, Refinement, Fusion, and Anchor). <strong>Layer 1 (Compression):</strong> the first DeltaNet layer writes the current token's key–value pair into a fresh recurrent state and reads back the aggregated context up to this point, so the stream now carries a compressed summary of the recent past. <strong>Layer 2 (Refinement):</strong> the next token is written into the same state and a refined summary is read back; the state is accumulating a denser representation and the stream begins to integrate mid-range dependencies. <strong>Layer 3 (Fusion):</strong> the accumulation continues, and by now the recurrent state holds a compressed view of a sizeable local window, with the stream reflecting fused local context. <strong>Layer 4 (Anchor):</strong> the Gated Attention layer sets the recurrent state aside and attends over the full raw token sequence with softmax, so any fact the compression blurred (a needle far back in the haystack) is retrieved exactly and written back into the stream. The cycle then repeats on the next block of four, with the anchor's correction carried forward as the starting point for the next three compressions.</p>
+  <h3>作为“压缩—锚定”循环的超级块</h3>
+  <p>方程 (2) 描述的是调度，而非一次性布局。$\bigotimes_{k=1}^{16}$ 表示同一个 4 层块重复 16 次：这是一种周期性平铺，而非 64 个独立选择的层。每个块内，混合器开关 $l \bmod 4$ 将每四层中的前三层固定为 GatedDeltaNet，第四层固定为 GatedAttention；残差更新沿用 §01：每层都将归一化后的混合器输出和 FFN 输出加回残差流。DeltaNet 层与注意力层之间唯一变化的是由哪种混合器读取残差流；FFN 与残差总线完全相同。</p>
+  <p>从机制上看，一个块就是先压缩、后锚定的循环。第 1–3 层（DeltaNet）将残差流中的近期词元折叠进各自循环状态，以恒定内存整合局部上下文；第四层（注意力）重新读取原始嵌入序列，取回压缩时丢失的内容，并针对三层压缩原本会累积的漂移重新锚定残差流。由于这个 4 层循环每隔四层重复一次，漂移在注意力层纠正之前最多只能累积三步；因此关键不仅是 3:1 的数量比，更是该模式的<em>周期性重复</em>。</p>
+  <p>逐层来看，四层承担不同角色（下方模式可视化器将其标为“压缩、精炼、融合、锚定”）。<strong>第 1 层（压缩）：</strong>第一个 DeltaNet 层把当前词元的键值对写入新的循环状态，并读回截至此处的聚合上下文，于是残差流开始承载近期历史的压缩摘要。<strong>第 2 层（精炼）：</strong>下一个词元写入同一状态，再读回精炼后的摘要；状态逐步积累更密集的表示，残差流开始整合中程依赖。<strong>第 3 层（融合）：</strong>继续累积，此时循环状态已保存较大局部窗口的压缩视图，残差流则反映融合后的局部上下文。<strong>第 4 层（锚定）：</strong>门控注意力层暂时绕开循环状态，通过 softmax 关注完整原始词元序列，从而精确检索压缩所模糊的任何事实（例如埋在很久之前的“针”），并写回残差流。随后下一个四层块重复此循环，锚定产生的修正会作为接下来三次压缩的起点继续向前传递。</p>
 
-  <h3>What each layer actually does</h3>
-  <p>Strip away the mixer difference and every one of the 64 layers follows the same internal recipe: the residual update from §01 made concrete. A layer takes the residual stream $\mathbf{x}_l$, normalizes a copy of it (RMSNorm), runs the <strong>mixer</strong> on that normalized copy to route information <em>across positions</em>, and adds the result back into the stream. It then normalizes the updated stream, runs the <strong>FFN</strong> on it to transform the representation <em>at each position independently</em>, and adds that back too. The mixer and the FFN divide labor cleanly: the mixer decides what each token gets to see from other tokens, and the FFN decides what each token does with what it has. The only component that varies between a DeltaNet layer and an attention layer is the mixer; the FFN and the residual bus are identical.</p>
-  <p>The FFN is on every one of the 64 layers, a 17,408-wide SwiGLU (§06), because routing information between positions is useless unless each position also has the capacity to act on it. A layer with only a mixer would move content around the stream without enriching it; a layer with only an FFN would enrich each position in isolation, unable to aggregate across tokens. Stacking both each layer lets the model alternate "gather" and "transform" 64 times, which is why depth, not width alone, drives quality. This is also why the 3:1 schedule is a statement about the <em>mixer</em> only: the FFN bandwidth is constant across the whole stack, and the question the backbone answers is what fraction of layers should gather cheaply (DeltaNet) versus gather exactly (attention).</p>
+  <h3>每一层实际做什么</h3>
+  <p>撇开混合器的差异，64 层都遵循相同的内部流程，即 §01 残差更新的具体实现。每层接收残差流 $\mathbf{x}_l$，归一化其副本（RMSNorm），让<strong>混合器</strong>在该归一化副本上运行，以便在<em>不同位置间</em>路由信息，再把结果加回残差流。随后，它归一化更新后的残差流，运行 <strong>FFN</strong> 以<em>独立转换每个位置上</em>的表示，并同样将结果加回。混合器与 FFN 分工明确：混合器决定每个词元能从其他词元看到什么，FFN 决定每个词元如何处理已有内容。DeltaNet 层和注意力层之间唯一不同的组件就是混合器；FFN 和残差总线完全相同。</p>
+  <p>64 层中的每一层都有一个宽度为 17,408 的 SwiGLU FFN（§06），因为除非每个位置都有能力处理信息，否则在位置之间路由信息毫无意义。只有混合器的层只能在残差流中搬运内容，无法丰富内容；只有 FFN 的层则只能孤立地丰富各个位置，无法跨词元聚合。每层同时堆叠两者，让模型交替执行 64 次“收集”与“转换”，因此推动质量的是深度，而非仅仅宽度。这也解释了为何 3:1 调度只针对<em>混合器</em>：整个堆栈中的 FFN 带宽恒定，骨干网络要回答的问题是，应有多少比例的层进行低成本收集（DeltaNet），多少进行精确收集（注意力）。</p>
 
-  <p>One concrete consequence of mixing the two regimes is that the KV cache does not accumulate on every layer. DeltaNet layers keep their memory inside the recurrent state (a fixed tensor, not a per-token cache), so they add nothing to the sequence-length-dependent footprint. Only the 16 Gated Attention layers contribute KV cache, which means the cumulative cache grows in 16 jumps (at layers 4, 8, …, 64) rather than 64. The explorer below makes this visible: step through the layer strip and watch the running VRAM stay flat across DeltaNet layers and step up at each attention layer.</p>
+  <p>混合两种机制的一项具体结果是：KV 缓存不会在每一层都累积。DeltaNet 层把记忆保存在循环状态中（固定张量，而非逐词元缓存），因此不会增加随序列长度变化的占用。只有 16 个门控注意力层产生 KV 缓存，这意味着累计缓存只会分 16 次阶跃增长（位于第 4、8、…、64 层），而不是 64 次。下方探索器将其可视化：逐层浏览时，可以看到运行中的显存用量在 DeltaNet 层保持不变，并在每个注意力层阶跃上升。</p>
 
   <!-- Widget 1: 64-Layer Backbone Explorer (#w-layers) -->
   <div class="widget" id="w-layers">
-    <div class="w-head"><span class="w-title">64-layer backbone explorer &amp; memory accumulator</span><span class="w-tag">layer architecture</span></div>
-    <div class="w-desc">Click any layer in the 64-layer backbone to inspect its parameter footprint, state dimension, arithmetic FLOPs, and running cumulative KV cache memory at the chosen context length and precision.</div>
+    <div class="w-head"><span class="w-title">64 层骨干网络探索器与内存累加器</span><span class="w-tag">层架构</span></div>
+    <div class="w-desc">点击 64 层骨干网络中的任一层，查看其参数占用、状态维度、算术 FLOPs，以及在所选上下文长度和精度下的累计 KV 缓存内存。</div>
     
-    <div class="layer-strip" id="layerStrip" role="grid" aria-label="64 model layers (DeltaNet or Gated Attention). Use ← / → to navigate, Enter to select." tabindex="0"></div>
+    <div class="layer-strip" id="layerStrip" role="grid" aria-label="64 个模型层（DeltaNet 或门控注意力）。使用 ← / → 导航，按 Enter 选择。" tabindex="0"></div>
     
     <div class="calc-ctl" style="margin-top:var(--s-3)">
       <div class="w-ctl">
-        <label for="layerCtx">evaluation context length</label>
+        <label for="layerCtx">评估上下文长度</label>
         <select id="layerCtx">
-          <option value="4096">4,096 tokens (Short Prompt)</option>
-          <option value="32768">32,768 tokens (Standard Document)</option>
-          <option value="131072">131,072 tokens (128k Repository)</option>
-          <option value="262144" selected>262,144 tokens (Max Native 262k)</option>
+          <option value="4096">4,096 词元（短提示）</option>
+          <option value="32768">32,768 词元（标准文档）</option>
+          <option value="131072">131,072 词元（128k 代码仓库）</option>
+          <option value="262144" selected>262,144 词元（原生最大 262k）</option>
         </select>
       </div>
       <div class="w-ctl">
-        <label for="layerDtype">KV precision dtype</label>
+        <label for="layerDtype">KV 精度数据类型</label>
         <select id="layerDtype">
-          <option value="2" selected>BF16 (16-bit · 2 bytes/elem)</option>
-          <option value="1">FP8 Quantized (8-bit · 1 byte/elem)</option>
-          <option value="0.5">NVFP4 (4-bit · 0.5 bytes/elem)</option>
+          <option value="2" selected>BF16（16 位 · 每元素 2 字节）</option>
+          <option value="1">FP8 量化（8 位 · 每元素 1 字节）</option>
+          <option value="0.5">NVFP4（4 位 · 每元素 0.5 字节）</option>
         </select>
       </div>
     </div>
 
-    <div class="calc-readout" id="layerInfo" aria-live="polite" style="margin-top:var(--s-2)">Click a layer to inspect parameters and VRAM.</div>
+    <div class="calc-readout" id="layerInfo" aria-live="polite" style="margin-top:var(--s-2)">点击某一层以查看参数与显存。</div>
   </div>
 
   <!-- Widget 2: 4-Layer Super-Block Schematic Visualizer (#w-hybrid-motif) -->
   <div class="widget" id="w-hybrid-motif">
-    <div class="w-head"><span class="w-title">4-layer super-block motif &amp; information flow</span><span class="w-tag">motif topology</span></div>
-    <div class="w-desc">Signal propagation through a single 4-layer super-block: three fast $\mathcal{O}(1)$ recurrent updates compress token streams, followed by an exact softmax attention retrieval step that re-reads raw context to prevent associative drift.</div>
+    <div class="w-head"><span class="w-title">4 层超级块模式与信息流</span><span class="w-tag">模式拓扑</span></div>
+    <div class="w-desc">信号在单个 4 层超级块中的传播：三次快速的 $\mathcal{O}(1)$ 循环更新压缩词元流，随后通过一次精确 softmax 注意力检索重新读取原始上下文，以防止联想漂移。</div>
     
     <div class="packing-ctl">
-      <div class="seg" id="motifStepSeg" role="group" aria-label="Super-block step selector">
-        <button data-step="1" class="on" aria-pressed="true">Layer 1: DeltaNet Compression</button>
-        <button data-step="2" aria-pressed="false">Layer 2: DeltaNet Refinement</button>
-        <button data-step="3" aria-pressed="false">Layer 3: DeltaNet Fusion</button>
-        <button data-step="4" aria-pressed="false">Layer 4: Gated Attention Anchor</button>
+      <div class="seg" id="motifStepSeg" role="group" aria-label="超级块步骤选择器">
+        <button data-step="1" class="on" aria-pressed="true">第 1 层：DeltaNet 压缩</button>
+        <button data-step="2" aria-pressed="false">第 2 层：DeltaNet 精炼</button>
+        <button data-step="3" aria-pressed="false">第 3 层：DeltaNet 融合</button>
+        <button data-step="4" aria-pressed="false">第 4 层：门控注意力锚定</button>
       </div>
     </div>
 
@@ -509,66 +510,66 @@
   </div>
 
   <!-- Memory & Quality Tradeoff Matrix -->
-  <h3>Why the 3:1 hybrid ratio is the Pareto optimum</h3>
-  <p>The 3:1 ratio sits at the optimum of the memory-quality tradeoff curve. Pure linear attention eliminates the KV cache entirely but degrades on needle-in-a-haystack retrieval beyond 32k tokens. Pure softmax attention delivers perfect retrieval but demands 68.7 GB of KV cache per stream at 262k context. The 3:1 hybrid retains <strong>99.4% of full-attention benchmark accuracy</strong> while cutting KV cache VRAM by <strong>75%</strong>.</p>
-  <p>The tradeoff has a knee, and 3:1 sits on it. Moving from pure linear to 3:1 adds 16 attention layers, each a periodic anchor, and recovers almost all retrieval quality because the DeltaNet layers between them already handle short-range aggregation cheaply, so the anchors only need to fix long-range drift. Moving from 3:1 to 1:1 adds another 16 attention layers, but they mostly duplicate retrieval the periodic anchors already provide, so quality becomes "indistinguishable from 64A" while the KV cache doubles. Dropping to 7:1 falls past the knee: eight anchors cannot stop drift on multi-hop associative recall within a 262k-token window. The 3:1 ratio is therefore the point of diminishing returns to attention, not a guess tuned on a sweep.</p>
-  <p>The cache numbers in the table are not round figures; they fall out of the config. Each attention layer's KV cache holds a key and a value tensor for every token, sized by the number of KV heads and the head dimension; at 262k tokens in BF16 the per-layer cost is:</p>
-  <div class="math" aria-label="KV cache per attention layer at 262k BF16: two tensors (K and V) times 4 KV heads times 256 head-dim times 262,144 tokens times 2 bytes, approximately 1.07 GB; multiplied by 16 attention layers gives 17.18 GB, by 64 gives 68.72 GB.">
-    \text{KV / layer}_{\;262\text{k},\;\text{BF16}} = 2 \cdot \underbrace{n_{\text{KV}}}_{4} \cdot \underbrace{d_{\text{head}}}_{256} \cdot \underbrace{T}_{262144} \cdot \underbrace{2}_{\text{B}} \approx 1.07\text{ GB} \;\;\implies\;\; 16\text{A} \to 17.18\text{ GB},\;\; 64\text{A} \to 68.72\text{ GB}
+  <h3>为何 3:1 混合比例是帕累托最优点</h3>
+  <p>3:1 比例处于内存—质量权衡曲线的最优位置。纯线性注意力完全消除 KV 缓存，但在超过 32k 词元的“干草堆寻针”检索中性能下降。纯 softmax 注意力能实现完美检索，但在 262k 上下文下，每条残差流需要 68.7 GB KV 缓存。3:1 混合方案保留<strong>全注意力基准准确率的 99.4%</strong>，同时将 KV 缓存显存削减 <strong>75%</strong>。</p>
+  <p>这项权衡存在一个拐点，而 3:1 正位于拐点之上。从纯线性转向 3:1 会增加 16 个注意力层，每层充当周期性锚点；由于其间的 DeltaNet 层已低成本处理短程聚合，锚点只需纠正长程漂移，因而几乎恢复全部检索质量。从 3:1 转向 1:1 会再增加 16 个注意力层，但它们大多重复周期性锚点已有的检索能力，于是质量虽变得“与 64A 无法区分”，KV 缓存却翻倍。降至 7:1 则越过拐点：八个锚点无法阻止 262k 词元窗口内多跳联想回忆的漂移。因此，3:1 是注意力收益递减点，而非参数扫描调出的猜测。</p>
+  <p>表中的缓存数字并非取整值，而是由配置直接得出。每个注意力层的 KV 缓存为每个词元保存一个键张量和一个值张量，其大小由 KV 头数和头维度决定；在 262k 词元、BF16 精度下，每层成本为：</p>
+  <div class="math" aria-label="262k BF16 下每个注意力层的 KV 缓存：两个张量（K 与 V）乘以 4 个 KV 头、256 头维度、262,144 个词元和 2 字节，约为 1.07 GB；乘以 16 个注意力层为 17.18 GB，乘以 64 为 68.72 GB。">
+    \text{每层 KV}_{\;262\text{k},\;\text{BF16}} = 2 \cdot \underbrace{n_{\text{KV}}}_{4} \cdot \underbrace{d_{\text{head}}}_{256} \cdot \underbrace{T}_{262144} \cdot \underbrace{2}_{\text{B}} \approx 1.07\text{ GB} \;\;\implies\;\; 16\text{A} \to 17.18\text{ GB},\;\; 64\text{A} \to 68.72\text{ GB}
   </div>
-  <p>DeltaNet layers contribute zero to this sum, so the hybrid's cache is simply $1.07 \times n_{\text{attn}}$ GB. That is the whole story behind the "75% savings": replacing 48 of the 64 attention layers with constant-memory DeltaNet layers cuts the cache from $64 \times 1.07$ to $16 \times 1.07$ GB, a fourfold drop for a 0.6-point quality cost, and FP8 or NVFP4 KV precision (toggleable in the explorer above) scales the same product down by another 2× or 4×. The table walks this arithmetic across five mixes.</p>
+  <p>DeltaNet 层对该总和的贡献为零，因此混合方案的缓存就是 $1.07 \times n_{\text{attn}}$ GB。这就是“节省 75%”的全部原理：将 64 个注意力层中的 48 个替换为恒定内存 DeltaNet 层，缓存便从 $64 \times 1.07$ 降至 $16 \times 1.07$ GB，以 0.6 个百分点的质量代价换取四倍降幅；使用 FP8 或 NVFP4 KV 精度（可在上方探索器切换）还可让同一乘积再缩小 2 倍或 4 倍。下表对五种混合方式逐一展示这一计算。</p>
 
   <div class="tbl-wrap">
     <table>
-      <caption><strong>Table 2 — Backbone Pareto matrix:</strong> DeltaNet/attention layer counts, 262k BF16 KV cache cost, and drift quality across five architectural mixes.</caption>
+      <caption><strong>表 2 — 骨干网络帕累托矩阵：</strong>五种架构混合方案的 DeltaNet／注意力层数、262k BF16 KV 缓存成本与漂移质量。</caption>
       <thead>
         <tr>
-          <th scope="col">Backbone Architecture</th>
-          <th scope="col" class="r">DeltaNet Layers</th>
-          <th scope="col" class="r">Attention Layers</th>
-          <th scope="col" class="r">KV cache @ 262k BF16</th>
-          <th scope="col">Drift &amp; Quality</th>
+          <th scope="col">骨干网络架构</th>
+          <th scope="col" class="r">DeltaNet 层</th>
+          <th scope="col" class="r">注意力层</th>
+          <th scope="col" class="r">262k BF16 下的 KV 缓存</th>
+          <th scope="col">漂移与质量</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Pure Attention (64A)</strong></td>
+          <td><strong>纯注意力（64A）</strong></td>
           <td class="r">0</td>
           <td class="r bad">64</td>
           <td class="r bad">68.72 GB</td>
-          <td>Baseline (Perfect Retrieval, Unbatchable VRAM)</td>
+          <td>基线（完美检索，显存无法批处理）</td>
         </tr>
         <tr>
-          <td><strong>1:1 Hybrid (32Δ + 32A)</strong></td>
+          <td><strong>1:1 混合（32Δ + 32A）</strong></td>
           <td class="r">32</td>
           <td class="r">32</td>
           <td class="r">34.36 GB</td>
-          <td>Indistinguishable from 64A, but high cache cost</td>
+          <td>与 64A 无法区分，但缓存成本高</td>
         </tr>
         <tr>
-          <td><strong>3:1 Hybrid (Qwen 3.8 Chosen)</strong></td>
+          <td><strong>3:1 混合（Qwen 3.8 采用）</strong></td>
           <td class="r good"><strong>48</strong></td>
           <td class="r good"><strong>16</strong></td>
           <td class="r hl"><strong>17.18 GB</strong></td>
-          <td class="good"><strong>99.4% parity on LongBench; $4\times$ cache savings</strong></td>
+          <td class="good"><strong>LongBench 上达到 99.4% 的同等水平；缓存节省 $4\times$</strong></td>
         </tr>
         <tr>
-          <td><strong>7:1 Hybrid (56Δ + 8A)</strong></td>
+          <td><strong>7:1 混合（56Δ + 8A）</strong></td>
           <td class="r">56</td>
           <td class="r">8</td>
           <td class="r">8.59 GB</td>
-          <td class="bad">Noticeable drift on complex code needle retrieval</td>
+          <td class="bad">复杂代码寻针检索出现明显漂移</td>
         </tr>
         <tr>
-          <td><strong>Pure Linear (64Δ)</strong></td>
+          <td><strong>纯线性（64Δ）</strong></td>
           <td class="r">64</td>
           <td class="r">0</td>
           <td class="r good">0.00 GB</td>
-          <td class="bad">Degrades severely on multi-hop associative recall</td>
+          <td class="bad">多跳联想回忆性能严重下降</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p>The backbone description so far treats the two mixers as black boxes, "compress" and "anchor." The next two sections open them. §04 derives Gated DeltaNet's delta rule as a <em>gated associative memory</em>: how a fixed-size state can write and forget content under learned gates, and why that beats a plain SSM on recall. §05 opens Gated Attention: why 24 query heads share only 4 key-value heads (GQA 6:1), how 3D MRoPE places image and text tokens on one position axis, and the output $\sigma$-gate that suppresses noise before the residual write.</p>
+  <p>到目前为止，骨干网络说明仍将两个混合器视为“压缩”和“锚定”黑盒。接下来两节将打开它们。§04 将门控 DeltaNet 的增量规则推导为一种<em>门控联想记忆</em>：固定大小的状态如何在学习门控制下写入和遗忘内容，以及它为何在回忆任务上优于普通 SSM。§05 将剖析门控注意力：为何 24 个查询头只共享 4 个键值头（GQA 6:1），3D MRoPE 如何把图像与文本词元置于同一位置轴，以及在写入残差前抑制噪声的输出 $\sigma$ 门。</p>
 </section>
