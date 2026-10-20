@@ -42,7 +42,7 @@ test("Chinese heading anchors remain meaningful and distinguishable", () => {
 
 test("chapter prose does not regress to untranslated English paragraphs", () => {
   for (const [, paragraph] of html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/g)) {
-    const prose = paragraph.replace(/<[^>]+>/g, "").replace(/\$\$?[\s\S]*?\$\$?/g, "").trim();
+    const prose = paragraph.replace(/\$\$?[\s\S]*?\$\$?/g, "").trim();
     if (/[A-Za-z]{3,}\s+[A-Za-z]{3,}/.test(prose)) {
       assert.match(prose, /[\u3400-\u9fff]/, `untranslated paragraph: ${prose.slice(0, 120)}`);
     }
