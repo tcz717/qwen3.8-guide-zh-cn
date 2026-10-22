@@ -5,6 +5,8 @@
 训练课程、后训练强化学习和推理优化，并配有交互组件、SVG 示意图及动态图表。
 无需构建步骤、前端框架或安装 npm 依赖。
 
+**静态页面：** https://tcz717.github.io/qwen3.8-guide-zh-cn/
+
 **英文原版：** https://atandra2000.github.io/qwen3.8-guide/
 
 原作为从零实现深度学习系列的一部分，作者为 Atandra Bharati。
